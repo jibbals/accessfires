@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 """
 Created on Fri Aug 28 11:59:29 2015
-
+  HISTORY
+    7/8/19 jwg574 added minor comments where possible
 @author: jdk
 """
 
@@ -30,6 +31,7 @@ ddhh2 = '0515'
 ddhh = '0608'
 
 xsecname='xxx'
+# limit for z axis plotting
 zl = 4000
 
 # ends of xsec
