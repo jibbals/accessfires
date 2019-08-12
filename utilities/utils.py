@@ -26,8 +26,8 @@ def cross_section(data,start,end,lats,lons,npoints=None):
               If this is None, use resolution of grid
   '''
   
-  lon1,lat1=start
-  lon2,lat2=end
+  lat1,lon1=start
+  lat2,lon2=end
   
   # add z axis if there is none
   if len(data.shape) < 3:
@@ -48,12 +48,6 @@ def cross_section(data,start,end,lats,lons,npoints=None):
   slicelon = lon1 + (lon2-lon1)*slicex
   slicelat = lat1 + (lat2-lat1)*slicex
   
-  ## Physical height along slice, model height coordinates. Note that the
-  ## transpose is needed because RectBivariateSpline assumes the axis order (x,y)
-  #slicez = np.tile(np.nan, [nz,nx])
-  #for k in range(0,nz):
-  #    f = interpolate.RectBivariateSpline(lonz,latz,z[k,:,:].transpose())
-  #    slicez[k,:] = f.ev(slicelon,slicelat)
 
   # Interpolate data along slice (in model height coordinate). Note that the
   # transpose is needed because RectBivariateSpline assumes the axis order (x,y)
@@ -73,5 +67,16 @@ def cross_section(data,start,end,lats,lons,npoints=None):
     print('    {:9.2f} {:9.2f}'.format(slicedata[0,0 ],data[0,j1,i1]))
     print('    {:9.2f} {:9.2f}'.format(slicedata[0,-1],data[0,j2,i2]))
   
-  return slicedata
+  return np.squeeze(slicedata)
 
+def cross_section_ticks_labels(start,end):
+  '''
+    return xticks and xlabels for a cross section
+  '''
+  lat1,lon1=start
+  lat2,lon2=end
+  # Set up a tuple of strings for the labels. Very crude!
+  xticks = (0.0,0.5,1.0)
+  fmt = '{:.1f}S {:.1f}E'
+  xlabels = (fmt.format(-lat1,lon1),fmt.format(-0.5*(lat1+lat2),0.5*(lon1+lon2)),fmt.format(-lat2,lon2))
+  return xticks,xlabels
