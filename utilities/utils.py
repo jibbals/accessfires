@@ -38,9 +38,11 @@ def cross_section(data,start,end,lats,lons,npoints=None):
   if npoints is None:
     dy = lats[1] - lats[0]
     dx = lons[1] - lons[0]
+    #print (dy, dx)
     dgrid = np.hypot(dx,dy)
+    #print(dgrid)
     dline = np.sqrt((lon2-lon1)**2 + (lat2-lat1)**2) # dist from start to end
-    npoints = np.ceil(dgrid/dline)
+    npoints = int(np.ceil(dline/dgrid))
   
   # Define grid for horizontal interpolation. x increases from 0 to 1 along the
   # desired line segment
@@ -51,7 +53,7 @@ def cross_section(data,start,end,lats,lons,npoints=None):
 
   # Interpolate data along slice (in model height coordinate). Note that the
   # transpose is needed because RectBivariateSpline assumes the axis order (x,y)
-  slicedata = np.tile(np.nan, [nz,npoints])
+  slicedata = np.tile(np.nan, [nz, npoints])
   for k in range(0,nz):
       f = interpolate.RectBivariateSpline(lons,lats,data[k,:,:].transpose())
       slicedata[k,:] = f.ev(slicelon,slicelat)
@@ -80,3 +82,4 @@ def cross_section_ticks_labels(start,end):
   fmt = '{:.1f}S {:.1f}E'
   xlabels = (fmt.format(-lat1,lon1),fmt.format(-0.5*(lat1+lat2),0.5*(lon1+lon2)),fmt.format(-lat2,lon2))
   return xticks,xlabels
+
