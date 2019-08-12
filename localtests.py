@@ -31,7 +31,7 @@ pafile = 'data/umnsaa_pa2016010515.nc'
 pcfile = 'data/umnsaa_pc2016010515.nc'
 
 nlev=60 # Save on ram just look at lower levels
-ztop=4000
+ztop=3000
 with Dataset(pcfile,'r') as ncfile:
     
     ## PULL OUT MASKED ARRAYS
@@ -122,14 +122,28 @@ cmapw = plt.cm.get_cmap('PiYG')
 cmapw.set_over('k')
 wnorm = col.SymLogNorm(0.25)
 
-for ax, slicedata, slicelevels, cmap, slicecontours, title,norm in [
-    [axes[0,0], slicetheta,thetalevels,thetacmap,thetacontours, "T$_{\theta}$ (K)", None],
-    axes[0,1], slicew, wlevels, cmapw, wcontours, "Vertical motion (m/s)",wnorm]:
+# wind speed
+s[np.isnan(s)] = -5000 # There is one row or column of s that is np.NaN, one of the edges I think
+slices = utils.cross_section(s,start,end,lat,lon,npoints=npoints)
+slevels = np.arange(0,22,2)
+cmaps = plt.cm.get_cmap('YlGnBu')
+
+# clouds by water+ice content
+sliceqc = utils.cross_section(qc,start,end,lat,lon,npoints=npoints)
+qccontours = np.arange(0.0,2.25,0.25)
+cmapqc = plt.cm.get_cmap('YlGnBu')
+
+for ax, slicedata, slicelevels, cmap, slicecontours, title,norm, cbarform in [
+    [axes[0,0], slicetheta,thetalevels,thetacmap,thetacontours, "T$_{\\theta}$ (K)", None, None],
+    [axes[0,1], slicew, wlevels, cmapw, wcontours, "Vertical motion (m/s)",wnorm, tick.ScalarFormatter()],
+    [axes[1,0], slices, slevels, cmaps, slevels, "Wind (m/s)", None, None],
+    [axes[1,1], sliceqc, qccontours, cmapqc, qccontours, "Water+ice (kg/kg air)",None,None]
+    ]:
   plt.sca(ax)
   # Note that contourf can work with non-plaid coordinate grids provided both are 2-d
   # Contour inputs: xaxis, yaxis, data, colour gradient 
   plt.contourf(slicex,slicez,slicedata,slicelevels,cmap=cmap,norm=norm)
-  plt.colorbar()
+  plt.colorbar(format=cbarform)
   # Add contour lines
   plt.contour(slicex,slicez,slicedata,slicecontours,colors='k')            
   # make sure land is obvious
@@ -147,6 +161,8 @@ for ax in [axes[0,0],axes[1,0]]:
 for ax in [axes[1,0],axes[1,1]]:
   plt.sca(ax)
   #plt.xticks(xticks,xlabels,rotation=-15)
-  plt.xlabel("Horizontal")
+  plt.xlabel("Transect")
+  #plt.xticks(xticks,xlabels, rotation=25)
+  plt.xticks(None,None)
 # Pull out cross section of potential temperature
 

@@ -43,6 +43,27 @@ def init_plots():
   matplotlib.rcParams['image.cmap'] = 'plasma'        # Colormap default
   matplotlib.rcParams['axes.formatter.useoffset'] = False # another one I've forgotten the purpose of
 
+
+
+def crass_section():
+    '''
+    Draw generic cross section based on 2D data, x axis, y axis, contours, cmap, norm, cbarformat
+    '''
+    
+    
+    # Contour inputs: xaxis, yaxis, data, colour gradient 
+    plt.contourf(slicex,slicez,slicedata,slicelevels,cmap=cmap,norm=norm)
+    plt.colorbar(format=cbarform)
+    # Add contour lines
+    plt.contour(slicex,slicez,slicedata,slicecontours,colors='k')            
+    # make sure land is obvious
+    plt.fill_between(xaxis,slicetopog,interpolate=True,facecolor='black')
+    plt.xticks(None,None)
+    if ztop != None:
+        plt.ylim(0,ztop)
+    
+    
+    
 def utm_from_lon(lon):
     """
     utm_from_lon - UTM zone for a longitude

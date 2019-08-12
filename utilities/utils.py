@@ -13,7 +13,7 @@ from scipy import interpolate
 
 
 # more print statements for testing
-__VERBOSE__=True
+__VERBOSE__=False
 
 
 def cross_section(data,start,end,lats,lons,npoints=None):
