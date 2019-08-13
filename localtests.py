@@ -8,14 +8,19 @@ Created on Mon Aug  5 13:55:32 2019
 @author: jesse
 """
 
-import cartopy
-import cartopy.io.img_tiles as cimgt
 import matplotlib as mpl
 import matplotlib.colors as col
 import matplotlib.pyplot as plt
 import matplotlib.ticker as tick
 import numpy as np
 from netCDF4 import Dataset
+
+import cartopy.crs as ccrs
+from cartopy.io import shapereader
+from cartopy.mpl.gridliner import LONGITUDE_FORMATTER, LATITUDE_FORMATTER
+import cartopy.io.img_tiles as cimgt
+import matplotlib.patches as mpatches
+
 #import sys
 
 from utilities import utils, plotting, fio
@@ -24,11 +29,62 @@ plotting.init_plots()
 extents = plotting._extents_
 latlons = plotting._latlons_
 
-plt.close()
-
 # Data file locations
 pafile = 'data/umnsaa_pa2016010515.nc'
 pcfile = 'data/umnsaa_pc2016010515.nc'
+with Dataset(pafile,'r') as ncfile:
+    topog = ncfile.variables['surface_altitude'][:,:]
+    latt = ncfile.variables['latitude' ][:]
+    lont = ncfile.variables['longitude'][:]
+
+plt.close()
+
+
+# Google map image tiles view of synoptic map
+fig,ax,proj=plotting.map_google(extents['waroonas'],
+                                zoom=6,
+                                subplotxyn=[2,1,1],
+                                gridlines=[np.arange(-50,-10,2),
+                                           np.arange(100,150,4)])
+
+## Add box around zoomed in area
+ax.add_patch(mpatches.Rectangle(xy=latlons['waroona'][::-1], 
+                                width=.4, 
+                                height=.3,
+                                facecolor='red', 
+                                alpha=0.4, 
+                                transform=ccrs.PlateCarree()))
+## add text?
+
+
+## Add scale
+scaleloc=(0.2,0.05)
+plotting.scale_bar(ax,proj,100, location=scaleloc)
+
+
+## Look at waroona and yarloop
+_,ax2,_ = plotting.map_google(extents['waroona'],zoom=10,fig=fig,subplotxyn=[2,2,3],draw_gridlines=False)
+
+## Add scale
+plotting.scale_bar(ax2,proj,10, location=scaleloc)
+
+## Add contour plot showing topography
+plt.subplot(2,2,4)
+plt.contourf(lont,latt,topog, cmap='copper')
+# set x and y limits to match extent
+xlims = extents['waroona'][0:2] # East to West
+ylims = extents['waroona'][2:] # South to North
+plt.ylim(ylims); plt.xlim(xlims)
+plt.colorbar(label="m")
+plt.title("Topography")
+## Turn off the tick values
+plt.xticks([]); plt.yticks([])
+plt.show()
+
+assert False,"stop here"
+
+
+
 
 nlev=60 # Save on ram just look at lower levels
 ztop=3000

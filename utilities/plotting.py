@@ -8,10 +8,19 @@ Created on Mon Aug 12 14:06:49 2019
 @author: jesse
 """
 
+# Plotting stuff
 import numpy as np
-import cartopy
 import matplotlib
+from matplotlib import pyplot as plt
 from matplotlib import patheffects
+
+# Mapping stuff
+import cartopy
+import cartopy.crs as ccrs
+from cartopy.io import shapereader
+from cartopy.mpl.gridliner import LONGITUDE_FORMATTER, LATITUDE_FORMATTER
+import cartopy.io.img_tiles as cimgt
+
 
 ###
 ### GLOBALS
@@ -20,8 +29,8 @@ from matplotlib import patheffects
 
 # Extents: EWSN
 _extents_             = {}
-_extents_['waroona']  = [115.5,116.3, -33.1,-32.5] # local
-_extents_['waroonas'] = [112,120,-35,-30] # synoptic
+_extents_['waroona']  = [115.7,116.05, -33.05,-32.75] # local
+_extents_['waroonas'] = [112,120,-34.5,-31] # synoptic
 _extents_['yarloop']  = _extents_['waroona']
 _extents_['yarloops'] = _extents_['waroonas']
 _latlons_             = {}
@@ -31,38 +40,72 @@ _latlons_['perth']    = -31.9505, 115.8605
 
 
 def init_plots():
-  matplotlib.rcParams['font.size'] = 18.0
+  matplotlib.rcParams['font.size'] = 16.0
   matplotlib.rcParams["text.usetex"]      = False     # I forget what this is for, maybe allows latex labels?
   matplotlib.rcParams["legend.numpoints"] = 1         # one point for marker legends
   matplotlib.rcParams["figure.figsize"]   = (9, 7)    # Default figure size
-  matplotlib.rcParams["font.size"]        = 17        # font sizes:
-  matplotlib.rcParams["axes.titlesize"]   = 24        # title font size
-  matplotlib.rcParams["axes.labelsize"]   = 19        #
-  matplotlib.rcParams["xtick.labelsize"]  = 15        #
-  matplotlib.rcParams["ytick.labelsize"]  = 15        #
+  matplotlib.rcParams["axes.titlesize"]   = 22        # title font size
+  matplotlib.rcParams["axes.labelsize"]   = 17        #
+  matplotlib.rcParams["xtick.labelsize"]  = 13        #
+  matplotlib.rcParams["ytick.labelsize"]  = 13        #
   matplotlib.rcParams['image.cmap'] = 'plasma'        # Colormap default
   matplotlib.rcParams['axes.formatter.useoffset'] = False # another one I've forgotten the purpose of
 
 
 
-def crass_section():
+def cross_section():
     '''
     Draw generic cross section based on 2D data, x axis, y axis, contours, cmap, norm, cbarformat
     '''
+    print("TODO")
     
+#    # Contour inputs: xaxis, yaxis, data, colour gradient 
+#    plt.contourf(slicex,slicez,slicedata,slicelevels,cmap=cmap,norm=norm)
+#    plt.colorbar(format=cbarform)
+#    # Add contour lines
+#    plt.contour(slicex,slicez,slicedata,slicecontours,colors='k')            
+#    # make sure land is obvious
+#    plt.fill_between(xaxis,slicetopog,interpolate=True,facecolor='black')
+#    plt.xticks(None,None)
+#    if ztop != None:
+#        plt.ylim(0,ztop)
+
+def map_google(extent,zoom=10,fig=None,subplotxyn=None,draw_gridlines=True,gridlines=None):
+    '''
+    Draw a map with google image tiles over given EWSN extent
+    if this will be part of a larger figure, subplotxyn=[3,3,4] will put it there
+    to define where gridlines go, put gridlines = [lats,lons] 
+    return figure, axis, projection
+    '''
+    # Request map from google
+    request = cimgt.GoogleTiles()
+    gproj=request.crs
+    # Use projection to set up plot
+    if fig is None:
+        fig = plt.figure()
     
-    # Contour inputs: xaxis, yaxis, data, colour gradient 
-    plt.contourf(slicex,slicez,slicedata,slicelevels,cmap=cmap,norm=norm)
-    plt.colorbar(format=cbarform)
-    # Add contour lines
-    plt.contour(slicex,slicez,slicedata,slicecontours,colors='k')            
-    # make sure land is obvious
-    plt.fill_between(xaxis,slicetopog,interpolate=True,facecolor='black')
-    plt.xticks(None,None)
-    if ztop != None:
-        plt.ylim(0,ztop)
-    
-    
+    if subplotxyn is None:
+        ax = fig.add_subplot(1, 1, 1, projection=gproj)#stamen_terrain.crs)
+    else:
+        nrows,ncols,n= subplotxyn
+        ax = fig.add_subplot(nrows,ncols,n, projection=gproj)
+
+    if draw_gridlines:
+        print("drawing grid")
+        gl = ax.gridlines(linewidth=1, color='black', alpha=0.5, linestyle='--', draw_labels=True)
+        gl.xlabels_top = gl.ylabels_right = False
+        gl.xformatter = LONGITUDE_FORMATTER
+        gl.yformatter = LATITUDE_FORMATTER
+        if gridlines is not None:
+            yrange,xrange=gridlines
+            gl.xlocator = matplotlib.ticker.FixedLocator(xrange)
+            gl.ylocator = matplotlib.ticker.FixedLocator(yrange)
+
+    # Where are we looking
+    ax.set_extent(extent)
+    # default interpolation ruins location names
+    ax.add_image(request, zoom, interpolation='spline36') 
+    return fig, ax, gproj
     
 def utm_from_lon(lon):
     """
@@ -89,8 +132,8 @@ def scale_bar(ax, proj, length, location=(0.5, 0.05), linewidth=3,
     m_per_unit is the number of meters in a unit
     """
     # find lat/lon center to find best UTM zone
-    #x0, x1, y0, y1 = ax.get_extent(proj.as_geodetic())
-    x0, x1, y0, y1 = ax.get_extent(proj)
+    x0, x1, y0, y1 = ax.get_extent(proj.as_geodetic())
+    #x0, x1, y0, y1 = ax.get_extent(proj)
     # Projection in metres
     utm = cartopy.crs.UTM(utm_from_lon((x0+x1)/2))
     # Get the extent of the plotted area in coordinates in metres
