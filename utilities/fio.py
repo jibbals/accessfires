@@ -16,6 +16,7 @@ Created on Mon Aug  5 13:52:09 2019
 from netCDF4 import Dataset
 import numpy as np
 
+
 def read_nc(fpath, keepvars=None):
   '''
     Generic read function for netcdf files

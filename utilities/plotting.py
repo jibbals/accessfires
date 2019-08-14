@@ -30,6 +30,10 @@ from .context import utils
 ### GLOBALS
 ###
 
+## Standard colour maps for use between figures
+_cmaps_ = {}
+_cmaps_['verticalvelocity'] = plt.cm.get_map('PiYG')
+_cmaps_ ['windspeed'] = plt.cm.get_cmap('YlGnBu')
 
 # Extents: EWSN
 _extents_             = {}
@@ -181,6 +185,46 @@ def transect_w(w, z, lat, lon, start, end, npoints=100,
              title=title, ax=ax, 
              cmap=cmap, norm=norm, cbarform=cbarform,
              contours=contours,lines=lines)
+
+def transect_qc(qc, z, lat, lon, start, end, npoints=100, 
+               topog=None, latt=None, lont=None, ztop=4000,
+               title="Water and Ice (kg/kg air)", ax=None, 
+               cmap=plt.cm.get_cmap('YlGnBu'), norm=None, cbarform=None,
+               contours=np.arange(0.0,2.0,0.25),
+               lines=np.array([0.1])):
+    '''
+    Draw theta cross section
+        w is 3d vertical motion
+        z(3d), lat(1d), lon(1d) is height (m), lats and lons
+        start, end are [lat0,lon0], [lat1,lon1]
+        contours will be filled colours
+        lines will be where to draw black lines
+    '''
+    if cmap is not None:
+        cmap.set_over('k')
+    # call transect using some defaults for vertical velocity w
+    transect(qc, z,lat,lon,start,end,npoints=npoints,
+             topog=topog, latt=latt, lont=lont, ztop=ztop,
+             title=title, ax=ax, 
+             cmap=cmap, norm=norm, cbarform=cbarform,
+             contours=contours,lines=lines)
+
+def map_add_locations(namelist, proj=None,
+                      marker='o', color='r', markersize=None, 
+                      dx=.025,dy=.015):
+    '''
+    input is list of names to be added to a map using the lat lons in _latlons_
+    '''
+    for name in namelist:
+        y,x=_latlons_[name]
+        # Add marker
+        plt.plot(x,y,  color=color, linewidth=0, 
+                 marker=marker, markersize=None, transform=proj)
+        # add name
+        plt.text(x+dx, y+dy, name,
+             horizontalalignment='right',
+             transform=proj)
+    
 
 def map_google(extent,zoom=10,fig=None,subplotxyn=None,draw_gridlines=True,gridlines=None):
     '''

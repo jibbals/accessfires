@@ -79,7 +79,7 @@ plt.title("h vs zth, not index matched (yet)")
 # cross section lat,lon start and finish
 transects = plotting._transects_
 start,end = transects['waroona1']
-npoints = 50
+npoints = 100
 
 # Pull out cross section of topography and height
 slicetopog = utils.cross_section(topog,latt,lont,start,end,npoints=npoints)
@@ -103,7 +103,8 @@ ax1 = plt.subplot(2,1,1)
 plotting.map_topography(waroona,topog,latt,lont)
 plt.title('Topography, wind speed')
 # start to end x=[lon0,lon1], y=[lat0, lat1]
-plt.plot([start[1],end[1]],[start[0],end[0], ], '--k', linewidth=2)
+plt.plot([start[1],end[1]],[start[0],end[0], ], '--k', 
+         linewidth=2, marker='o', markersize=5, markercolor='red')
 
 ax2 = plt.subplot(2,2,3)
 plotting.transect_w(w,zth,lat,lon,start,end,topog=topog,latt=latt,lont=lont)
