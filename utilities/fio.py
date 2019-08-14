@@ -44,15 +44,15 @@ def read_pcfile(fpath, keepvars=None):
     #lon1 = variables['longitude_0'] # staggered
     #z   = variables['model_level_number'  ]
     #z1  = variables['model_level_number_0']
-    Ta  = variables['air_temperature'] # [lat,lon] at surface
-    pmsl = variables['air_pressure_at_sea_level'] # [lev,lat,lon]
+    Ta  = variables['air_temperature'][:,:] # [lat,lon] at surface
+    pmsl = variables['air_pressure_at_sea_level'][0,:,:] # [lev,lat,lon]
     #h   = variables['level_height'] # [lev] in metres
     
     # Some variables are on staggered latitude and longitude dimension
     # Some are on staggered time dimension (so there will be 2 time steps instead of none)
-    p   = variables['air_pressure'] # [time,lev,lat,lon] in pascals
-    u1  = variables['x_wind'] #[time,levs,lat,lon1] wind speeds are on their directional grid edges
-    v1  = variables['y_wind'] #[time,levs,lat1,lons]
+    p   = variables['air_pressure'][:,:,:,:] # [time,lev,lat,lon] in pascals
+    u1  = variables['x_wind'][:,:,:,:] #[time,levs,lat,lon1] wind speeds are on their directional grid edges
+    v1  = variables['y_wind'][:,:,:,:] #[time,levs,lat1,lons]
     #q   = variables['specific_humidity_0'] # [time,lev,lat,lon]
     #w   = variables['upward_air_velocity']# [time,lev,lat,lon] in m/s
     #qc  = variables['mass_fraction_of_cloud_liquid_water_in_air'] + ncfile.variables['mass_fraction_of_cloud_ice_in_air']
@@ -62,11 +62,16 @@ def read_pcfile(fpath, keepvars=None):
     nt,nz,ny,nx = p.shape
 
     # height data (z) based on P = P0 exp{ -z/H } with assumed scale height H
-    zth = -(287*300/9.8)*np.log(p/pmsl[np.newaxis,0:1,:,:])
-    zrho = zth
+    zth = np.zeros(np.shape(p))
+    for tstep in range(2):
+        zth[tstep] = -(287*300/9.8)*np.log(p[tstep]/pmsl[np.newaxis,:,:])
+    
     # Potential temperature based on https://en.wikipedia.org/wiki/Potential_temperature
     # with gas constant R = 287.05 and specific heat capacity c_p = 1004.64
-    theta = Ta[np.newaxis,np.newaxis,:,:]*(1e5/p)**(287.05/1004.64)
+    theta = np.zeros(np.shape(p))
+    repTa = np.repeat(Ta[np.newaxis,:,:], nz, axis=0) # repeat Ta along z axis
+    for tstep in range(2):
+        theta[tstep] = repTa*(1e5/p[tstep])**(287.05/1004.64)
 
     ## Destagger winds
     #u = np.tile(np.nan,(nz,ny,nx))
@@ -81,13 +86,16 @@ def read_pcfile(fpath, keepvars=None):
     variables['x_wind_destaggered'] = u
     variables['y_wind_destaggered'] = v
     variables['wind_speed'] = s
-    ## dummy topog for now
-    #topog = np.zeros([len(lat),len(lon)])
-    #latt,lont = lat,lon
-    ## READ TOPOG DATA FROM PA
-    #with Dataset(pafile,'r') as ncfile:
-    #    topog = ncfile.variables['surface_altitude'][:,:]
-    #    latt = ncfile.variables['latitude' ][:]
-    #    lont = ncfile.variables['longitude'][:]
+
     
     return variables
+
+def read_topog(pafile='data/umnsaa_pa2016010515.nc'):
+    '''
+    Read topography and lat,lon from pa file
+    '''
+    with Dataset(pafile,'r') as ncfile:
+        topog = ncfile.variables['surface_altitude'][:,:]
+        latt = ncfile.variables['latitude' ][:]
+        lont = ncfile.variables['longitude'][:]
+    return topog,latt,lont

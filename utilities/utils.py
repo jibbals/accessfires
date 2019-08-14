@@ -16,7 +16,7 @@ from scipy import interpolate
 __VERBOSE__=False
 
 
-def cross_section(data,start,end,lats,lons,npoints=None):
+def cross_section(data,lats,lons,start,end,npoints=None):
   '''
     interpolate along cross section
     inputs: data = array[[z],lats,lons]

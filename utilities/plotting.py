@@ -11,8 +11,10 @@ Created on Mon Aug 12 14:06:49 2019
 # Plotting stuff
 import numpy as np
 import matplotlib
-from matplotlib import pyplot as plt
 from matplotlib import patheffects
+import matplotlib.colors as col
+import matplotlib.pyplot as plt
+import matplotlib.ticker as tick
 
 # Mapping stuff
 import cartopy
@@ -21,6 +23,8 @@ from cartopy.io import shapereader
 from cartopy.mpl.gridliner import LONGITUDE_FORMATTER, LATITUDE_FORMATTER
 import cartopy.io.img_tiles as cimgt
 
+# local stuff
+from .context import utils
 
 ###
 ### GLOBALS
@@ -29,7 +33,7 @@ import cartopy.io.img_tiles as cimgt
 
 # Extents: EWSN
 _extents_             = {}
-_extents_['waroona']  = [115.7,116.05, -33.05,-32.75] # local
+_extents_['waroona']  = [115.775,116.2, -33.05,-32.7] # local
 _extents_['waroonas'] = [112,120,-34.5,-31] # synoptic
 _extents_['yarloop']  = _extents_['waroona']
 _extents_['yarloops'] = _extents_['waroonas']
@@ -38,6 +42,13 @@ _latlons_['waroona']  = -32.8430, 115.8526 # latlon of waroona
 _latlons_['yarloop']  = -32.9534, 115.9124
 _latlons_['perth']    = -31.9505, 115.8605
 
+_latlons_['fire_waroona'] = -32.89, 116.17
+_latlons_['fire_sirivan'] = -30,120 # check with harvey or find in accessdev
+
+_transects_             = {} 
+_transects_['waroona1'] = [-32.75,115.75], [-32.95,116.19]
+_transects_['waroona2'] = [-32.85,115.75], [-33.05,116.19] # like waroona1 but lower
+_transects_['waroona3'] = [-32.65,115.75], [-32.85,116.19] # '' but higher
 
 def init_plots():
   matplotlib.rcParams['font.size'] = 16.0
@@ -52,23 +63,124 @@ def init_plots():
   matplotlib.rcParams['axes.formatter.useoffset'] = False # another one I've forgotten the purpose of
 
 
-
-def cross_section():
+def transect(data, z, lat, lon, start, end, npoints=100, 
+             topog=None, latt=None, lont=None, ztop=4000,
+             title="", ax=None, 
+             cmap=None, norm=None, cbarform=None,
+             contours=None,lines=None):
     '''
-    Draw generic cross section based on 2D data, x axis, y axis, contours, cmap, norm, cbarformat
+    Draw cross section
+        data is 3d
+        z (3d), lat(1d), lon(1d) is height (m), lats and lons
+        start, end are [lat0,lon0], [lat1,lon1]
+        contours will be filled colours
+        lines will be where to draw black lines
     '''
-    print("TODO")
+    # Potential temperature
+    slicedata  = utils.cross_section(data,lat,lon,start,end,npoints=npoints)
     
-#    # Contour inputs: xaxis, yaxis, data, colour gradient 
-#    plt.contourf(slicex,slicez,slicedata,slicelevels,cmap=cmap,norm=norm)
-#    plt.colorbar(format=cbarform)
-#    # Add contour lines
-#    plt.contour(slicex,slicez,slicedata,slicecontours,colors='k')            
-#    # make sure land is obvious
-#    plt.fill_between(xaxis,slicetopog,interpolate=True,facecolor='black')
-#    plt.xticks(None,None)
-#    if ztop != None:
-#        plt.ylim(0,ztop)
+    # Pull out cross section of topography and height
+    if topog is not None:
+        slicetopog = utils.cross_section(topog,latt,lont,start,end,npoints=npoints)
+    
+    slicez = utils.cross_section(z,lat,lon,start,end,npoints=npoints)
+    #xticks,xlabels = utils.cross_section_ticks_labels(start,end)
+    xaxis=np.linspace(0,1,npoints)
+    slicex=np.tile(xaxis,(len(z),1))
+    
+    if ax is not None:
+        plt.sca(ax)
+    # Note that contourf can work with non-plaid coordinate grids provided both are 2-d
+    # Contour inputs: xaxis, yaxis, data, colour gradient 
+    if contours is None:
+        plt.contourf(slicex,slicez,slicedata,cmap=cmap,norm=norm)
+    else:
+        plt.contourf(slicex,slicez,slicedata,contours,cmap=cmap,norm=norm)
+    
+    if cbarform is not None:
+        plt.colorbar(format=cbarform)
+    
+    # Add contour lines
+    if lines is not None:
+        plt.contour(slicex,slicez,slicedata,lines,colors='k')            
+    
+    # make sure land is obvious
+    if topog is not None:
+        plt.fill_between(xaxis,slicetopog,interpolate=True,facecolor='black')
+    
+    if ztop != None:
+        plt.ylim(0,ztop)
+    
+    plt.xticks([])
+    plt.xlabel('')
+    plt.title(title)
+
+def transect_s(s, z, lat, lon, start, end, npoints=100, 
+               topog=None, latt=None, lont=None, ztop=4000,
+               title="Wind speed (m/s)", ax=None, 
+               cmap=plt.cm.get_cmap('YlGnBu'), norm=None, cbarform=None,
+               contours=np.arange(0,22,2),lines=np.arange(0,22,2)):
+    '''
+    Draw wind speed cross section
+        s is 3d wind speed
+        z(3d), lat(1d), lon(1d) is height (m), lats and lons
+        start, end are [lat0,lon0], [lat1,lon1]
+        contours will be filled colours
+        lines will be where to draw black lines
+    '''
+    
+    # wind speed
+    s[np.isnan(s)] = -5000 # There is one row or column of s that is np.NaN, one of the edges I think
+    
+    # call transect using some defaults for potential temperature
+    transect(s,z,lat,lon,start,end,npoints=npoints,
+             topog=topog, latt=latt, lont=lont, ztop=ztop,
+             title=title, ax=ax, 
+             cmap=cmap, norm=norm, cbarform=cbarform,
+             contours=contours,lines=lines)
+
+def transect_theta(theta, z, lat, lon, start, end, npoints=100, 
+                   topog=None, latt=None, lont=None, ztop=4000,
+                   title="$T_{\\theta}$ (K)", ax=None, 
+                   cmap=plt.cm.get_cmap('YlOrRd'), norm=None, cbarform=None,
+                   contours=np.arange(280,320,2),lines=np.arange(280,320,2)):
+    '''
+    Draw theta cross section
+        theta is 3d potential temperature
+        z(3d), lat(1d), lon(1d) is height (m), lats and lons
+        start, end are [lat0,lon0], [lat1,lon1]
+        contours will be filled colours
+        lines will be where to draw black lines
+    '''
+    # call transect using some defaults for potential temperature
+    transect(theta,z,lat,lon,start,end,npoints=npoints,
+             topog=topog, latt=latt, lont=lont, ztop=ztop,
+             title=title, ax=ax, 
+             cmap=cmap, norm=norm, cbarform=cbarform,
+             contours=contours,lines=lines)
+
+def transect_w(w, z, lat, lon, start, end, npoints=100, 
+               topog=None, latt=None, lont=None, ztop=4000,
+               title="Vertical motion (m/s)", ax=None, 
+               cmap=plt.cm.get_cmap('PiYG'), norm=col.SymLogNorm(0.25), cbarform=tick.ScalarFormatter(),
+               contours=np.union1d(np.union1d(2.0**np.arange(-2,6),-1*(2.0**np.arange(-2,6))),np.array([0])),
+               lines=np.array([0])):
+    '''
+    Draw theta cross section
+        w is 3d vertical motion
+        z(3d), lat(1d), lon(1d) is height (m), lats and lons
+        start, end are [lat0,lon0], [lat1,lon1]
+        contours will be filled colours
+        lines will be where to draw black lines
+    '''
+    if cmap is not None:
+        cmap.set_over('k')
+    # call transect using some defaults for vertical velocity w
+    transect(w, z,lat,lon,start,end,npoints=npoints,
+             topog=topog, latt=latt, lont=lont, ztop=ztop,
+             title=title, ax=ax, 
+             cmap=cmap, norm=norm, cbarform=cbarform,
+             contours=contours,lines=lines)
 
 def map_google(extent,zoom=10,fig=None,subplotxyn=None,draw_gridlines=True,gridlines=None):
     '''
@@ -106,7 +218,22 @@ def map_google(extent,zoom=10,fig=None,subplotxyn=None,draw_gridlines=True,gridl
     # default interpolation ruins location names
     ax.add_image(request, zoom, interpolation='spline36') 
     return fig, ax, gproj
+
+def map_topography(extent, topog,lat,lon,title="Topography",cmap='copper'):
+    '''
+    Show topography map matching extents
+    '''
     
+    plt.contourf(lon,lat,topog, cmap=cmap)
+    # set x and y limits to match extent
+    xlims = extent[0:2] # East to West
+    ylims = extent[2:] # South to North
+    plt.ylim(ylims); plt.xlim(xlims)
+    plt.colorbar(label="m")
+    plt.title(title)
+    ## Turn off the tick values
+    plt.xticks([]); plt.yticks([])
+
 def utm_from_lon(lon):
     """
     utm_from_lon - UTM zone for a longitude
