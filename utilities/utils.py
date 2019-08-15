@@ -83,3 +83,26 @@ def cross_section_ticks_labels(start,end):
   xlabels = (fmt.format(-lat1,lon1),fmt.format(-0.5*(lat1+lat2),0.5*(lon1+lon2)),fmt.format(-lat2,lon2))
   return xticks,xlabels
 
+
+def relative_humidity_from_specific(qair, temp, press = 1013.25):
+    '''
+    modified from https://earthscience.stackexchange.com/questions/2360/how-do-i-convert-specific-humidity-to-relative-humidity
+    ##' Convert specific humidity to relative humidity
+    ##'
+    ##' NCEP surface flux data does not have RH
+    ##' from Bolton 1980 The computation of Equivalent Potential Temperature 
+    ##' \url{http://www.eol.ucar.edu/projects/ceop/dm/documents/refdata_report/eqns.html}
+    ##' @title qair2rh
+    ##' @param qair specific humidity, dimensionless (e.g. kg/kg) ratio of water mass / total air mass
+    ##' @param temp degrees K
+    ##' @param press pressure in mb
+    ##' @return rh relative humidity, ratio of actual water mixing ratio to saturation mixing ratio
+    ##' @author David LeBauer
+    '''
+    tempC= temp-273.16
+    es =  6.112 * np.exp((17.67 * tempC)/(tempC + 243.5))
+    e  = qair * press / (0.378 * qair + 0.622)
+    rh = e / es
+    rh[rh > 1] = 1
+    rh[rh < 0] = 0
+    return(rh)

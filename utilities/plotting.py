@@ -32,27 +32,57 @@ from .context import utils
 
 ## Standard colour maps for use between figures
 _cmaps_ = {}
-_cmaps_['verticalvelocity'] = plt.cm.get_map('PiYG')
-_cmaps_ ['windspeed'] = plt.cm.get_cmap('YlGnBu')
+_cmaps_['verticalvelocity'] = 'PiYG'
+_cmaps_ ['windspeed'] = 'YlGnBu'
 
 # Extents: EWSN
-_extents_             = {}
-_extents_['waroona']  = [115.775,116.2, -33.05,-32.7] # local
-_extents_['waroonas'] = [112,120,-34.5,-31] # synoptic
-_extents_['yarloop']  = _extents_['waroona']
-_extents_['yarloops'] = _extents_['waroonas']
-_latlons_             = {}
-_latlons_['waroona']  = -32.8430, 115.8526 # latlon of waroona
-_latlons_['yarloop']  = -32.9534, 115.9124
-_latlons_['perth']    = -31.9505, 115.8605
+_extents_               = {}
+_latlons_               = {}
 
+# Waroona locations
+_extents_['waroona']    = [115.775,116.2, -33.05,-32.7] # local
+_extents_['waroonas']   = [112,120,-34.5,-31] # synoptic
+_latlons_['waroona']    = -32.84, 115.93  # suburb centre: -32.8430, 115.8526
+_latlons_['yarloop']    = -32.96, 115.90  # suburb centre: -32.9534, 115.9124
+_latlons_['perth']      = -31.9505, 115.8605
 _latlons_['fire_waroona'] = -32.89, 116.17
-_latlons_['fire_sirivan'] = -30,120 # check with harvey or find in accessdev
+# two PyroCB
+_latlons_['pyrocb_waroona1'] = 0,0 # ~4pm first day
+_latlons_['pyrocb_waroona2'] = 0,0 # 1100-1400 second day
+
+# Sir Ivan locations
+_extents_['sirivan']    = [149.1, 150.1, -32.3, -31.8]
+_extents_['sirivans']   = [145,154, -34, -30]
+_latlons_['sirivan']    = -32.039730, 149.531430
+_latlons_['uarby']      = -32.047280, 149.764510
+_latlons_['fire_sirivan'] = -32.045, 149.6  # check with harvey or find in accessdev
+# one pyrocb
+_latlons_['pyrocb_sirivan'] = 0,0 # 0530UTC=XXXX local time
+# The pycb over Sir Ivan was around 0530 UTC on Sunday 12 Feb (or a bit after).
+# The exact location is a bit tricky, because the pycb would be downstream of 
+# the actual fire front, but around the location of Uarbry 
+# (which was burned over) is probably a good place to start. 
+# You'll probably have to move the cross section around a bit to see what 
+# lat/longs get the most interesting picture.
 
 _transects_             = {} 
-_transects_['waroona1'] = [-32.75,115.75], [-32.95,116.19]
-_transects_['waroona2'] = [-32.85,115.75], [-33.05,116.19] # like waroona1 but lower
-_transects_['waroona3'] = [-32.65,115.75], [-32.85,116.19] # '' but higher
+__w0__,__w1__ = 115.8, 116.19
+_transects_['waroona1'] = [-32.75 , __w0__], [-32.95 , __w1__]
+_transects_['waroona2'] = [-32.85 , __w0__], [-33.05 , __w1__] # like waroona1 but lower
+_transects_['waroona3'] = [-32.65 , __w0__], [-32.85 , __w1__] # '' but higher
+# again but start more southerly and end more northerly
+_transects_['waroona4'] = [-32.925, __w0__], [-32.75 , __w1__]
+_transects_['waroona5'] = [-33.025, __w0__], [-32.85 , __w1__] # like waroona1 but lower
+_transects_['waroona6'] = [-32.825, __w0__], [-32.705, __w1__] # '' but higher
+
+# looking at sir ivan
+__si0__, __si1__ = 149.4, 149.9
+_transects_['sirivan1'] = [-32.  , __si0__], [-32.3 , __si1__]
+_transects_['sirivan2'] = [-32.05, __si0__], [-32.35, __si1__] # like sirivan1 but lower
+_transects_['sirivan3'] = [-31.95, __si0__], [-32.25, __si1__]   # '' but higher
+_transects_['sirivan4'] = [-32.25, __si0__], [-31.95, __si1__] # low lat to high lat crosssec
+_transects_['sirivan5'] = [-32.35, __si0__], [-32.05, __si1__] 
+_transects_['sirivan6'] = [-32.3 , __si0__], [-32   , __si1__] 
 
 def init_plots():
   matplotlib.rcParams['font.size'] = 16.0
@@ -65,6 +95,8 @@ def init_plots():
   matplotlib.rcParams["ytick.labelsize"]  = 13        #
   matplotlib.rcParams['image.cmap'] = 'plasma'        # Colormap default
   matplotlib.rcParams['axes.formatter.useoffset'] = False # another one I've forgotten the purpose of
+  # rcParams["figure.dpi"] 
+  matplotlib.rcParams["figure.dpi"] = 600           # DEFAULT DPI for plot output
 
 
 def transect(data, z, lat, lon, start, end, npoints=100, 
@@ -84,6 +116,10 @@ def transect(data, z, lat, lon, start, end, npoints=100,
     slicedata  = utils.cross_section(data,lat,lon,start,end,npoints=npoints)
     
     # Pull out cross section of topography and height
+    if latt is None:
+        latt=lat
+    if lont is None:
+        lont=lon
     if topog is not None:
         slicetopog = utils.cross_section(topog,latt,lont,start,end,npoints=npoints)
     
@@ -101,8 +137,9 @@ def transect(data, z, lat, lon, start, end, npoints=100,
     else:
         plt.contourf(slicex,slicez,slicedata,contours,cmap=cmap,norm=norm)
     
-    if cbarform is not None:
-        plt.colorbar(format=cbarform)
+    plt.colorbar(format=cbarform)
+    #if cbarform is not None:
+    #    plt.colorbar(format=cbarform)
     
     # Add contour lines
     if lines is not None:
@@ -122,7 +159,7 @@ def transect(data, z, lat, lon, start, end, npoints=100,
 def transect_s(s, z, lat, lon, start, end, npoints=100, 
                topog=None, latt=None, lont=None, ztop=4000,
                title="Wind speed (m/s)", ax=None, 
-               cmap=plt.cm.get_cmap('YlGnBu'), norm=None, cbarform=None,
+               cmap='YlGnBu', norm=None, cbarform=None,
                contours=np.arange(0,22,2),lines=np.arange(0,22,2)):
     '''
     Draw wind speed cross section
@@ -146,7 +183,7 @@ def transect_s(s, z, lat, lon, start, end, npoints=100,
 def transect_theta(theta, z, lat, lon, start, end, npoints=100, 
                    topog=None, latt=None, lont=None, ztop=4000,
                    title="$T_{\\theta}$ (K)", ax=None, 
-                   cmap=plt.cm.get_cmap('YlOrRd'), norm=None, cbarform=None,
+                   cmap='YlOrRd', norm=None, cbarform=None,
                    contours=np.arange(280,320,2),lines=np.arange(280,320,2)):
     '''
     Draw theta cross section
@@ -166,7 +203,7 @@ def transect_theta(theta, z, lat, lon, start, end, npoints=100,
 def transect_w(w, z, lat, lon, start, end, npoints=100, 
                topog=None, latt=None, lont=None, ztop=4000,
                title="Vertical motion (m/s)", ax=None, 
-               cmap=plt.cm.get_cmap('PiYG'), norm=col.SymLogNorm(0.25), cbarform=tick.ScalarFormatter(),
+               cmap='PiYG', norm=col.SymLogNorm(0.25), cbarform=tick.ScalarFormatter(),
                contours=np.union1d(np.union1d(2.0**np.arange(-2,6),-1*(2.0**np.arange(-2,6))),np.array([0])),
                lines=np.array([0])):
     '''
@@ -177,8 +214,9 @@ def transect_w(w, z, lat, lon, start, end, npoints=100,
         contours will be filled colours
         lines will be where to draw black lines
     '''
-    if cmap is not None:
-        cmap.set_over('k')
+    #if cmap is not None:
+    #    if hasattr(cmap,'set_over'):
+    #        cmap.set_over('k')
     # call transect using some defaults for vertical velocity w
     transect(w, z,lat,lon,start,end,npoints=npoints,
              topog=topog, latt=latt, lont=lont, ztop=ztop,
@@ -189,7 +227,7 @@ def transect_w(w, z, lat, lon, start, end, npoints=100,
 def transect_qc(qc, z, lat, lon, start, end, npoints=100, 
                topog=None, latt=None, lont=None, ztop=4000,
                title="Water and Ice (kg/kg air)", ax=None, 
-               cmap=plt.cm.get_cmap('YlGnBu'), norm=None, cbarform=None,
+               cmap='YlGnBu', norm=None, cbarform=None,
                contours=np.arange(0.0,2.0,0.25),
                lines=np.array([0.1])):
     '''
@@ -200,8 +238,7 @@ def transect_qc(qc, z, lat, lon, start, end, npoints=100,
         contours will be filled colours
         lines will be where to draw black lines
     '''
-    if cmap is not None:
-        cmap.set_over('k')
+    
     # call transect using some defaults for vertical velocity w
     transect(qc, z,lat,lon,start,end,npoints=npoints,
              topog=topog, latt=latt, lont=lont, ztop=ztop,
@@ -209,21 +246,34 @@ def transect_qc(qc, z, lat, lon, start, end, npoints=100,
              cmap=cmap, norm=norm, cbarform=cbarform,
              contours=contours,lines=lines)
 
-def map_add_locations(namelist, proj=None,
-                      marker='o', color='r', markersize=None, 
+def map_add_locations(namelist, text=None, proj=None,
+                      marker='o', color='grey', markersize=None, 
+                      textcolor='k',
                       dx=.025,dy=.015):
     '''
     input is list of names to be added to a map using the lat lons in _latlons_
     '''
-    for name in namelist:
+    for i,name in enumerate(namelist):
         y,x=_latlons_[name]
-        # Add marker
-        plt.plot(x,y,  color=color, linewidth=0, 
-                 marker=marker, markersize=None, transform=proj)
-        # add name
-        plt.text(x+dx, y+dy, name,
-             horizontalalignment='right',
-             transform=proj)
+        # maybe want special text
+        if text is not None:
+            name = text[i]
+        # Add marker and text
+        if proj is None:
+            plt.plot(x,y,  color=color, linewidth=0, 
+                     marker=marker, markersize=None)
+            plt.text(x+dx, y+dy, name, color=textcolor,
+                     horizontalalignment='right')
+        else:
+            plt.plot(x,y,  color=color, linewidth=0, 
+                     marker=marker, markersize=None, transform=proj)
+            plt.text(x+dx, y+dy, name, color=textcolor,
+                     horizontalalignment='right',
+                     transform=proj)
+        
+        
+        
+        
     
 
 def map_google(extent,zoom=10,fig=None,subplotxyn=None,draw_gridlines=True,gridlines=None):
@@ -263,20 +313,28 @@ def map_google(extent,zoom=10,fig=None,subplotxyn=None,draw_gridlines=True,gridl
     ax.add_image(request, zoom, interpolation='spline36') 
     return fig, ax, gproj
 
-def map_topography(extent, topog,lat,lon,title="Topography",cmap='copper'):
+def map_contourf(extent, data, lat,lon, title="",cmap=None, clabel=""):
     '''
     Show topography map matching extents
     '''
     
-    plt.contourf(lon,lat,topog, cmap=cmap)
+    plt.contourf(lon,lat,data, cmap=cmap)
     # set x and y limits to match extent
     xlims = extent[0:2] # East to West
     ylims = extent[2:] # South to North
     plt.ylim(ylims); plt.xlim(xlims)
-    plt.colorbar(label="m")
+    cb=plt.colorbar(label=clabel)
     plt.title(title)
     ## Turn off the tick values
     plt.xticks([]); plt.yticks([])
+    return cb
+
+def map_topography(extent, topog,lat,lon,title="Topography",cmap='copper'):
+    '''
+    Show topography map matching extents
+    '''
+    return map_contourf(extent, topog,lat,lon,title=title,cmap=cmap,clabel="m")
+    
 
 def utm_from_lon(lon):
     """

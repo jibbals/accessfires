@@ -45,7 +45,7 @@ w   = dat['upward_air_velocity'][tstep,:nlev,:,:]
 qc  = dat['mass_fraction_of_cloud_liquid_water_in_air'][tstep,:nlev,:,:] + dat['mass_fraction_of_cloud_ice_in_air'][tstep,:nlev,:,:]
 # Also some stuff based on calculated data (in fio.py)
 theta = dat['theta'][tstep,:nlev,:,:]
-zth = dat['z_theta'][tstep,:nlev,:,:]
+zth = dat['zth'][tstep,:nlev,:,:]
 u   = dat['x_wind_destaggered'][tstep,:nlev,:,:]
 v   = dat['y_wind_destaggered'][tstep,:nlev,:,:]
 s   = dat['wind_speed'][tstep,:nlev,:,:]
@@ -104,7 +104,17 @@ plotting.map_topography(waroona,topog,latt,lont)
 plt.title('Topography, wind speed')
 # start to end x=[lon0,lon1], y=[lat0, lat1]
 plt.plot([start[1],end[1]],[start[0],end[0], ], '--k', 
-         linewidth=2, marker='o', markersize=5, markercolor='red')
+         linewidth=2, marker='o', markersize=5)
+
+# add waroona, yarloop, fire start
+plotting.map_add_locations(['waroona','yarloop'], text=['Waroona', 'Yarloop'], textcolor='white')
+plotting.map_add_locations(['fire_waroona'],text = ['Fire start'], marker='*', textcolor='white')
+
+# Add vectors for winds
+# just surface, and one every 10 points to reduce density
+skip = (slice(None,None,10),slice(None,None,10))
+#mlon,mlat = np.meshgrid(lon,lat)
+plt.quiver(lon[skip[1]],lat[skip[0]],u[0][skip],v[0][skip], scale=60)
 
 ax2 = plt.subplot(2,2,3)
 plotting.transect_w(w,zth,lat,lon,start,end,topog=topog,latt=latt,lont=lont)
