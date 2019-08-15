@@ -35,7 +35,7 @@ def read_nc(fpath, keepvars=None):
   variables = {}
   if keepvars is None:
     for vname in ncfile.variables:
-      variables[vname] = ncfile.variables[vname]
+      variables[vname] = ncfile.variables[vname][:]
   else:
     # keep dimensions and whatever is in keepvars
     for vname in set(keepvars) | set(ncfile.dimensions.keys()):
@@ -100,15 +100,13 @@ def read_pcfile(fpath, keepvars=None):
     
     return variables
 
-def read_sirivan(fileindices, toplev=80, keepvars=None):
+def read_sirivan(fpaths, toplev=80, keepvars=None):
     '''
     Read a subset of the Sir Ivan model outputs
     This will loop over the desired files, so RAM doesn't need to be more than 8GB hopefully
     
     INPUTS:
-        fileindices is a list or slice telling which pc files need to be read in
-            fileindices=slice(0,None,None) will read all files
-            fileindices=[0,1,2] will read first 3 hours of output
+        fpaths is a list of files to read
         toplev = highest model level to read (save some ram)
         keepvars
             set this if you just one one or two outputs over time
@@ -120,11 +118,8 @@ def read_sirivan(fileindices, toplev=80, keepvars=None):
     topog,latt,lont = read_topog(_topog_sirivan_)
     data['topog']=topog
     
-    ## list the files to be read
-    toread = _files_sirivan_[fileindices]    
-    
     ## read first file
-    data0 = read_pcfile(toread[0])
+    data0 = read_pcfile(fpaths[0])
     
     # Keep dimensions:
     dims = ['latitude','longitude',
@@ -154,7 +149,7 @@ def read_sirivan(fileindices, toplev=80, keepvars=None):
                 'mass_fraction_of_cloud_ice_in_air',            # kg/kg
                 'mass_fraction_of_cloud_liquid_water_in_air',   # kg/kg
                 'theta',                                        # K (potential temp)
-                's',                                            # m/s (wind speed)
+                'wind_speed',                                   # m/s (wind speed)
                 'specific_humidity_0',                          # kg/kg
                 'upward_air_velocity',                          # m/s
                 'x_wind_destaggered',                           # m/s
@@ -175,7 +170,10 @@ def read_sirivan(fileindices, toplev=80, keepvars=None):
     
     ## Copy all the data we want
     for varname in flatdata:
-        data[varname] = data0[varname][np.newaxis] # newaxis is for time dimension [1,lat,lon]
+        print(varname)
+        print(type(data0[varname]), type(data0[varname][:]))
+        print(np.shape(data0[varname]))
+        data[varname] = data0[varname][np.newaxis]
         # add time dim to the flat data
         #data[varname] = data[varname][np.newaxis]
     
@@ -188,7 +186,7 @@ def read_sirivan(fileindices, toplev=80, keepvars=None):
     del data0
     
     # read each file and append along time dimension
-    for i,fpath in enumerate(toread):
+    for i,fpath in enumerate(fpaths):
         if i==0:
             continue
         datai = read_pcfile(fpath)

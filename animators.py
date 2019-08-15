@@ -8,12 +8,13 @@ Created on Fri Aug  2 10:17:14 2019
 @author: jesse greenslade
 """
 
+import matplotlib as mpl
 import matplotlib.colors as col
 import matplotlib.pyplot as plt
 import matplotlib.ticker as tick
 import numpy as np
 
-from utilities import plotting, utils
+from utilities import plotting, utils, fio
 
 def winds_2panel(topog, w, s, u, v, z, lat, lon, extentname, transect=1, hourstamp = ""):
     '''
@@ -65,6 +66,23 @@ def winds_2panel(topog, w, s, u, v, z, lat, lon, extentname, transect=1, hoursta
     plotting.transect_w(w,z, lat, lon,start,end,topog=topog)
     
     ax3 = plt.subplot(2,2,4)
-    plotting.transect_s(s,zth,lat,lon,start,end,topog=topog,latt=latt,lont=lont)
+    plotting.transect_s(s,z,lat,lon,start,end,topog=topog)
     plt.yticks([])
     
+    # Save figure into animation folder with numeric identifier
+    
+# Check winds_2panel 
+
+## Read sir ivan data
+data = fio.read_sirivan([fio._files_sirivan_[0]])
+for k,v in data.items():
+    print(k, np.shape(v))
+
+
+#mpl.rcParams["figure.dpi"] = 100
+print (data['hour'], data['time'])
+tstep=0
+winds_2panel(data['topog'], data['upward_air_velocity'][tstep], data['wind_speed'][tstep],
+             data['x_wind_destaggered'][tstep], data['y_wind_destaggered'][tstep],
+             data['zth'][tstep], data['latitude'], data['longitude'], 
+             extentname='sirivan')

@@ -54,7 +54,7 @@ _latlons_['pyrocb_waroona2'] = 0,0 # 1100-1400 second day
 _extents_['sirivan']    = [149.1, 150.1, -32.3, -31.8]
 _extents_['sirivans']   = [145,154, -34, -30]
 _latlons_['sirivan']    = -32.039730, 149.531430
-_latlons_['uarby']      = -32.047280, 149.764510
+_latlons_['uarbry']      = -32.047280, 149.764510
 _latlons_['fire_sirivan'] = -32.045, 149.6  # check with harvey or find in accessdev
 # one pyrocb
 _latlons_['pyrocb_sirivan'] = 0,0 # 0530UTC=XXXX local time
@@ -96,7 +96,8 @@ def init_plots():
   matplotlib.rcParams['image.cmap'] = 'plasma'        # Colormap default
   matplotlib.rcParams['axes.formatter.useoffset'] = False # another one I've forgotten the purpose of
   # rcParams["figure.dpi"] 
-  matplotlib.rcParams["figure.dpi"] = 600           # DEFAULT DPI for plot output
+  #matplotlib.rcParams["figure.dpi"] = 400           # DEFAULT DPI for plot output
+  # THIS MESSES UP THE PLOTTING
 
 
 def transect(data, z, lat, lon, start, end, npoints=100, 
