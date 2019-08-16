@@ -259,22 +259,25 @@ def map_add_locations(namelist, text=None, proj=None,
         # maybe want special text
         if text is not None:
             name = text[i]
+        # dx,dy can be scalar or list
+        dxi,dyi = dx,dy
+        if isintance(dx, (list,tuple,np.ndarray)):
+            dxi,dyi = dx[i], dy[i]
+
         # Add marker and text
         if proj is None:
             plt.plot(x,y,  color=color, linewidth=0, 
                      marker=marker, markersize=None)
-            plt.text(x+dx, y+dy, name, color=textcolor,
+            plt.text(x+dxi, y+dyi, name, color=textcolor,
                      horizontalalignment='right')
         else:
             plt.plot(x,y,  color=color, linewidth=0, 
                      marker=marker, markersize=None, transform=proj)
-            plt.text(x+dx, y+dy, name, color=textcolor,
+            plt.text(x+dxi, y+dyi, name, color=textcolor,
                      horizontalalignment='right',
                      transform=proj)
         
-        
-        
-        
+
     
 
 def map_google(extent,zoom=10,fig=None,subplotxyn=None,draw_gridlines=True,gridlines=None):

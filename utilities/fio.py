@@ -23,7 +23,7 @@ from glob import glob
 
 ## Sir ivan pc fire files
 _topog_sirivan_ = 'data/sirivan/umnsaa_pa2017021121.nc'
-_files_sirivan_ = glob('data/sirivan/umnsaa_pc*.nc')
+_files_sirivan_ = sorted(glob('data/sirivan/umnsaa_pc*.nc'))
 
 def read_nc(fpath, keepvars=None):
   '''
@@ -170,14 +170,11 @@ def read_sirivan(fpaths, toplev=80, keepvars=None):
     
     ## Copy all the data we want
     for varname in flatdata:
-        print(varname)
-        print(type(data0[varname]), type(data0[varname][:]))
-        print(np.shape(data0[varname]))
-        data[varname] = data0[varname][np.newaxis]
         # add time dim to the flat data
-        #data[varname] = data[varname][np.newaxis]
+        data[varname] = data0[varname][np.newaxis]
     
     for varname in fulldata:
+		# Just read up to toplev 
         data[varname] = data0[varname][:,:toplev,:,:]
         
     ## also copy height
