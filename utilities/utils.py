@@ -7,6 +7,7 @@ Created on Thu Aug  8 11:39:09 2019
 """
 
 import numpy as np
+from datetime import datetime,timedelta
 
 # interpolation package
 from scipy import interpolate
@@ -83,6 +84,15 @@ def cross_section_ticks_labels(start,end):
   xlabels = (fmt.format(-lat1,lon1),fmt.format(-0.5*(lat1+lat2),0.5*(lon1+lon2)),fmt.format(-lat2,lon2))
   return xticks,xlabels
 
+def date_from_gregorian(greg, d0=datetime(1970,1,1,0,0,0)):
+    '''
+        gregorian = "hours since 19700101 00:00:00"
+        Returns nparray of datetimes
+    '''
+    greg=np.array(greg)
+    if greg.ndim==0:
+        return np.array( [d0+timedelta(seconds=int(greg*3600)),])
+    return np.array([d0+timedelta(seconds=int(hr*3600)) for hr in greg])
 
 def relative_humidity_from_specific(qair, temp, press = 1013.25):
     '''
