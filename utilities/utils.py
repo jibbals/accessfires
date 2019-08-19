@@ -94,6 +94,15 @@ def date_from_gregorian(greg, d0=datetime(1970,1,1,0,0,0)):
         return np.array( [d0+timedelta(seconds=int(greg*3600)),])
     return np.array([d0+timedelta(seconds=int(hr*3600)) for hr in greg])
 
+
+def lat_lon_index(lat,lon,lats,lons):
+    ''' lat,lon index from lats,lons    '''
+    with np.errstate(invalid='ignore'):
+        latind=(np.abs(lats-lat)).argmin()
+        lonind=(np.abs(lons-lon)).argmin()
+    return latind,lonind
+
+
 def relative_humidity_from_specific(qair, temp, press = 1013.25):
     '''
     modified from https://earthscience.stackexchange.com/questions/2360/how-do-i-convert-specific-humidity-to-relative-humidity

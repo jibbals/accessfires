@@ -63,15 +63,17 @@ def read_nc(fpath, keepvars=None):
     Reads all dimensions, and all [or some] variables into a dictionary to be returned
   '''
   ncfile =  Dataset(fpath,'r')
-  print("Reading ",fpath, " ... ")
+  print("INFO: Reading ",fpath, " ... ")
   variables = {}
   if keepvars is None:
     for vname in ncfile.variables:
       variables[vname] = ncfile.variables[vname][:]
   else:
     # keep dimensions and whatever is in keepvars
-    for vname in set(keepvars) | set(ncfile.dimensions.keys()):
+    for vname in set(keepvars) | (set(ncfile.dimensions.keys()) & set(ncfile.variables.keys())):
       variables[vname] = ncfile.variables[vname][:]
+
+  print("INFO: finished reading ",fpath)
   return variables
 
 def read_pcfile(fpath, keepvars=None):
@@ -80,54 +82,46 @@ def read_pcfile(fpath, keepvars=None):
     '''
     variables=read_nc(fpath,keepvars)
     
-    #lat  = variables['latitude']
-    #lon  = variables['longitude']
-    #lat1 = variables['latitude_0'] # staggered 
-    #lon1 = variables['longitude_0'] # staggered
-    #z   = variables['model_level_number'  ]
-    #z1  = variables['model_level_number_0']
-    Ta  = variables['air_temperature'][:,:] # [lat,lon] at surface
-    pmsl = variables['air_pressure_at_sea_level'][0,:,:] # [lev,lat,lon]
-    #h   = variables['level_height'] # [lev] in metres
-    
-    # Some variables are on staggered latitude and longitude dimension
-    # Some are on staggered time dimension (so there will be 2 time steps instead of none)
-    p   = variables['air_pressure'][:,:,:,:] # [time,lev,lat,lon] in pascals
-    u1  = variables['x_wind'][:,:,:,:] #[time,levs,lat,lon1] wind speeds are on their directional grid edges
-    v1  = variables['y_wind'][:,:,:,:] #[time,levs,lat1,lons]
-    #q   = variables['specific_humidity_0'] # [time,lev,lat,lon]
-    #w   = variables['upward_air_velocity']# [time,lev,lat,lon] in m/s
-    #qc  = variables['mass_fraction_of_cloud_liquid_water_in_air'] + ncfile.variables['mass_fraction_of_cloud_ice_in_air']
-    
-
-    # Dimensions
-    nt,nz,ny,nx = p.shape
+    if 'air_pressure' in variables.keys():
+        p   = variables['air_pressure'][:,:,:,:] # [time,lev,lat,lon] in pascals
+        nt,nz,ny,nx = p.shape
 
     # height data (z) based on P = P0 exp{ -z/H } with assumed scale height H
-    zth = np.zeros(np.shape(p))
-    for tstep in range(2):
-        zth[tstep] = -(287*300/9.8)*np.log(p[tstep]/pmsl[np.newaxis,:,:])
+    if np.all( [varname in variables.keys() for varname in ['zth','air_pressure','air_pressure_at_sea_level']] ):
+        pmsl = variables['air_pressure_at_sea_level'][0,:,:] # [lev,lat,lon]
+        zth = np.zeros(np.shape(p))
+        for tstep in range(2):
+            zth[tstep] = -(287*300/9.8)*np.log(p[tstep]/pmsl[np.newaxis,:,:])
     
+        variables['zth']= zth
+
     # Potential temperature based on https://en.wikipedia.org/wiki/Potential_temperature
     # with gas constant R = 287.05 and specific heat capacity c_p = 1004.64
-    theta = np.zeros(np.shape(p))
-    repTa = np.repeat(Ta[np.newaxis,:,:], nz, axis=0) # repeat Ta along z axis
-    for tstep in range(2):
-        theta[tstep] = repTa*(1e5/p[tstep])**(287.05/1004.64)
+    if np.all( [varname in variables.keys() for varname in ['air_pressure','air_temperature']] ):
+        theta = np.zeros(np.shape(p))
+        Ta  = variables['air_temperature'][:,:] # [lat,lon] at surface
+        repTa = np.repeat(Ta[np.newaxis,:,:], nz, axis=0) # repeat Ta along z axis
+        for tstep in range(2):
+            theta[tstep] = repTa*(1e5/p[tstep])**(287.05/1004.64)
+        variables['theta'] = theta
 
     ## Destagger winds
     #u = np.tile(np.nan,(nz,ny,nx))
-    u = np.tile(np.nan,(nt,nz,ny,nx)) # tile repeats the nan accross nz,ny,nx dimensions
-    u[:,:,:,1:] = 0.5*(u1[:,:,:,1:] + u1[:,:,:,:-1]) # interpolation of edges
-    v = 0.5*(v1[:,:,1::,] + v1[:,:,:-1,:]) # interpolation of edges
-    s = np.hypot(u,v) # Speed is hypotenuse of u and v
-    # ONE EDGE OF S is now NANs, just set it to adjacent edge speed... (not interested in edge of domain anyway)
+    if  np.all( [varname in variables.keys() for varname in ['x_wind','y_wind']] ):
+        u1  = variables['x_wind'][:,:,:,:] #[time,levs,lat,lon1] wind speeds are on their directional grid edges
+        v1  = variables['y_wind'][:,:,:,:] #[time,levs,lat1,lons]
+        u = np.tile(np.nan,u1.shape) # tile repeats the nan accross nz,ny,nx dimensions
+        u[:,:,:,1:] = 0.5*(u1[:,:,:,1:] + u1[:,:,:,:-1]) # interpolation of edges
+        v = 0.5*(v1[:,:,1:,:] + v1[:,:,:-1,:]) # interpolation of edges
+        s = np.hypot(u,v) # Speed is hypotenuse of u and v
+        ## HYPOT on this 
+        # S[0,:,:,0] ARE ALL -5000
+        # S[1,:,:,0] ARE ALL NaN
+        s[:,:,:,0] = np.NaN # set that edge to NaN
     
-    variables['theta'] = theta
-    variables['zth']= zth
-    variables['x_wind_destaggered'] = u
-    variables['y_wind_destaggered'] = v
-    variables['wind_speed'] = s
+        variables['x_wind_destaggered'] = u
+        variables['y_wind_destaggered'] = v
+        variables['wind_speed'] = s
 
     
     return variables
@@ -151,11 +145,12 @@ def read_sirivan(fpaths, toplev=80, keepvars=None):
     data['topog']=topog
     
     ## read first file
-    data0 = read_pcfile(fpaths[0])
+    data0 = read_pcfile(fpaths[0],keepvars=keepvars)
     
     # Keep dimensions:
     dims = ['latitude','longitude',
             'time_1', # how many time steps in file 
+            'time_0', # time step of file
             'model_level_number', # 140 levels
             'pseudo_level', # 5 levels for soil?
             'longitude_0','latitude_0', # staggered lat,lon
@@ -163,7 +158,8 @@ def read_sirivan(fpaths, toplev=80, keepvars=None):
             ]
     # copy dims
     for dim in dims:
-        data[dim] = data0[dim]
+        if dim in data0.keys():
+            data[dim] = data0[dim]
     
     #assert np.all(data['latitude'] == latt), "topog latitude doesn't match pc file latitude"
     #assert np.all(data['longitude'] == lont), "topog longitude doesn't match pc file longitude"
@@ -178,6 +174,8 @@ def read_sirivan(fpaths, toplev=80, keepvars=None):
                 'surface_temperature',  # [lat,lon] K
                 #'level_height',         # [z] metres from ground level]
                 ]
+    if keepvars is not None:
+        flatdata = list(set(flatdata) & set(keepvars))
     
     ## 4 dim data [t1, z, lat, lon]
     fulldata = ['air_pressure',                                 # Pascals
@@ -200,7 +198,10 @@ def read_sirivan(fpaths, toplev=80, keepvars=None):
     time = []
     
     # Gregorian hours since 19700101 00:00:00
-    hour.append(data0['time_0']) 
+    if 'time_0' in data0.keys():
+        hour.append(data0['time_0']) 
+    else:
+        hour.append(np.nanmean(data0['time_1']))
     time.append(data0['time_1'][0])
     time.append(data0['time_1'][1])
     
@@ -209,12 +210,9 @@ def read_sirivan(fpaths, toplev=80, keepvars=None):
         # add time dim to the flat data
         data[varname] = data0[varname][np.newaxis]
     
-    for varname in fulldata:
-		# Just read up to toplev 
-        data[varname] = data0[varname][:,:toplev,:,:]
-        
     ## also copy height
-    data['level_height'] = data0['level_height'][:toplev]
+    if 'level_height' in data0.keys():
+        data['level_height'] = data0['level_height'][:toplev]
     
     del data0
     
@@ -222,11 +220,17 @@ def read_sirivan(fpaths, toplev=80, keepvars=None):
     for i,fpath in enumerate(fpaths):
         if i==0:
             continue
-        datai = read_pcfile(fpath)
+        datai = read_pcfile(fpath,keepvars=keepvars)
         
-        # Append each file along the time dimension
+        for varname in flatdata:
+            # add time dim to the flat data
+            datai[varname] = datai[varname][np.newaxis]
+        
+        # Append each file along the time dimension, which has been added to the vars missing a time dim
         for varname in flatdata+fulldata:
+            print("DEBUG:",varname,data[varname].shape, datai[varname].shape)
             data[varname] = np.append(data[varname], datai[varname], axis=0)
+            print("DEBUG:",varname,data[varname].shape)
         
         # Append time step
         hour.append(datai['time_0']) 
@@ -234,19 +238,29 @@ def read_sirivan(fpaths, toplev=80, keepvars=None):
         time.append(datai['time_1'][1])
         
         del datai
+
+
     
     data['hour'] = np.array(hour)
     data['time'] = np.array(time)
     # also for convenience add cloud metric
-    if keepvars is None:
+    if np.all( [varname in data.keys() for varname in ['mass_fraction_of_cloud_ice_in_air', 'mass_fraction_of_cloud_liquid_water_in_air']] ):
         data['qc'] = data['mass_fraction_of_cloud_ice_in_air'] + data['mass_fraction_of_cloud_liquid_water_in_air']
+
+
+    # Finally chop the top
+    for varname in fulldata:
+		# Just read up to toplev 
+        data[varname] = data[varname][:,:toplev,:,:]
+    
+
     return data
 
 
 
 
 
-def read_waroona(dtime,toplev=80,slx=True,ro=True,th1=True,th2=True):
+def read_waroona(dtime,slx=True,ro=True,th1=True,th2=True):
     '''
         Read the converted waroona model output, subset if desired
     '''
@@ -259,18 +273,20 @@ def read_waroona(dtime,toplev=80,slx=True,ro=True,th1=True,th2=True):
           'longitude', # = 576
     ]
     
+    j=[slx,ro,th1,th2]
     # 4 files per datetime to be read
     keepdata = [{},{},{},{}] # keep 4 dictionaries for output
-    for filetype,varnames in _file_types_waroona_.items():
+    for i,(filetype,varnames) in enumerate(_file_types_waroona_.items()):
         
-        if slx:
-            path = _files_waroona_%(dstamp,"slx")
-            slxdata=read_nc(path)
+        if j[i]:
+            path = _files_waroona_%(dstamp,filetype)
+            data=read_nc(path)
             for varname in varnames:
-                keepdata[0][varname] = slxdata[varname]
+                keepdata[i][varname] = data[varname]
             for dim in dims:
-                keepdata[0][dim] = slxdata[dim]
+                keepdata[i][dim] = data[dim]
             
+    return keepdata
 
 def read_waroona_old(fpaths,toplev=80,keepvars=None,old=True):
     '''
@@ -279,6 +295,8 @@ def read_waroona_old(fpaths,toplev=80,keepvars=None,old=True):
     # converted output used to match sirivan output exactly:
     data= read_sirivan(fpaths,toplev,keepvars)
     data['topog'], latt, lont = read_topog(_topog_waroona_)
+    del data['latt']
+    del data['lont'] 
      
     return data
     
