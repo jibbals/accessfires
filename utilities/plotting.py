@@ -229,11 +229,11 @@ def transect_qc(qc, z, lat, lon, start, end, npoints=100,
                topog=None, latt=None, lont=None, ztop=4000,
                title="Water and Ice (kg/kg air)", ax=None, 
                cmap='YlGnBu', norm=None, cbarform=None,
-               contours=np.arange(0.0,2.0,0.25),
+               contours=np.arange(0.0,1.5,0.1),
                lines=np.array([0.1])):
     '''
     Draw theta cross section
-        w is 3d vertical motion
+        qc is 3d vertical motion
         z(3d), lat(1d), lon(1d) is height (m), lats and lons
         start, end are [lat0,lon0], [lat1,lon1]
         contours will be filled colours
@@ -261,7 +261,7 @@ def map_add_locations(namelist, text=None, proj=None,
             name = text[i]
         # dx,dy can be scalar or list
         dxi,dyi = dx,dy
-        if isintance(dx, (list,tuple,np.ndarray)):
+        if isinstance(dx, (list,tuple,np.ndarray)):
             dxi,dyi = dx[i], dy[i]
 
         # Add marker and text
