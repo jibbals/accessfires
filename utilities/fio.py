@@ -23,7 +23,10 @@ from glob import glob
 
 ## Sir ivan pc fire files
 _topog_sirivan_ = 'data/sirivan/umnsaa_pa2017021121.nc'
+_topog_waroona_ = 'data/waroona/umnsaa_pa2016010515.nc'
 _files_sirivan_ = sorted(glob('data/sirivan/umnsaa_pc*.nc'))
+# Old version of waroona output:
+_files_waroona_old_= sorted(glob('data/waroona/umnsaa_pc*.nc'))
 
 def read_nc(fpath, keepvars=None):
   '''
@@ -132,8 +135,12 @@ def read_sirivan(fpaths, toplev=80, keepvars=None):
     # copy dims
     for dim in dims:
         data[dim] = data0[dim]
-    assert np.all(data['latitude'] == latt), "topog latitude doesn't match pc file latitude"
-    assert np.all(data['longitude'] == lont), "topog longitude doesn't match pc file longitude"
+    
+    #assert np.all(data['latitude'] == latt), "topog latitude doesn't match pc file latitude"
+    #assert np.all(data['longitude'] == lont), "topog longitude doesn't match pc file longitude"
+    if (not np.all(data['latitude'] == latt)) or (not np.all(data['longitude'] == lont)):
+        data['latt'] = latt
+        data['lont'] = lont
     
     ## data without time dim
     flatdata = ['air_temperature',      # [lat, lon] K at surface
@@ -206,6 +213,18 @@ def read_sirivan(fpaths, toplev=80, keepvars=None):
         data['qc'] = data['mass_fraction_of_cloud_ice_in_air'] + data['mass_fraction_of_cloud_liquid_water_in_air']
     return data
 
+def read_waroona(fpaths,toplev=80,keepvars=None,old=True):
+    '''
+    Read converted waroona output
+    '''
+    # converted output used to match sirivan output exactly:
+    if old:
+        data= read_sirivan(fpaths,toplev,keepvars)
+        data['topog'], latt, lont = read_topog(_topog_waroona_)
+    
+    return None
+    
+    
 def read_topog(pafile='data/umnsaa_pa2016010515.nc'):
     '''
     Read topography and lat,lon from pa file
