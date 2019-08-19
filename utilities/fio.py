@@ -28,6 +28,35 @@ _files_sirivan_ = sorted(glob('data/sirivan/umnsaa_pc*.nc'))
 # Old version of waroona output:
 _files_waroona_old_= sorted(glob('data/waroona/umnsaa_pc*.nc'))
 
+# 3 file types for new waroona output
+## slx - single level output
+## mdl_ro1 - multi level, on ro dimension (winds)
+## mdl_th1 - multi level, on theta dimension
+## mdl_th2 - multi level, on theta dimension (since um output file size is limited)
+_file_types_waroona_ = {'slx':['specific_humidity',  # [t,lat,lon]
+                               'surface_air_pressure',
+                               'surface_altitude', # [lat,lon] # Is this the new topog? 
+                               'surface_temperature', # [t,y,x]
+                               # x_wind and y_wind are here also...
+                               ],
+                        'mdl_ro1':['air_pressure', # [t,z,lat,lon]
+                               'x_wind', # [t,z,y,x]
+                               'y_wind', # [t,z,y,x]
+                               'height_above_reference_ellipsoid', #[z,y,x] # new level heights?
+                               ],
+                        'mdl_th1':['air_pressure', # Pa [t,z,y,x]
+                                   'air_temperature', # K [t,z,y,x]
+                                   'height_above_reference_ellipsoid', # m [t,z,y,x]
+                                   'specific_humidity', # kg/kg [tzyx]
+                                   'upward_air_velocity', # m/s [tzyx]
+                                   ],
+                        'mdl_th2':['mass_fraction_of_cloud_ice_in_air', # kg/kg [tzyx]
+                                   'mass_fraction_of_cloud_liquid_water_in_air',
+                                   ],
+                       }
+_files_waroona_ = 'data/waroona/umnsaa_%Y%m%d%H%M_%s.nc'
+
+
 def read_nc(fpath, keepvars=None):
   '''
     Generic read function for netcdf files
@@ -213,16 +242,45 @@ def read_sirivan(fpaths, toplev=80, keepvars=None):
         data['qc'] = data['mass_fraction_of_cloud_ice_in_air'] + data['mass_fraction_of_cloud_liquid_water_in_air']
     return data
 
-def read_waroona(fpaths,toplev=80,keepvars=None,old=True):
+
+
+
+
+def read_waroona(dtime,toplev=80,slx=True,ro=True,th1=True,th2=True):
+    '''
+        Read the converted waroona model output, subset if desired
+    '''
+    dstamp=dtime.strftime('%Y%m%d%H%M')
+    
+    # dimensions to keep
+    dims=['time', # = 6 ;
+    	  'model_level_number', # = 140 ;
+          'latitude', # = 576 ;
+          'longitude', # = 576
+    ]
+    
+    # 4 files per datetime to be read
+    keepdata = [{},{},{},{}] # keep 4 dictionaries for output
+    for filetype,varnames in _file_types_waroona_.items():
+        
+        if slx:
+            path = _files_waroona_%(dstamp,"slx")
+            slxdata=read_nc(path)
+            for varname in varnames:
+                keepdata[0][varname] = slxdata[varname]
+            for dim in dims:
+                keepdata[0][dim] = slxdata[dim]
+            
+
+def read_waroona_old(fpaths,toplev=80,keepvars=None,old=True):
     '''
     Read converted waroona output
     '''
     # converted output used to match sirivan output exactly:
-    if old:
-        data= read_sirivan(fpaths,toplev,keepvars)
-        data['topog'], latt, lont = read_topog(_topog_waroona_)
-    
-    return None
+    data= read_sirivan(fpaths,toplev,keepvars)
+    data['topog'], latt, lont = read_topog(_topog_waroona_)
+     
+    return data
     
     
 def read_topog(pafile='data/umnsaa_pa2016010515.nc'):
