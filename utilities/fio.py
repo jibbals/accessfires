@@ -33,28 +33,44 @@ _files_waroona_old_= sorted(glob('data/waroona/umnsaa_pc*.nc'))
 ## mdl_ro1 - multi level, on ro dimension (winds)
 ## mdl_th1 - multi level, on theta dimension
 ## mdl_th2 - multi level, on theta dimension (since um output file size is limited)
-_file_types_waroona_ = {'slx':['specific_humidity',  # [t,lat,lon]
+_file_types_waroona_ = {'slv':['specific_humidity',  # [t,lat,lon]
                                'surface_air_pressure',
                                'surface_altitude', # [lat,lon] # Is this the new topog? 
                                'surface_temperature', # [t,y,x]
+                               'time', # = 6 ;
+                               #'level_height', # = 140 ;
+                               'latitude', # = 576 ;
+                               'longitude', # = 576
                                # x_wind and y_wind are here also...
                                ],
                         'mdl_ro1':['air_pressure', # [t,z,lat,lon]
                                'x_wind', # [t,z,y,x]
                                'y_wind', # [t,z,y,x]
                                'height_above_reference_ellipsoid', #[z,y,x] # new level heights?
+                               'time', # = 6 ;
+                               'level_height', # = 140 ;
+                               'latitude', # = 576 ;
+                               'longitude', # = 576
                                ],
                         'mdl_th1':['air_pressure', # Pa [t,z,y,x]
                                    'air_temperature', # K [t,z,y,x]
                                    'height_above_reference_ellipsoid', # m [t,z,y,x]
                                    'specific_humidity', # kg/kg [tzyx]
                                    'upward_air_velocity', # m/s [tzyx]
+                                   'time', # = 6 ;
+                                   'level_height', # = 140 ;
+                                   'latitude', # = 576 ;
+                                   'longitude', # = 576
                                    ],
                         'mdl_th2':['mass_fraction_of_cloud_ice_in_air', # kg/kg [tzyx]
                                    'mass_fraction_of_cloud_liquid_water_in_air',
+                                   'time', # = 6 ;
+                                   'level_height', # = 140 ;
+                                   'latitude', # = 576 ;
+                                   'longitude', # = 576
                                    ],
                        }
-_files_waroona_ = 'data/waroona/umnsaa_%Y%m%d%H%M_%s.nc'
+_files_waroona_ = 'data/waroona/umnsaa_%s_%s.nc' # umnsaa_YYYYMMDDhh_slx.nc
 
 
 def read_nc(fpath, keepvars=None):
@@ -87,7 +103,7 @@ def read_pcfile(fpath, keepvars=None):
         nt,nz,ny,nx = p.shape
 
     # height data (z) based on P = P0 exp{ -z/H } with assumed scale height H
-    if np.all( [varname in variables.keys() for varname in ['zth','air_pressure','air_pressure_at_sea_level']] ):
+    if np.all( [varname in variables.keys() for varname in ['air_pressure','air_pressure_at_sea_level']] ):
         pmsl = variables['air_pressure_at_sea_level'][0,:,:] # [lev,lat,lon]
         zth = np.zeros(np.shape(p))
         for tstep in range(2):
@@ -137,6 +153,8 @@ def read_sirivan(fpaths, toplev=80, keepvars=None):
         keepvars
             set this if you just one one or two outputs over time
     '''
+    if isinstance(fpaths, str):
+        fpaths = [fpaths]
     # dictionary of data to keep
     data = {}
     
@@ -209,7 +227,10 @@ def read_sirivan(fpaths, toplev=80, keepvars=None):
     for varname in flatdata:
         # add time dim to the flat data
         data[varname] = data0[varname][np.newaxis]
-    
+    ## And read the stuff with time dim normally
+    for varname in fulldata:
+        data[varname] = data0[varname]
+        
     ## also copy height
     if 'level_height' in data0.keys():
         data['level_height'] = data0['level_height'][:toplev]
@@ -260,20 +281,14 @@ def read_sirivan(fpaths, toplev=80, keepvars=None):
 
 
 
-def read_waroona(dtime,slx=True,ro=True,th1=True,th2=True):
+def read_waroona(dtime,slv=True,ro=True,th1=True,th2=True):
     '''
-        Read the converted waroona model output, subset if desired
+        Read the converted waroona model output files
+        returns list of 4 file output dictionaries
     '''
-    dstamp=dtime.strftime('%Y%m%d%H%M')
+    dstamp=dtime.strftime('%Y%m%d%H')
     
-    # dimensions to keep
-    dims=['time', # = 6 ;
-    	  'model_level_number', # = 140 ;
-          'latitude', # = 576 ;
-          'longitude', # = 576
-    ]
-    
-    j=[slx,ro,th1,th2]
+    j=[slv,ro,th1,th2]
     # 4 files per datetime to be read
     keepdata = [{},{},{},{}] # keep 4 dictionaries for output
     for i,(filetype,varnames) in enumerate(_file_types_waroona_.items()):
@@ -281,11 +296,49 @@ def read_waroona(dtime,slx=True,ro=True,th1=True,th2=True):
         if j[i]:
             path = _files_waroona_%(dstamp,filetype)
             data=read_nc(path)
+            #print("DEBUG: ",path)
+            #print("DEBUG: ",data.keys())
+            
             for varname in varnames:
                 keepdata[i][varname] = data[varname]
-            for dim in dims:
-                keepdata[i][dim] = data[dim]
-            
+            del data # delete from ram the stuff we don't want to keep
+    
+    # Potential temperature based on https://en.wikipedia.org/wiki/Potential_temperature
+    # with gas constant R = 287.05 and specific heat capacity c_p = 1004.64
+    if th1:
+        k=2
+        p=keepdata[k]['air_pressure']
+        nt,nz,ny,nx = p.shape
+        theta = np.zeros(np.shape(p))
+        Ta  = keepdata[k]['air_temperature'][:,0:1,:,:] # [t,1,lat,lon] at surface
+        repTa = np.repeat(Ta[:,:,:,:], 140, axis=1) # repeat Ta along z axis
+        for tstep in range(nt):
+            theta[tstep] = repTa*(1e5/p[tstep])**(287.05/1004.64)
+        keepdata[k]['theta'] = theta
+
+    ## Destagger winds
+    #u = np.tile(np.nan,(nz,ny,nx))
+    if  ro:
+        k=1
+        u1  = keepdata[k]['x_wind'][:,:,:,:] #[time,levs,lat,lon1] wind speeds are on their directional grid edges
+        v1  = keepdata[k]['y_wind'][:,:,:,:] #[time,levs,lat1,lons]
+        u = np.tile(np.nan,u1.shape) # tile repeats the nan accross nz,ny,nx dimensions
+        u[:,:,:,1:] = 0.5*(u1[:,:,:,1:] + u1[:,:,:,:-1]) # interpolation of edges
+        v = 0.5*(v1[:,:,1:,:] + v1[:,:,:-1,:]) # interpolation of edges
+        s = np.hypot(u,v) # Speed is hypotenuse of u and v
+        ## HYPOT on this 
+        # S[0,:,:,0] ARE ALL -5000
+        # S[1,:,:,0] ARE ALL NaN
+        s[:,:,:,0] = np.NaN # set that edge to NaN
+        # could also jsut set them to the adjacent edge
+        #s[:,:,:,0] = s[:,:,:,1]
+        assert np.all(not np.isnan(s[:,:,:,1:])), "Some nans are left in the wind_speed calculation"
+        assert np.all(not s==-5000), "Some -5000 values remain in the wind_speed calculation"
+        
+        keepdata[k]['x_wind_destaggered'] = u
+        keepdata[k]['y_wind_destaggered'] = v
+        keepdata[k]['wind_speed'] = s
+        
     return keepdata
 
 def read_waroona_old(fpaths,toplev=80,keepvars=None,old=True):
@@ -301,7 +354,7 @@ def read_waroona_old(fpaths,toplev=80,keepvars=None,old=True):
     return data
     
     
-def read_topog(pafile='data/umnsaa_pa2016010515.nc'):
+def read_topog(pafile='data/waroona/umnsaa_pa2016010515.nc'):
     '''
     Read topography and lat,lon from pa file
     '''

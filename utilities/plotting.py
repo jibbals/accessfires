@@ -89,7 +89,8 @@ def init_plots():
   matplotlib.rcParams["text.usetex"]      = False     # I forget what this is for, maybe allows latex labels?
   matplotlib.rcParams["legend.numpoints"] = 1         # one point for marker legends
   matplotlib.rcParams["figure.figsize"]   = (9, 7)    # Default figure size
-  matplotlib.rcParams["axes.titlesize"]   = 22        # title font size
+  matplotlib.rcParams["axes.titlesize"]   = 20        # title font size
+  matplotlib.rcParams["figure.titlesize"] = 22        # figure suptitle size
   matplotlib.rcParams["axes.labelsize"]   = 17        #
   matplotlib.rcParams["xtick.labelsize"]  = 13        #
   matplotlib.rcParams["ytick.labelsize"]  = 13        #
@@ -301,21 +302,27 @@ def map_google(extent,zoom=10,fig=None,subplotxyn=None,draw_gridlines=True,gridl
         ax = fig.add_subplot(nrows,ncols,n, projection=gproj)
 
     if draw_gridlines:
-        print("drawing grid")
-        gl = ax.gridlines(linewidth=1, color='black', alpha=0.5, linestyle='--', draw_labels=True)
-        gl.xlabels_top = gl.ylabels_right = False
-        gl.xformatter = LONGITUDE_FORMATTER
-        gl.yformatter = LATITUDE_FORMATTER
-        if gridlines is not None:
-            yrange,xrange=gridlines
-            gl.xlocator = matplotlib.ticker.FixedLocator(xrange)
-            gl.ylocator = matplotlib.ticker.FixedLocator(yrange)
+        map_draw_gridlines(ax, gridlines=gridlines)
 
     # Where are we looking
     ax.set_extent(extent)
     # default interpolation ruins location names
     ax.add_image(request, zoom, interpolation='spline36') 
     return fig, ax, gproj
+
+def map_draw_gridlines(ax, linewidth=1, color='black', alpha=0.5, 
+                       linestyle='--', draw_labels=True,
+                       gridlines=None):
+    gl = ax.gridlines(linewidth=linewidth, color=color, alpha=alpha, 
+                      linestyle=linestyle, draw_labels=draw_labels)
+    if draw_labels:
+        gl.xlabels_top = gl.ylabels_right = False
+        gl.xformatter = LONGITUDE_FORMATTER
+        gl.yformatter = LATITUDE_FORMATTER
+    if gridlines is not None:
+        yrange,xrange=gridlines
+        gl.xlocator = matplotlib.ticker.FixedLocator(xrange)
+        gl.ylocator = matplotlib.ticker.FixedLocator(yrange)
 
 def map_contourf(extent, data, lat,lon, title="",cmap=None, clabel=""):
     '''
