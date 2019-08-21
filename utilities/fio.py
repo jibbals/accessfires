@@ -88,7 +88,7 @@ def read_nc(fpath, keepvars=None):
   else:
     # keep dimensions and whatever is in keepvars
     #for vname in set(keepvars) | (set(ncfile.dimensions.keys()) & set(ncfile.variables.keys())):
-    for vname in set(keepvars) 
+    for vname in set(keepvars):
       variables[vname] = ncfile.variables[vname][:]
 
   print("INFO: finished reading ",fpath)

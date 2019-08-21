@@ -151,8 +151,174 @@ def winds_2panel(data,tstep,
     return pname
 
 
+def clouds_2panel(data, tstep,
+                 extentname='waroona',
+                 transect=1, 
+                 vectorskip=14,
+                 quiverscale=60,
+                 ztop=13000,
+                 dtime=None,
+                 ext='.png'
+                ):
+    '''
+    211 Plot showing windspeed map and wind speed, along with near sites and transect
+    223 vertical motion along transect
+    224 water and ice content along transect
+    INPUTS:
+        topography, vert motion, wind speed, u,v, qc, z,lat,lon, 
+        extentname = { 'waroona' | 'sirivan' } choice of two fire locations
+        transect = int from 1 to 6 for transect choice
+        vectorskip reduces quiver density (may need to fiddle)
+        quiverscale changes how long the arrows are (also may need to fiddle)
+        dtime is datetime of output 
+        ext is the plot extension { '.png' | '.eps' }
+    '''
+    
+    topog=data['topog']
+    #w=data['upward_air_velocity'][tstep]
+    sh=data['specific_humidity'][tstep]
+    s=data['wind_speed'][tstep]
+    u=data['x_wind_destaggered'][tstep]
+    v=data['y_wind_destaggered'][tstep]
+    z=data['zth'][tstep]
+    lat=data['latitude']
+    lon=data['longitude']
+    qc=data['qc'][tstep]
+    
+    # datetime timestamp for file,title
+    if dtime is None:
+        dstamp = "YYYYMMDDHHMM"
+        stitle = dstamp
+    else:
+        dstamp = dtime.strftime("%Y%m%d%H%M")
+        stitle = dtime.strftime("%Y %b %d %H:%M (UTC)")
+    # figure name and location
+    pname="figures/%s/clouds_outline_X%d/fig_%s%s"%(extentname,transect,dstamp,ext)
+    
+    # set font sizes
+    plotting.init_plots()
+    
+    # get plot extent, and transect
+    extent = plotting._extents_[extentname]
+    start,end = plotting._transects_["%s%d"%(extentname,transect)]
+    
+    plt.figure(figsize=[7,10])
+    ax1 = plt.subplot(3,1,1)
+    
+    # top panel is wind speed surface values
+    plotting.map_contourf(extent,s[0],lat,lon,
+                          cmap=plotting._cmaps_['windspeed'],
+                          clabel='m/s')
+    plt.title('Horizontal wind speed')
+    
 
+    # start to end x=[lon0,lon1], y=[lat0, lat1]
+    plt.plot([start[1],end[1]],[start[0],end[0], ], '--k', 
+             linewidth=2, 
+             marker='X', markersize=7,markerfacecolor='white')
+    
+    # add nearby towns
+    if extentname == 'waroona':
+        plotting.map_add_locations(['waroona','yarloop'], 
+                                   text=['Waroona', 'Yarloop'], 
+                                   textcolor='k')
+        # add fire ignition
+        plotting.map_add_locations(['fire_waroona'],
+                                   text = ['Fire ignition'], 
+                                   color='r', marker='*', 
+                                   textcolor='k')
+        # add pyroCB
+    else:
+        plotting.map_add_locations(['sirivan','uarbry'], 
+                                   text=['Sir Ivan','Uarbry'],
+                                   dx=[-.02,.05], dy =[-.015,-.03],
+                                   textcolor='k')
+        # add fire ignition
+        plotting.map_add_locations(['fire_sirivan'],
+                                   text = ['Fire ignition'], dx=.05,
+                                   color='r', marker='*', 
+                                   textcolor='k')
+        # add pyroCB
 
+    
+    # Add vectors for winds
+    # just surface, and one every N points to reduce density
+    skip = (slice(None,None,vectorskip),slice(None,None,vectorskip))
+    #mlon,mlat = np.meshgrid(lon,lat)
+    plt.quiver(lon[skip[1]],lat[skip[0]],u[0][skip],v[0][skip], scale=quiverscale)
+    
+    
+    ## Second row is transect plots
+    ax2 = plt.subplot(3,1,2)
+    plotting.transect(sh,z,lat,lon,start,end,topog=topog,
+                      cmap='plasma',
+                      ztop=ztop)
+    plt.title("Specific humidity")
+    #plotting.transect_w(w,z, lat, lon,start,end,topog=topog)
+    
+    plt.ylabel('height (m)')
+    plt.xlabel('')
+    
+    ax3 = plt.subplot(3,1,3)
+    plotting.transect_qc(qc,z,lat,lon,start,end,topog=topog,
+                        ztop=ztop,)
+    # Show transect start and end
+    xticks,xlabels = plotting.transect_ticks_labels(start,end)
+    plt.xticks(xticks[0::2],xlabels[0::2]) # show transect start and end
+    
+    # Save figure into animation folder with numeric identifier
+    plt.suptitle(stitle)
+    print("INFO: Saving figure:",pname)
+    plt.savefig(pname)
+    plt.close()
+    return pname
+
+def waroona_cloud_loop(dtime):
+    '''
+    make an hours worth of clouds_2panel plots
+    '''
+    # Waroona loop
+    extentname='waroona'
+    vectorskip=9
+
+    # List of hours for which we have output.. 0515 - 0614
+    #date_list = [datetime(2016,1,5,15) + timedelta(hours=x) for x in range(24)]
+    # first hour is already done, subsequent hours have some missing fields!
+    topography,latt,lont = fio.read_topog('data/waroona/topog.nc')
+
+    # Read the files for this hour
+    waroona_outputs = fio.read_waroona(dtime)
+    slv, ro1, th1, th2 = waroona_outputs
+    
+    # grab the outputs desired
+    waroona={}
+    waroona['wind_speed'] = ro1['wind_speed']
+    waroona['x_wind_destaggered'] = ro1['x_wind_destaggered']
+    waroona['y_wind_destaggered'] = ro1['y_wind_destaggered']
+    waroona['topog'] = topography
+    waroona['zth'] = th1['zth']
+    waroona['latitude'] = slv['latitude']
+    waroona['longitude'] = slv['longitude']
+    waroona['specific_humidity'] = th1['specific_humidity']
+    waroona['qc'] = th2['mass_fraction_of_cloud_ice_in_air'] + \
+                    th2['mass_fraction_of_cloud_liquid_water_in_air']
+    #waroona['upward_air_velocity'] = th1['upward_air_velocity']
+    
+    
+    # datetime of outputs
+    timesteps = utils.date_from_gregorian(th1['time'])
+    
+    # also loop over different transects
+    for i_transect in np.arange(1,6.5,1, dtype=int):
+        for tstep in range(len(timesteps)):
+            pname = clouds_2panel(waroona,tstep=tstep,
+                                 dtime=timesteps[tstep],
+                                 extentname=extentname,
+                                 vectorskip=vectorskip, 
+                                 transect=i_transect)
+    
+    # Save ram hopefully
+    del waroona, slv, ro1, th1, th2, waroona_outputs
 
 def waroona_wind_loop(dtime):
     '''
@@ -207,7 +373,7 @@ if __name__=='__main__':
     
     with Pool(processes=4) as pool:
         
-        # Send each datetime to the process pool
-        pool.map( waroona_wind_loop, day1_dtimes )
-        
+        ## Send each datetime to the process pool
+        #pool.map( waroona_wind_loop, day1_dtimes )
+        pool.map( waroona_cloud_loop, day1_dtimes )
         
