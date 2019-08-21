@@ -72,17 +72,6 @@ def cross_section(data,lats,lons,start,end,npoints=None):
   
   return np.squeeze(slicedata)
 
-def cross_section_ticks_labels(start,end):
-  '''
-    return xticks and xlabels for a cross section
-  '''
-  lat1,lon1=start
-  lat2,lon2=end
-  # Set up a tuple of strings for the labels. Very crude!
-  xticks = (0.0,0.5,1.0)
-  fmt = '{:.1f}S {:.1f}E'
-  xlabels = (fmt.format(-lat1,lon1),fmt.format(-0.5*(lat1+lat2),0.5*(lon1+lon2)),fmt.format(-lat2,lon2))
-  return xticks,xlabels
 
 def date_from_gregorian(greg, d0=datetime(1970,1,1,0,0,0)):
     '''

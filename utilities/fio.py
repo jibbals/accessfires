@@ -33,9 +33,10 @@ _files_waroona_old_= sorted(glob('data/waroona/umnsaa_pc*.nc'))
 ## mdl_ro1 - multi level, on ro dimension (winds)
 ## mdl_th1 - multi level, on theta dimension
 ## mdl_th2 - multi level, on theta dimension (since um output file size is limited)
-_file_types_waroona_ = {'slv':['specific_humidity',  # [t,lat,lon]
-                               'surface_air_pressure',
-                               'surface_altitude', # [lat,lon] # Is this the new topog? 
+_file_types_waroona_ = {'slv':['specific_humidity',  # kg/kg [t,lat,lon]
+                               'surface_air_pressure', # Pa 
+                               'air_pressure_at_sea_level', # Pa [t,lat,lon]
+                               #'surface_altitude', # [lat,lon] # topog # only occurs in first output
                                'surface_temperature', # [t,y,x]
                                'time', # = 6 ;
                                #'level_height', # = 140 ;
@@ -46,7 +47,7 @@ _file_types_waroona_ = {'slv':['specific_humidity',  # [t,lat,lon]
                         'mdl_ro1':['air_pressure', # [t,z,lat,lon]
                                'x_wind', # [t,z,y,x]
                                'y_wind', # [t,z,y,x]
-                               'height_above_reference_ellipsoid', #[z,y,x] # new level heights?
+                               #'height_above_reference_ellipsoid', #[z,y,x] # new level heights? # only occurs in first outfile
                                'time', # = 6 ;
                                'level_height', # = 140 ;
                                'latitude', # = 576 ;
@@ -54,7 +55,7 @@ _file_types_waroona_ = {'slv':['specific_humidity',  # [t,lat,lon]
                                ],
                         'mdl_th1':['air_pressure', # Pa [t,z,y,x]
                                    'air_temperature', # K [t,z,y,x]
-                                   'height_above_reference_ellipsoid', # m [t,z,y,x]
+                                   #'height_above_reference_ellipsoid', # m [t,z,y,x] # only occurs in first outfile
                                    'specific_humidity', # kg/kg [tzyx]
                                    'upward_air_velocity', # m/s [tzyx]
                                    'time', # = 6 ;
@@ -86,7 +87,8 @@ def read_nc(fpath, keepvars=None):
       variables[vname] = ncfile.variables[vname][:]
   else:
     # keep dimensions and whatever is in keepvars
-    for vname in set(keepvars) | (set(ncfile.dimensions.keys()) & set(ncfile.variables.keys())):
+    #for vname in set(keepvars) | (set(ncfile.dimensions.keys()) & set(ncfile.variables.keys())):
+    for vname in set(keepvars) 
       variables[vname] = ncfile.variables[vname][:]
 
   print("INFO: finished reading ",fpath)
@@ -295,7 +297,7 @@ def read_waroona(dtime,slv=True,ro=True,th1=True,th2=True):
         
         if j[i]:
             path = _files_waroona_%(dstamp,filetype)
-            data=read_nc(path)
+            data=read_nc(path,varnames) # only read the stuff we want!!
             #print("DEBUG: ",path)
             #print("DEBUG: ",data.keys())
             
@@ -303,6 +305,18 @@ def read_waroona(dtime,slv=True,ro=True,th1=True,th2=True):
                 keepdata[i][varname] = data[varname]
             del data # delete from ram the stuff we don't want to keep
     
+
+    # zth
+    #
+    if th1 and slv:
+        pmsl = keepdata[0]['air_pressure_at_sea_level'][:,:,:] # [t,lat,lon]
+        p=keepdata[2]['air_pressure'][:,:,:,:] # [t,lev,lat,lon]
+        nt,nz,ny,nx = p.shape
+        reppmsl = np.repeat(pmsl[:,np.newaxis,:,:],nz, axis=1) # repeat surface pressure along z axis
+        zth = -(287*300/9.8)*np.log(p/reppmsl)
+        keepdata[2]['zth']= zth
+
+
     # Potential temperature based on https://en.wikipedia.org/wiki/Potential_temperature
     # with gas constant R = 287.05 and specific heat capacity c_p = 1004.64
     if th1:
@@ -311,9 +325,13 @@ def read_waroona(dtime,slv=True,ro=True,th1=True,th2=True):
         nt,nz,ny,nx = p.shape
         theta = np.zeros(np.shape(p))
         Ta  = keepdata[k]['air_temperature'][:,0:1,:,:] # [t,1,lat,lon] at surface
-        repTa = np.repeat(Ta[:,:,:,:], 140, axis=1) # repeat Ta along z axis
-        for tstep in range(nt):
-            theta[tstep] = repTa*(1e5/p[tstep])**(287.05/1004.64)
+        repTa = np.repeat(Ta[:,:,:,:], nz, axis=1) # repeat Ta along z axis
+        assert np.all(repTa[:,0,:,:] - repTa[:,1,:,:] == 0), "Repeated z dim is not the same"
+        theta = repTa*(1e5/p)**(287.05/1004.64)
+        #print("DEBUG: ",p.shape, theta.shape, repTa.shape, Ta.shape)
+        #print("DEBUG: ",'theta' in keepdata[k].keys())
+        if 'theta' in keepdata[k].keys():
+            print("DEBUG: ", keepdata[k]['theta'].shape)
         keepdata[k]['theta'] = theta
 
     ## Destagger winds
@@ -332,8 +350,8 @@ def read_waroona(dtime,slv=True,ro=True,th1=True,th2=True):
         s[:,:,:,0] = np.NaN # set that edge to NaN
         # could also jsut set them to the adjacent edge
         #s[:,:,:,0] = s[:,:,:,1]
-        assert np.all(not np.isnan(s[:,:,:,1:])), "Some nans are left in the wind_speed calculation"
-        assert np.all(not s==-5000), "Some -5000 values remain in the wind_speed calculation"
+        assert np.sum(np.isnan(s[:,:,:,1:]))==0, "Some nans are left in the wind_speed calculation"
+        assert np.sum(s==-5000)==0, "Some -5000 values remain in the wind_speed calculation"
         
         keepdata[k]['x_wind_destaggered'] = u
         keepdata[k]['y_wind_destaggered'] = v
@@ -354,9 +372,13 @@ def read_waroona_old(fpaths,toplev=80,keepvars=None,old=True):
     return data
     
     
-def read_topog(pafile='data/waroona/umnsaa_pa2016010515.nc'):
+def read_topog(pafile='data/waroona/topog.nc'):
     '''
     Read topography and lat,lon from pa file
+    for new output, topography exists as 'surface_altitude' in the first slv output
+    moved to topog.nc by ncks:
+        ncks -v surface_altitude ..._slv.nc data/waroona/topog.nc 
+    For easy reading here
     '''
     with Dataset(pafile,'r') as ncfile:
         topog = ncfile.variables['surface_altitude'][:,:]

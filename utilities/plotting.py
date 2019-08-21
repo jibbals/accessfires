@@ -32,8 +32,9 @@ from .context import utils
 
 ## Standard colour maps for use between figures
 _cmaps_ = {}
-_cmaps_['verticalvelocity'] = 'PiYG'
-_cmaps_ ['windspeed'] = 'YlGnBu'
+_cmaps_['verticalvelocity'] = 'PiYG'  # jeff likes this for vert velocity
+_cmaps_['windspeed']        = 'YlGnBu' # jeff likes this for wind speeds
+_cmaps_['qc']               = 'BuPu' # white through to purple for water+ice content in air
 
 # Extents: EWSN
 _extents_               = {}
@@ -66,14 +67,16 @@ _latlons_['pyrocb_sirivan'] = 0,0 # 0530UTC=XXXX local time
 # lat/longs get the most interesting picture.
 
 _transects_             = {} 
-__w0__,__w1__ = 115.8, 116.19
-_transects_['waroona1'] = [-32.75 , __w0__], [-32.95 , __w1__]
-_transects_['waroona2'] = [-32.85 , __w0__], [-33.05 , __w1__] # like waroona1 but lower
-_transects_['waroona3'] = [-32.65 , __w0__], [-32.85 , __w1__] # '' but higher
+__x0__,__x1__ = 115.8, 116.19
+__y0__,__y1__ = -32.79, -32.92
+__dy__ = .07
+_transects_['waroona1'] = [__y0__        , __x0__], [__y1__       , __x1__]
+_transects_['waroona2'] = [__y0__-__dy__ , __x0__], [__y1__-__dy__, __x1__] # like waroona1 but lower
+_transects_['waroona3'] = [__y0__+__dy__ , __x0__], [__y1__+__dy__, __x1__] # '' but higher
 # again but start more southerly and end more northerly
-_transects_['waroona4'] = [-32.925, __w0__], [-32.75 , __w1__]
-_transects_['waroona5'] = [-33.025, __w0__], [-32.85 , __w1__] # like waroona1 but lower
-_transects_['waroona6'] = [-32.825, __w0__], [-32.705, __w1__] # '' but higher
+_transects_['waroona4'] = [__y1__        , __x0__], [__y0__       , __x1__]
+_transects_['waroona5'] = [__y1__-__dy__ , __x0__], [__y0__-__dy__, __x1__] 
+_transects_['waroona6'] = [__y1__+__dy__ , __x0__], [__y0__+__dy__, __x1__]
 
 # looking at sir ivan
 __si0__, __si1__ = 149.4, 149.9
@@ -139,7 +142,7 @@ def transect(data, z, lat, lon, start, end, npoints=100,
     else:
         plt.contourf(slicex,slicez,slicedata,contours,cmap=cmap,norm=norm)
     
-    plt.colorbar(format=cbarform)
+    plt.colorbar(format=cbarform, pad=0.01) # pad is distance from axes
     #if cbarform is not None:
     #    plt.colorbar(format=cbarform)
     
@@ -157,6 +160,8 @@ def transect(data, z, lat, lon, start, end, npoints=100,
     plt.xticks([])
     plt.xlabel('')
     plt.title(title)
+
+    return slicedata, slicex, slicez
 
 def transect_s(s, z, lat, lon, start, end, npoints=100, 
                topog=None, latt=None, lont=None, ztop=4000,
@@ -176,11 +181,11 @@ def transect_s(s, z, lat, lon, start, end, npoints=100,
     s[np.isnan(s)] = -5000 # There is one row or column of s that is np.NaN, one of the edges I think
     
     # call transect using some defaults for potential temperature
-    transect(s,z,lat,lon,start,end,npoints=npoints,
-             topog=topog, latt=latt, lont=lont, ztop=ztop,
-             title=title, ax=ax, 
-             cmap=cmap, norm=norm, cbarform=cbarform,
-             contours=contours,lines=lines)
+    return transect(s,z,lat,lon,start,end,npoints=npoints,
+                    topog=topog, latt=latt, lont=lont, ztop=ztop,
+                    title=title, ax=ax, 
+                    cmap=cmap, norm=norm, cbarform=cbarform,
+                    contours=contours,lines=lines)
 
 def transect_theta(theta, z, lat, lon, start, end, npoints=100, 
                    topog=None, latt=None, lont=None, ztop=4000,
@@ -196,11 +201,11 @@ def transect_theta(theta, z, lat, lon, start, end, npoints=100,
         lines will be where to draw black lines
     '''
     # call transect using some defaults for potential temperature
-    transect(theta,z,lat,lon,start,end,npoints=npoints,
-             topog=topog, latt=latt, lont=lont, ztop=ztop,
-             title=title, ax=ax, 
-             cmap=cmap, norm=norm, cbarform=cbarform,
-             contours=contours,lines=lines)
+    return transect(theta,z,lat,lon,start,end,npoints=npoints,
+                    topog=topog, latt=latt, lont=lont, ztop=ztop,
+                    title=title, ax=ax, 
+                    cmap=cmap, norm=norm, cbarform=cbarform,
+                    contours=contours,lines=lines)
 
 def transect_w(w, z, lat, lon, start, end, npoints=100, 
                topog=None, latt=None, lont=None, ztop=4000,
@@ -220,17 +225,17 @@ def transect_w(w, z, lat, lon, start, end, npoints=100,
     #    if hasattr(cmap,'set_over'):
     #        cmap.set_over('k')
     # call transect using some defaults for vertical velocity w
-    transect(w, z,lat,lon,start,end,npoints=npoints,
-             topog=topog, latt=latt, lont=lont, ztop=ztop,
-             title=title, ax=ax, 
-             cmap=cmap, norm=norm, cbarform=cbarform,
-             contours=contours,lines=lines)
+    return transect(w, z,lat,lon,start,end,npoints=npoints,
+                    topog=topog, latt=latt, lont=lont, ztop=ztop,
+                    title=title, ax=ax, 
+                    cmap=cmap, norm=norm, cbarform=cbarform,
+                    contours=contours,lines=lines)
 
 def transect_qc(qc, z, lat, lon, start, end, npoints=100, 
                topog=None, latt=None, lont=None, ztop=4000,
                title="Water and Ice (kg/kg air)", ax=None, 
-               cmap='YlGnBu', norm=None, cbarform=None,
-               contours=np.arange(0.0,1.5,0.1),
+               cmap=_cmaps_['qc'] , norm=None, cbarform=None,
+               contours=np.arange(0.0,0.6,0.1),
                lines=np.array([0.1])):
     '''
     Draw theta cross section
@@ -242,11 +247,24 @@ def transect_qc(qc, z, lat, lon, start, end, npoints=100,
     '''
     
     # call transect using some defaults for vertical velocity w
-    transect(qc, z,lat,lon,start,end,npoints=npoints,
-             topog=topog, latt=latt, lont=lont, ztop=ztop,
-             title=title, ax=ax, 
-             cmap=cmap, norm=norm, cbarform=cbarform,
-             contours=contours,lines=lines)
+    return transect(qc, z,lat,lon,start,end,npoints=npoints,
+                    topog=topog, latt=latt, lont=lont, ztop=ztop,
+                    title=title, ax=ax, 
+                    cmap=cmap, norm=norm, cbarform=cbarform,
+                    contours=contours,lines=lines)
+
+def transect_ticks_labels(start,end):
+  '''
+    return xticks and xlabels for a cross section
+  '''
+  lat1,lon1=start
+  lat2,lon2=end
+  # Set up a tuple of strings for the labels. Very crude!
+  xticks = (0.0,0.5,1.0)
+  fmt = '{:.1f}S {:.1f}E'
+  xlabels = (fmt.format(-lat1,lon1),fmt.format(-0.5*(lat1+lat2),0.5*(lon1+lon2)),fmt.format(-lat2,lon2))
+  return xticks,xlabels
+
 
 def map_add_locations(namelist, text=None, proj=None,
                       marker='o', color='grey', markersize=None, 
@@ -334,7 +352,7 @@ def map_contourf(extent, data, lat,lon, title="",cmap=None, clabel=""):
     xlims = extent[0:2] # East to West
     ylims = extent[2:] # South to North
     plt.ylim(ylims); plt.xlim(xlims)
-    cb=plt.colorbar(label=clabel)
+    cb=plt.colorbar(label=clabel, pad=0.01)
     plt.title(title)
     ## Turn off the tick values
     plt.xticks([]); plt.yticks([])
