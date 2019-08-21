@@ -14,7 +14,9 @@ Created on Mon Aug  5 13:52:09 2019
 
 #import numpy as np
 from netCDF4 import Dataset
+from iris.fileformats.netcdf import load_cubes
 import numpy as np
+import timeit # for timing stuff
 from glob import glob
 ###
 ## GLOBALS
@@ -79,6 +81,7 @@ def read_nc(fpath, keepvars=None):
     Generic read function for netcdf files
     Reads all dimensions, and all [or some] variables into a dictionary to be returned
   '''
+  tstart = timeit.default_timer()
   ncfile =  Dataset(fpath,'r')
   print("INFO: Reading ",fpath, " ... ")
   variables = {}
@@ -91,8 +94,33 @@ def read_nc(fpath, keepvars=None):
     for vname in set(keepvars):
       variables[vname] = ncfile.variables[vname][:]
 
-  print("INFO: finished reading ",fpath)
+  
+  print("INFO: finished reading %s (%6.2f minutes) "%(fpath, timeit.default_timer()-tstart))
   return variables
+
+
+def read_nc_iris(fpath, keepvars=None):
+    '''
+    Try using iris and see if it's way faster or whatever
+    '''
+    
+    tstart = timeit.default_timer()
+    cube = load_cube(fpath)
+    print("INFO: Reading(iris) ",fpath, " ... ")
+    variables = {}
+    if keepvars is None:
+        for vname in ncfile.variables:
+            variables[vname] = ncfile.variables[vname][:]
+    else:
+        # keep dimensions and whatever is in keepvars
+        #for vname in set(keepvars) | (set(ncfile.dimensions.keys()) & set(ncfile.variables.keys())):
+        for vname in set(keepvars):
+            variables[vname] = ncfile.variables[vname][:]
+
+  
+    print("INFO: finished reading(iris) %s (%6.2f minutes) "%(fpath, timeit.default_timer()-tstart))
+    return variables
+    
 
 def read_pcfile(fpath, keepvars=None):
     '''

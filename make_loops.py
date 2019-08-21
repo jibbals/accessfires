@@ -9,6 +9,12 @@ Created on Wed Aug  20 2019
 @author: jesse
 """
 
+import matplotlib
+matplotlib.use('Agg')# don't plot on screen, send straight to file
+# this is for NCI display issue
+import matplotlib.pyplot as plt
+plt.ioff() # fix problem with ploting datetimes (don't know why this works)
+
 import matplotlib as mpl
 import matplotlib.colors as col
 import matplotlib.pyplot as plt
@@ -368,12 +374,22 @@ def waroona_wind_loop(dtime):
 
 if __name__=='__main__':
     
+    # TODO make input arguments for each loop being created
+    
     # First 24 hours:
     day1_dtimes = [datetime(2016,1,5,15) + timedelta(hours=x) for x in range(24)]
+    still_need_times = [datetime(2016,1,6,7) + timedelta(hours=x) for x in range(8)]
+    first_10_hrs = day1_dtimes[:10]
     
-    with Pool(processes=4) as pool:
+    for dtime in first_10_hrs:
+        waroona_cloud_loop(dtime)
+    
+    #for dtime in still_need_times:
+    #    waroona_wind_loop(dtime)
+    
+    #with Pool(processes=2) as pool:
         
         ## Send each datetime to the process pool
         #pool.map( waroona_wind_loop, day1_dtimes )
-        pool.map( waroona_cloud_loop, day1_dtimes )
+        #pool.map( waroona_cloud_loop, day1_dtimes )
         
