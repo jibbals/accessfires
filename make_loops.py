@@ -132,9 +132,7 @@ def winds_2panel(data,tstep,
     #plt.xlabel('transect')
     
     ax3 = plt.subplot(3,1,3)
-    contours=np.arange(0,37,3)
-    trs, trx, trz = plotting.transect_s(s,z,lat,lon,start,end,topog=topog,
-                                        contours=contours,lines=contours)
+    trs, trx, trz = plotting.transect_s(s,z,lat,lon,start,end,topog=topog,)
     #plt.yticks([])
     xticks,xlabels = plotting.transect_ticks_labels(start,end)
     plt.xticks(xticks[0::2],xlabels[0::2]) # show transect start and end

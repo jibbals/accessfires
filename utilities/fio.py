@@ -14,14 +14,15 @@ Created on Mon Aug  5 13:52:09 2019
 
 #import numpy as np
 from netCDF4 import Dataset
-from iris.fileformats.netcdf import load_cubes
+#from iris.fileformats.netcdf import load_cubes
+import iris
 import numpy as np
 import timeit # for timing stuff
 from glob import glob
 ###
 ## GLOBALS
 ###
-
+__VERBOSE__=True
 
 ## Sir ivan pc fire files
 _topog_sirivan_ = 'data/sirivan/umnsaa_pa2017021121.nc'
@@ -77,36 +78,13 @@ _files_waroona_ = 'data/waroona/umnsaa_%s_%s.nc' # umnsaa_YYYYMMDDhh_slx.nc
 
 
 def read_nc(fpath, keepvars=None):
-  '''
+    '''
     Generic read function for netcdf files
     Reads all dimensions, and all [or some] variables into a dictionary to be returned
-  '''
-  tstart = timeit.default_timer()
-  ncfile =  Dataset(fpath,'r')
-  print("INFO: Reading ",fpath, " ... ")
-  variables = {}
-  if keepvars is None:
-    for vname in ncfile.variables:
-      variables[vname] = ncfile.variables[vname][:]
-  else:
-    # keep dimensions and whatever is in keepvars
-    #for vname in set(keepvars) | (set(ncfile.dimensions.keys()) & set(ncfile.variables.keys())):
-    for vname in set(keepvars):
-      variables[vname] = ncfile.variables[vname][:]
-
-  
-  print("INFO: finished reading %s (%6.2f minutes) "%(fpath, timeit.default_timer()-tstart))
-  return variables
-
-
-def read_nc_iris(fpath, keepvars=None):
     '''
-    Try using iris and see if it's way faster or whatever
-    '''
-    
     tstart = timeit.default_timer()
-    cube = load_cube(fpath)
-    print("INFO: Reading(iris) ",fpath, " ... ")
+    ncfile =  Dataset(fpath,'r')
+    print("INFO: Reading ",fpath, " ... ")
     variables = {}
     if keepvars is None:
         for vname in ncfile.variables:
@@ -118,8 +96,25 @@ def read_nc_iris(fpath, keepvars=None):
             variables[vname] = ncfile.variables[vname][:]
 
   
-    print("INFO: finished reading(iris) %s (%6.2f minutes) "%(fpath, timeit.default_timer()-tstart))
+    print("INFO: finished reading %s (%6.2f minutes) "%( fpath, ( timeit.default_timer()-tstart )/60.0 ))
     return variables
+
+
+def read_nc_iris(fpath, keepvars=None):
+    '''
+    Try using iris and see if it's way faster or whatever
+    '''
+    
+    tstart = timeit.default_timer()
+    print("INFO: Reading(iris) ",fpath, " ... ")
+    cubes = iris.load(fpath,keepvars)
+    
+    print("INFO: finished reading(iris) %s (%6.2f minutes) "%( fpath, ( timeit.default_timer()-tstart )/60.0 ))
+    if __VERBOSE__:
+        print("VERBOSE:=== cube ===")
+        print(cubes)
+        print("=========== cube ===")
+    return cubes
     
 
 def read_pcfile(fpath, keepvars=None):
@@ -309,7 +304,19 @@ def read_sirivan(fpaths, toplev=80, keepvars=None):
 
 
 
+def read_waroona_iris(dtime):
+    '''
+        Read the converted waroona model output files
+        returns list of 4 iris cube lists
+    '''
+    dstamp=dtime.strftime('%Y%m%d%H')
+    
+    cubelists = []
+    for filetype,varnames in _file_types_waroona_.items():
+        path = _files_waroona_%(dstamp,filetype)
+        cubelists.append(read_nc_iris(path,varnames))
 
+    return cubelists
 
 def read_waroona(dtime,slv=True,ro=True,th1=True,th2=True):
     '''

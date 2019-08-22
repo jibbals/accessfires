@@ -25,13 +25,30 @@ import matplotlib.patches as mpatches
 
 from utilities import utils,fio,plotting
 
-# Try reading new outputs
-dtime=datetime(2016,1,5,15)
-waroona_outputs = fio.read_waroona(dtime)
-slv, ro1, th1, th2 = waroona_outputs
+# Try reading file using iris
+import iris
+import iris.quickplot as qplt
+from iris.fileformats.netcdf import load_cubes
 
-# Check outputs
-for i in range(4):
-    for k,v in waroona_outputs[i].items():
-        print("==== %d ===="%i)
-        print(k, np.shape(v))
+
+rpath = 'data/waroona/umnsaa_2016010515_mdl_ro1.nc'
+
+rcubes = fio.read_nc_iris(rpath)
+print(rcubes[0].name())
+print(rcubes[0].units)
+
+cubess = fio.read_waroona_iris()
+
+
+fpath='data/umnsaa_pa2016010515.nc'
+#cube = load_cubes(fpath)
+cubes = iris.load(fpath, ['surface_altitude','land_binary_mask','latitude'])
+cubes = iris.load(fpath, None)
+print(cubes)
+topog=cubes[11]
+print(topog)
+print(topog.data.shape)
+print(topog.coord('latitude'))
+print("INFO: Reading(iris) ",fpath, " ... ")
+
+qplt.contourf(topog)

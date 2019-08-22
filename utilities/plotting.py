@@ -167,7 +167,7 @@ def transect_s(s, z, lat, lon, start, end, npoints=100,
                topog=None, latt=None, lont=None, ztop=4000,
                title="Wind speed (m/s)", ax=None, 
                cmap='YlGnBu', norm=None, cbarform=None,
-               contours=np.arange(0,22,2),lines=np.arange(0,22,2)):
+               contours=np.arange(0,25,3),lines=np.arange(0,25,3)):
     '''
     Draw wind speed cross section
         s is 3d wind speed
