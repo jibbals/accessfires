@@ -32,10 +32,10 @@ from .context import utils
 
 ## Standard colour maps for use between figures
 _cmaps_ = {}
-_cmaps_['verticalvelocity'] = 'PiYG'  # jeff likes this for vert velocity
+_cmaps_['verticalvelocity'] = 'PiYG_r'  # jeff likes this for vert velocity
 _cmaps_['windspeed']        = 'YlGnBu' # jeff likes this for wind speeds
 _cmaps_['qc']               = 'BuPu' # white through to purple for water+ice content in air
-
+_cmaps_['topog']            = 'terrain'
 # Extents: EWSN
 _extents_               = {}
 _latlons_               = {}
@@ -88,15 +88,15 @@ _transects_['sirivan5'] = [-32.35, __si0__], [-32.05, __si1__]
 _transects_['sirivan6'] = [-32.3 , __si0__], [-32   , __si1__] 
 
 def init_plots():
-  matplotlib.rcParams['font.size'] = 16.0
+  matplotlib.rcParams['font.size'] = 15.0
   matplotlib.rcParams["text.usetex"]      = False     # I forget what this is for, maybe allows latex labels?
   matplotlib.rcParams["legend.numpoints"] = 1         # one point for marker legends
   matplotlib.rcParams["figure.figsize"]   = (9, 7)    # Default figure size
-  matplotlib.rcParams["axes.titlesize"]   = 20        # title font size
-  matplotlib.rcParams["figure.titlesize"] = 22        # figure suptitle size
-  matplotlib.rcParams["axes.labelsize"]   = 17        #
-  matplotlib.rcParams["xtick.labelsize"]  = 13        #
-  matplotlib.rcParams["ytick.labelsize"]  = 13        #
+  matplotlib.rcParams["axes.titlesize"]   = 19        # title font size
+  matplotlib.rcParams["figure.titlesize"] = 21        # figure suptitle size
+  matplotlib.rcParams["axes.labelsize"]   = 15        #
+  matplotlib.rcParams["xtick.labelsize"]  = 11        #
+  matplotlib.rcParams["ytick.labelsize"]  = 11        #
   matplotlib.rcParams['image.cmap'] = 'plasma'        # Colormap default
   matplotlib.rcParams['axes.formatter.useoffset'] = False # another one I've forgotten the purpose of
   # rcParams["figure.dpi"] 
@@ -167,7 +167,7 @@ def transect_s(s, z, lat, lon, start, end, npoints=100,
                topog=None, latt=None, lont=None, ztop=4000,
                title="Wind speed (m/s)", ax=None, 
                cmap='YlGnBu', norm=None, cbarform=None,
-               contours=np.arange(0,25,3),lines=np.arange(0,25,3)):
+               contours=np.arange(0,25,2.5),lines=np.arange(0,25,2.5)):
     '''
     Draw wind speed cross section
         s is 3d wind speed
@@ -235,7 +235,7 @@ def transect_qc(qc, z, lat, lon, start, end, npoints=100,
                topog=None, latt=None, lont=None, ztop=4000,
                title="Water and Ice (kg/kg air)", ax=None, 
                cmap=_cmaps_['qc'] , norm=None, cbarform=None,
-               contours=np.arange(0.0,0.6,0.1),
+               contours=np.arange(0.0,0.251,0.025),
                lines=np.array([0.1])):
     '''
     Draw theta cross section
@@ -342,12 +342,13 @@ def map_draw_gridlines(ax, linewidth=1, color='black', alpha=0.5,
         gl.xlocator = matplotlib.ticker.FixedLocator(xrange)
         gl.ylocator = matplotlib.ticker.FixedLocator(yrange)
 
-def map_contourf(extent, data, lat,lon, title="",cmap=None, clabel=""):
+def map_contourf(extent, data, lat,lon, title="",cmap=None, clabel="", clevs=None):
     '''
     Show topography map matching extents
     '''
     
-    plt.contourf(lon,lat,data, cmap=cmap)
+    plt.contourf(lon,lat,data, levels=clevs, cmap=cmap)
+        
     # set x and y limits to match extent
     xlims = extent[0:2] # East to West
     ylims = extent[2:] # South to North
@@ -358,11 +359,14 @@ def map_contourf(extent, data, lat,lon, title="",cmap=None, clabel=""):
     plt.xticks([]); plt.yticks([])
     return cb
 
-def map_topography(extent, topog,lat,lon,title="Topography",cmap='copper'):
+def map_topography(extent, topog,lat,lon,title="Topography"):
     '''
     Show topography map matching extents
     '''
-    return map_contourf(extent, topog,lat,lon,title=title,cmap=cmap,clabel="m")
+    # push blue water part of scale a bit lower
+    clevs= np.linspace(-150,550,50,endpoint=True)
+    cmaptr=plt.cm.get_cmap("terrain")
+    return map_contourf(extent, topog,lat,lon,title=title,clevs=clevs,cmap=cmaptr,clabel="m")
     
 
 def utm_from_lon(lon):

@@ -18,6 +18,10 @@ from netCDF4 import Dataset
 import iris
 import numpy as np
 import timeit # for timing stuff
+from datetime import datetime
+
+#from .context import utils
+
 from glob import glob
 ###
 ## GLOBALS
@@ -105,15 +109,9 @@ def read_nc_iris(fpath, keepvars=None):
     Try using iris and see if it's way faster or whatever
     '''
     
-    tstart = timeit.default_timer()
-    print("INFO: Reading(iris) ",fpath, " ... ")
+    print("INFO: Reading(iris) ",fpath)
     cubes = iris.load(fpath,keepvars)
     
-    print("INFO: finished reading(iris) %s (%6.2f minutes) "%( fpath, ( timeit.default_timer()-tstart )/60.0 ))
-    if __VERBOSE__:
-        print("VERBOSE:=== cube ===")
-        print(cubes)
-        print("=========== cube ===")
     return cubes
     
 
@@ -302,7 +300,37 @@ def read_sirivan(fpaths, toplev=80, keepvars=None):
 
     return data
 
-
+def read_fire(fpath='data/waroona_fire/firefront.CSIRO_24h.20160105T1500Z.nc'):
+    '''
+    from dpath, read some the firefront and heat flux
+    if tsteps is set to a list of datetimes, use this to make a slice of the time dimension
+    '''
+    # Read fire front, taking one point from each 10 minutes
+    #fpath=['C:/Users/jgreensl/Desktop/data/waroona_fire/firefront.CSIRO_24h.20160105T1500Z.nc',
+    #   'C:/Users/jgreensl/Desktop/data/waroona_fire/firefront.CSIRO_24h.20160106T1500Z.nc'
+    #   ]
+    
+    # read the cube
+    ff, = read_nc_iris(fpath)
+    
+    # just want one entry every 10 minutes:
+    ff = ff[9::10]
+    
+    # pull datetimes from time dimension
+    t  = ff.coord('time')
+    lats = ff.coord('latitude').points
+    lons = ff.coord('longitude').points
+    
+    #d0 = datetime.strptime(str(t.units),'seconds since %Y-%m-%d %H:%M:00')
+    #dates=utils.date_from_gregorian(t.points/3600., d0=d0)
+    
+    # here is where the data is actually read
+    ffdata = ff.data
+    
+    return ffdata, t.points, lats, lons 
+    
+    
+    
 
 def read_waroona_iris(dtime):
     '''
@@ -317,6 +345,10 @@ def read_waroona_iris(dtime):
         cubelists.append(read_nc_iris(path,varnames))
 
     return cubelists
+
+def read_waroona_fire():
+    '''
+    '''
 
 def read_waroona(dtime,slv=True,ro=True,th1=True,th2=True):
     '''

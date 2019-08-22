@@ -188,6 +188,8 @@ def clouds_2panel(data, tstep,
     lat=data['latitude']
     lon=data['longitude']
     qc=data['qc'][tstep]
+    #Ta=cubes.extract('air_temperature')
+    #rh = utils.relative_humidity_from_specific(sh,Ta)
     
     # datetime timestamp for file,title
     if dtime is None:

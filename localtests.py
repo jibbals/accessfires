@@ -15,7 +15,7 @@ import matplotlib.ticker as tick
 import numpy as np
 from netCDF4 import Dataset
 
-from datetime import datetime
+from datetime import datetime, timedelta
 
 import cartopy.crs as ccrs
 from cartopy.io import shapereader
@@ -30,25 +30,28 @@ import iris
 import iris.quickplot as qplt
 from iris.fileformats.netcdf import load_cubes
 
+plotting.init_plots()
 
-rpath = 'data/waroona/umnsaa_2016010515_mdl_ro1.nc'
+fpath='C:/Users/jgreensl/Desktop/data/waroona_fire/firefront.CSIRO_24h.20160105T1500Z.nc'
 
-rcubes = fio.read_nc_iris(rpath)
-print(rcubes[0].name())
-print(rcubes[0].units)
+#ff, = fio.read_nc_iris(fpath)
+#ff = ff[9::10] # take every 10th minute
 
-cubess = fio.read_waroona_iris()
+ff, t, lats,lons = fio.read_fire(fpath)
+dtimes=utils.date_from_gregorian(t/3600.,d0=datetime(2016,1,5,15))
+
+topog,latt,lont = fio.read_topog()
+clevs= np.linspace(-150,550,50,endpoint=True)#linspace seems to work better than arange in colorbar
+
+plt.close()
+plt.figure()
+for i, j in enumerate(np.arange(1,144+1,144/6.0, dtype=int)):
+    plt.subplot(3,2,i+1)
+    print(i,j)
+    print(ff[j-1].shape, dtimes[j-1])
+    cmaptr=plt.cm.get_cmap("terrain")    
+    plt.contourf(lons,lats,topog,levels=clevs,cmap=cmaptr)
+    plt.contour(lons,lats,np.transpose(ff[j-1]),np.array([0]), colors='red')
+    plt.title(dtimes[j-1])
 
 
-fpath='data/umnsaa_pa2016010515.nc'
-#cube = load_cubes(fpath)
-cubes = iris.load(fpath, ['surface_altitude','land_binary_mask','latitude'])
-cubes = iris.load(fpath, None)
-print(cubes)
-topog=cubes[11]
-print(topog)
-print(topog.data.shape)
-print(topog.coord('latitude'))
-print("INFO: Reading(iris) ",fpath, " ... ")
-
-qplt.contourf(topog)
