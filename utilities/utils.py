@@ -73,6 +73,25 @@ def cross_section(data,lats,lons,start,end,npoints=None):
   return np.squeeze(slicedata)
 
 
+def date_index(date,dates, dn=None, ignore_hours=False):
+    new_date=date
+    new_dn=dn
+    new_dates=dates
+    if ignore_hours:
+        new_date=datetime(date.year,date.month,date.day)
+        if dn is not None:
+            new_dn=datetime(dn.year,dn.month,dn.day)
+        new_dates = [datetime(d.year,d.month,d.day) for d in dates]
+    whr=np.where(np.array(new_dates) == new_date) # returns (matches_array,something)
+    if len(whr[0])==0:
+        print ("ERROR: ",date, 'not in', new_dates[0], '...', new_dates[-1])
+    elif dn is None:
+        return np.array([whr[0][0]]) # We just want the match
+    else:
+        whrn=np.where(np.array(new_dates) == new_dn) # returns last date match
+        if len(whrn[0])==0: # last date not in dataset
+            print ("ERROR: ",new_dn, 'not in', new_dates[0], '...', new_dates[-1])
+        return np.arange(whr[0][0],whrn[0][0]+1)
 
 def date_from_gregorian(greg, d0=datetime(1970,1,1,0,0,0)):
     '''

@@ -10,9 +10,10 @@
 
 
 ## Check running as script on queue
-if [ -z ${PBS_O_LOGNAME} ] ; then
-    echo "EG usage: qsub ${0}"
-    echo "    to run make_loops.py"
+if [ -z ${PBS_O_LOGNAME} ] || [ -z ${quarterday} ] 
+then
+    echo "EG usage: qsub -v quarterday=2 ${0}"
+    echo "    to run make_loops.py on 2nd 6 hour period"
     exit 0
 fi
 
@@ -24,4 +25,4 @@ module use /g/data3/hh5/public/modules
 module load conda/analysis3
 
 # run script and send output to out.make_loops, also send error stream to output stream
-python make_loops.py
+./make_loops.py --quarterday ${quarterday} --winds

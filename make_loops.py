@@ -1,4 +1,3 @@
-
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
@@ -12,9 +11,11 @@ Created on Wed Aug  20 2019
 import matplotlib
 matplotlib.use('Agg')# don't plot on screen, send straight to file
 # this is for NCI display issue
-import matplotlib.pyplot as plt
-plt.ioff() # fix problem with ploting datetimes (don't know why this works)
 
+# allow input arguments
+import argparse
+
+# plotting stuff
 import matplotlib as mpl
 import matplotlib.colors as col
 import matplotlib.pyplot as plt
@@ -22,34 +23,38 @@ import matplotlib.ticker as tick
 import numpy as np
 from datetime import datetime,timedelta
 
+# multiproc
 from multiprocessing import Pool
 from time import sleep
 
+# local modules
 from utilities import plotting, utils, fio
-
 
 def winds_2panel(data,tstep, 
                  extentname='waroona',
                  transect=1, 
-                 vectorskip=14,
+                 vectorskip=9,
                  quiverscale=60,
-                 dtime=None,
                  ext='.png'
                 ):
     '''
-    211 Plot showing contour map and wind speed, along with near sites and transect
-    223 plot showing vertical motion along transect
-    224 plot showing wind speed along transect
+    311 Plot showing contour map and wind speed, along with near sites and transect
+    312 plot showing vertical motion along transect
+    313 plot showing wind speed along transect
     INPUTS:
-        topography, vert motion, wind speed, z,lat,lon, 
+        dictionary with topog, vert motion, wind speed, wind direction, zth,lat,lon, time
+        timestep: data will have a time dimension
         extentname = { 'waroona' | 'sirivan' } choice of two fire locations
         transect = int from 1 to 6 for transect choice
         vectorskip reduces quiver density (may need to fiddle)
         quiverscale changes how long the arrows are (also may need to fiddle)
-        dtime is datetime of output 
         ext is the plot extension { '.png' | '.eps' }
     '''
     topog=data['topog']
+    ff=None
+    if data['firefront'] is not None:
+        ff=data['firefront'][tstep]
+        print("DEBUG: ff: ",ff.shape)
     w=data['upward_air_velocity'][tstep]
     s=data['wind_speed'][tstep]
     u=data['x_wind_destaggered'][tstep]
@@ -57,15 +62,11 @@ def winds_2panel(data,tstep,
     z=data['zth'][tstep]
     lat=data['latitude']
     lon=data['longitude']
+    dtime = utils.date_from_gregorian(data['time'])[tstep]
     
+    dstamp = dtime.strftime("%Y%m%d%H%M")
+    stitle = dtime.strftime("%Y %b %d %H:%M (UTC)")
     
-    # datetime timestamp for file,title
-    if dtime is None:
-        dstamp = "20YYMMDDHHMM"
-        stitle = dstamp
-    else:
-        dstamp = dtime.strftime("%Y%m%d%H%M")
-        stitle = dtime.strftime("%Y %b %d %H:%M (UTC)")
     # figure name and location
     pname="figures/%s/winds_outline_X%d/fig_%s%s"%(extentname,transect,dstamp,ext)
     
@@ -83,13 +84,18 @@ def winds_2panel(data,tstep,
     plotting.map_topography(extent,topog,lat,lon)
     plt.title('Topography, winds')
     
+    # Add fire front contour
+    if ff is not None:
+        plt.contour(lon,lat,np.transpose(ff),np.array([0]), 
+                    colors='red',linewidth=2)
+    
     # start to end x=[lon0,lon1], y=[lat0, lat1]
     plt.plot([start[1],end[1]],[start[0],end[0], ], '--k', 
              linewidth=2, 
              marker='X', markersize=7,markerfacecolor='white')
     
     # add nearby towns
-    textcolor='lightgrey'
+    textcolor='k'
     if extentname == 'waroona':
         plotting.map_add_locations(['waroona','yarloop'], 
                                    text=['Waroona', 'Yarloop'], 
@@ -132,8 +138,7 @@ def winds_2panel(data,tstep,
     #plt.xlabel('transect')
     
     ax3 = plt.subplot(3,1,3)
-    trs, trx, trz = plotting.transect_s(s,z,lat,lon,start,end,topog=topog,)
-    #plt.yticks([])
+    trs, trx, trz = plotting.transect_s(s,z,lat,lon,start,end,topog=topog)
     xticks,xlabels = plotting.transect_ticks_labels(start,end)
     plt.xticks(xticks[0::2],xlabels[0::2]) # show transect start and end
     
@@ -326,7 +331,7 @@ def waroona_cloud_loop(dtime):
     # Save ram hopefully
     del waroona, slv, ro1, th1, th2, waroona_outputs
 
-def waroona_wind_loop(dtime):
+def waroona_wind_loop(dtime,ff=None):
     '''
     Loop over transects over waroona and make the wind outline figures
     '''
@@ -338,13 +343,15 @@ def waroona_wind_loop(dtime):
     #date_list = [datetime(2016,1,5,15) + timedelta(hours=x) for x in range(24)]
     # first hour is already done, subsequent hours have some missing fields!
     topography,latt,lont = fio.read_topog('data/waroona/topog.nc')
-
+    
+    
     # Read the files for this hour
     waroona_outputs = fio.read_waroona(dtime,th2=False) # don't need cloud stuff for this plot
     slv, ro1, th1, th2 = waroona_outputs
     
     # grab the outputs desired
     waroona={}
+    waroona['firefront'] = ff
     waroona['wind_speed'] = ro1['wind_speed']
     waroona['x_wind_destaggered'] = ro1['x_wind_destaggered']
     waroona['y_wind_destaggered'] = ro1['y_wind_destaggered']
@@ -353,6 +360,7 @@ def waroona_wind_loop(dtime):
     waroona['latitude'] = slv['latitude']
     waroona['longitude'] = slv['longitude']
     waroona['upward_air_velocity'] = th1['upward_air_velocity']
+    waroona['time'] = th1['time']
     
     
     # datetime of outputs
@@ -362,7 +370,6 @@ def waroona_wind_loop(dtime):
     for i_transect in np.arange(1,6.5,1, dtype=int):
         for tstep in range(len(timesteps)):
             pname = winds_2panel(waroona,tstep=tstep,
-                                 dtime=timesteps[tstep],
                                  extentname=extentname,
                                  vectorskip=vectorskip, 
                                  transect=i_transect)
@@ -374,18 +381,51 @@ def waroona_wind_loop(dtime):
 
 if __name__=='__main__':
     
-    # TODO make input arguments for each loop being created
+    # Input arguments
+    parser = argparse.ArgumentParser()
+    # Action flags
+    parser.add_argument("--winds", 
+                action="store_true", 
+                help="run wind outline panel plots")
+    parser.add_argument("--clouds", 
+                action="store_true", 
+                help="run cloud outline panel plots")
+    # arguments with inputs
+    parser.add_argument("--quarterday",
+                type=int,
+                help="which six hours will be running? (1,2,3, or 4)")
+    args = parser.parse_args()
+    
+    qd = args.quarterday - 1
+    assert (qd < 4) and (qd > -1), "--quarterday argument must be between 1 and 4 inclusive"
+    rundateinds=np.arange(qd*6,qd*6+6,1,dtype=int)
     
     # First 24 hours:
-    day1_dtimes = [datetime(2016,1,5,15) + timedelta(hours=x) for x in range(24)]
-    still_need_times = [datetime(2016,1,6,7) + timedelta(hours=x) for x in range(8)]
-    first_10_hrs = day1_dtimes[:10]
+    day1_dtimes = np.array([datetime(2016,1,5,15) + timedelta(hours=x) for x in range(24)])
+    rundates = day1_dtimes[rundateinds]
     
-    for dtime in first_10_hrs:
-        waroona_cloud_loop(dtime)
+    ## READ FIRE FRONT:
+    ff, fft, latff, lonff = fio.read_fire()
+    # Match date time
+    # For everything except the first minute, we can send FF data 
     
-    #for dtime in still_need_times:
-    #    waroona_wind_loop(dtime)
+    
+    for i,dtime in enumerate(rundates):
+        print("INFO: Running ",dtime)
+        
+        if dtime > day1_dtimes[0]:
+            ffhour = ff[rundateinds-1]
+        
+        if args.clouds:
+            waroona_cloud_loop(dtime)
+    
+        if args.winds:
+            
+            print(ffhour.shape)
+            if dtime>day1_dtimes[0]:
+                waroona_wind_loop(dtime,ffhour)
+            else:
+                waroona_wind_loop(dtime)
     
     #with Pool(processes=2) as pool:
         

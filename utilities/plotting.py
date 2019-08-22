@@ -66,17 +66,18 @@ _latlons_['pyrocb_sirivan'] = 0,0 # 0530UTC=XXXX local time
 # You'll probably have to move the cross section around a bit to see what 
 # lat/longs get the most interesting picture.
 
+
 _transects_             = {} 
 __x0__,__x1__ = 115.8, 116.19
-__y0__,__y1__ = -32.79, -32.92
-__dy__ = .07
-_transects_['waroona1'] = [__y0__        , __x0__], [__y1__       , __x1__]
-_transects_['waroona2'] = [__y0__-__dy__ , __x0__], [__y1__-__dy__, __x1__] # like waroona1 but lower
-_transects_['waroona3'] = [__y0__+__dy__ , __x0__], [__y1__+__dy__, __x1__] # '' but higher
+
+_transects_['waroona1'] = [-32.79   , __x0__], [-32.92   , __x1__]
+_transects_['waroona2'] = [-32.82   , __x0__], [-32.93   , __x1__]
+_transects_['waroona3'] = [-32.86   , __x0__], [-32.88   , __x1__]
 # again but start more southerly and end more northerly
-_transects_['waroona4'] = [__y1__        , __x0__], [__y0__       , __x1__]
-_transects_['waroona5'] = [__y1__-__dy__ , __x0__], [__y0__-__dy__, __x1__] 
-_transects_['waroona6'] = [__y1__+__dy__ , __x0__], [__y0__+__dy__, __x1__]
+_transects_['waroona4'] = [-32.92   , __x0__], [-32.82   , __x1__]
+_transects_['waroona5'] = [-32.96   , __x0__], [-32.85   , __x1__] 
+_transects_['waroona6'] = [-32.87   , __x0__], [-32.89   , __x1__]
+
 
 # looking at sir ivan
 __si0__, __si1__ = 149.4, 149.9
@@ -210,7 +211,8 @@ def transect_theta(theta, z, lat, lon, start, end, npoints=100,
 def transect_w(w, z, lat, lon, start, end, npoints=100, 
                topog=None, latt=None, lont=None, ztop=4000,
                title="Vertical motion (m/s)", ax=None, 
-               cmap='PiYG', norm=col.SymLogNorm(0.25), cbarform=tick.ScalarFormatter(),
+               cmap=_cmaps_['verticalvelocity'] , norm=col.SymLogNorm(0.25), 
+               cbarform=tick.ScalarFormatter(),
                contours=np.union1d(np.union1d(2.0**np.arange(-2,6),-1*(2.0**np.arange(-2,6))),np.array([0])),
                lines=np.array([0])):
     '''
