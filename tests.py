@@ -7,9 +7,36 @@ Created on Tue Aug 20 08:58:26 2019
 
 import numpy as np
 from matplotlib import pyplot as plt
+from datetime import datetime, timedelta
+import timeit
 
 from utilities import fio, utils, plotting
 
+def read_time_comparison():
+    '''
+        does subsetting prior to reading save time? 
+        YES
+    '''
+    #TEST FIRE STUFF
+    ff_path = 'data/waroona_fire/firefront.csiro.01.nc'
+    ff_dtimes = np.array([datetime(2016,1,5,15,1) + timedelta(hours=x/60.) for x in range(1440)])
+    tstart = timeit.default_timer()
+    ff = fio.read_fire(ff_path,dtimes=[ff_dtimes[1]], cube=True)
+    print(ff.data.shape) # here is where actual read takes place
+    read1 = timeit.default_timer() - tstart
+    print("took %6.5f seconds to read %d timesteps"%(read1, len(ff.coord('time').points)))
+    
+    tstart = timeit.default_timer()
+    ff = fio.read_fire(ff_path,dtimes=ff_dtimes[[1,11,25,36,46]], cube=True)
+    print(ff.data.shape)
+    read6 = timeit.default_timer() - tstart
+    print("took %6.5f seconds to read %d timesteps"%(read6, len(ff.coord('time').points)))
+    
+    tstart = timeit.default_timer()
+    ff = fio.read_fire(ff_path,dtimes=None, cube=True)
+    print(ff.data.shape)
+    read10th = timeit.default_timer() - tstart
+    print("took %6.5f seconds to read %d timesteps"%(read10th, len(ff.coord('time').points)))
 
 def compare_z_heights():
     dat = fio.read_pcfile('data/umnsaa_pc2016010515.nc')

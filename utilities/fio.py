@@ -18,7 +18,7 @@ from netCDF4 import Dataset
 import iris
 import numpy as np
 import timeit # for timing stuff
-from datetime import datetime
+from datetime import datetime, timedelta
 
 #from .context import utils
 
@@ -300,7 +300,9 @@ def read_sirivan(fpaths, toplev=80, keepvars=None):
 
     return data
 
-def read_fire(fpath='data/waroona_fire/firefront.CSIRO_24h.20160105T1500Z.nc'):
+def read_fire(fpath='data/waroona_fire/firefront.CSIRO_24h.20160105T1500Z.nc', 
+              dtimes=None,
+              cube=False):
     '''
     from dpath, read some the firefront and heat flux
     if tsteps is set to a list of datetimes, use this to make a slice of the time dimension
@@ -310,32 +312,80 @@ def read_fire(fpath='data/waroona_fire/firefront.CSIRO_24h.20160105T1500Z.nc'):
     #   'C:/Users/jgreensl/Desktop/data/waroona_fire/firefront.CSIRO_24h.20160106T1500Z.nc'
     #   ]
     
+    print("INFO: reading fire file ",fpath, '...')
     # read the cube
     ff, = read_nc_iris(fpath)
     
     # just want one entry every 10 minutes:
-    ff = ff[9::10]
+    if dtimes is None:
+        ff = ff[9::10]
+    else:
+        # We need to match the time coord in fire data to our dtimes list
+        # pull datetimes from time dimension
+        fft  = ff.coord('time')
+        d0 = datetime.strptime(str(fft.units),'seconds since %Y-%m-%d %H:%M:00')
+        # datetimes from ff
+        ffdt = np.array([d0 + timedelta(seconds=secs) for secs in fft.points])
+        # for each datetime in dtimes argument, find closest index in dt
+        tinds = []
+        for dtime in dtimes:
+            tinds.append(np.argmin(abs(ffdt-dtime)))
+        tinds = np.array(tinds)
+        # Check that fire times are within 2 minutes of desired dtimes
+        #print("DEBUG: diffs")
+        #print([(ffdt[tinds][i] - dtimes[i]).seconds < 121 for i in range(len(dtimes))])
+        assert np.all([(ffdt[tinds][i] - dtimes[i]).seconds < 121 for i in range(len(dtimes))]), "fire times are > 2 minutes from requested dtimes"
+        
+        # subset cube to desired times
+        ff = ff[tinds]
+        
     
-    # pull datetimes from time dimension
-    t  = ff.coord('time')
+    # maybe just return the iris cube
+    if cube:
+        return ff
+    
+    
     lats = ff.coord('latitude').points
     lons = ff.coord('longitude').points
     
-    #d0 = datetime.strptime(str(t.units),'seconds since %Y-%m-%d %H:%M:00')
-    #dates=utils.date_from_gregorian(t.points/3600., d0=d0)
-    
     # here is where the data is actually read
     ffdata = ff.data
+    tarr = ff.coord('time').points # seconds since d0
     
-    return ffdata, t.points, lats, lons 
+    return ffdata, tarr, lats, lons 
     
+    
+def read_z(fpath='data/waroona/umnsaa_2016010515_mdl_th1.nc'):
+    '''
+    '''
+    print("INFO: reading fire file ",fpath, '...')
+    # read the cube
+    z, = read_nc_iris(fpath,'height_above_reference_ellipsoid')
+    #height_above_reference_ellipsoid / (m) (model_level_number: 140; latitude: 576; longitude: 576)
     
     
 
 def read_waroona_iris(dtime):
     '''
         Read the converted waroona model output files
-        returns list of 4 iris cube lists
+        returns list of 4 iris cube lists:
+        ========
+        0: specific_humidity / (1)             (time: 6; latitude: 576; longitude: 576)
+        1: surface_air_pressure / (Pa)         (time: 6; latitude: 576; longitude: 576)
+        2: air_pressure_at_sea_level / (Pa)    (time: 6; latitude: 576; longitude: 576)
+        3: surface_temperature / (K)           (time: 6; latitude: 576; longitude: 576)
+        ========
+        0: air_pressure / (Pa)                 (time: 6; model_level_number: 140; latitude: 576; longitude: 576)
+        1: x_wind / (m s-1)                    (time: 6; model_level_number: 140; latitude: 576; longitude: 576)
+        2: y_wind / (m s-1)                    (time: 6; model_level_number: 140; latitude: 577; longitude: 576)
+        ========
+        0: air_pressure / (Pa)                 (time: 6; model_level_number: 140; latitude: 576; longitude: 576)
+        1: air_temperature / (K)               (time: 6; model_level_number: 140; latitude: 576; longitude: 576)
+        2: specific_humidity / (kg kg-1)       (time: 6; model_level_number: 140; latitude: 576; longitude: 576)
+        3: upward_air_velocity / (m s-1)       (time: 6; model_level_number: 140; latitude: 576; longitude: 576)
+        ========
+        0: mass_fraction_of_cloud_ice_in_air / (kg kg-1) (time: 6; model_level_number: 140; latitude: 576; longitude: 576)
+        1: mass_fraction_of_cloud_liquid_water_in_air / (kg kg-1) (time: 6; model_level_number: 140; latitude: 576; longitude: 576)
     '''
     dstamp=dtime.strftime('%Y%m%d%H')
     
