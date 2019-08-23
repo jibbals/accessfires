@@ -24,5 +24,5 @@ fi
 module use /g/data3/hh5/public/modules
 module load conda/analysis3
 
-# run script and send output to out.make_loops, also send error stream to output stream
+# run script with winds flag
 ./make_loops.py --quarterday ${quarterday} --winds

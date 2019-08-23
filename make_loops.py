@@ -54,7 +54,6 @@ def winds_2panel(data,tstep,
     ff=None
     if data['firefront'] is not None:
         ff=data['firefront'][tstep]
-        print("DEBUG: ff: ",ff.shape)
     w=data['upward_air_velocity'][tstep]
     s=data['wind_speed'][tstep]
     u=data['x_wind_destaggered'][tstep]
@@ -87,7 +86,7 @@ def winds_2panel(data,tstep,
     # Add fire front contour
     if ff is not None:
         plt.contour(lon,lat,np.transpose(ff),np.array([0]), 
-                    colors='red',linewidth=2)
+                    colors='red')
     
     # start to end x=[lon0,lon1], y=[lat0, lat1]
     plt.plot([start[1],end[1]],[start[0],end[0], ], '--k', 
@@ -406,22 +405,46 @@ if __name__=='__main__':
     
     ## READ FIRE FRONT:
     ff, fft, latff, lonff = fio.read_fire()
-    # Match date time
+    ffdt = utils.date_from_gregorian(fft/3600.,d0=datetime(2016,1,5,15))
+    # ff is every 10 minutes, day1times is hourly
     # For everything except the first minute, we can send FF data 
     
+    topog,latt,lont = fio.read_topog()
     
     for i,dtime in enumerate(rundates):
         print("INFO: Running ",dtime)
         
         if dtime > day1_dtimes[0]:
-            ffhour = ff[rundateinds-1]
+            # some offset between firefront and model output
+            ffoffind = 5+qd*6*6+(i-1)*6
+            ffhour = ff[ffoffind:ffoffind+6]
+            #print("DEBUG:",ffoffind,ffoffind+6)
+            #print("DEBUG:",dtime,ffdt[ffoffind])
+            assert (dtime.hour == ffdt[ffoffind].hour) and ffdt[ffoffind].minute==0, "fire front datetime doesn't match that of model output"
+            #print("DEBUG:",ffhour.shape)
+            #=============
+
+            
+            
+            
+            #clevs= np.linspace(-150,550,50,endpoint=True)
+            #cmaptr=plt.cm.get_cmap("terrain")    
+            #plt.contourf(lont,latt,topog,levels=clevs,cmap=cmaptr)
+            #plt.contour(lont,latt,np.transpose(ffhour[0]),np.array([0]), colors='red')
+            #plt.title(dtime)
+            #plt.ylim([-33.05,-32.7])
+            #plt.xlim([115.7,116.2])
+            #plt.savefig("check_ff.png")
+            #print("DEBUG: SAVED FIGURE check_ff.png")
+
+
+            #===================
         
         if args.clouds:
             waroona_cloud_loop(dtime)
     
         if args.winds:
             
-            print(ffhour.shape)
             if dtime>day1_dtimes[0]:
                 waroona_wind_loop(dtime,ffhour)
             else:
