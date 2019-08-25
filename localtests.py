@@ -37,7 +37,9 @@ plotting.init_plots()
 
 um_dtimes = np.array([datetime(2016,1,5,15,10) + timedelta(hours=x) for x in range(24)])
 
+
 dtime = um_dtimes[0]
+um_hour=datetime(dtime.year,dtime.month,dtime.day,dtime.hour)
 extentname='waroona'
 vectorskip=9
 
@@ -54,14 +56,14 @@ zro, = iris.load('data/waroona/umnsaa_2016010515_mdl_ro1.nc', ['height_above_ref
                                                                constr_lats & 
                                                                constr_lons])
 
-topography = fio.read_nc_iris('data/waroona/umnsaa_2016010515_slv.nc',
-                              constraints = 'surface_altitude'  & 
-                                            constr_lats & 
-                                            constr_lons)[0]
+topog = fio.read_nc_iris('data/waroona/umnsaa_2016010515_slv.nc',
+                         constraints = 'surface_altitude'  & 
+                                     constr_lats & 
+                                     constr_lons)[0]
 
 
 # Read the cubes
-slv,ro1,th1,th2 = fio.read_waroona_iris(dtime=dtime, 
+slv,ro1,th1,th2 = fio.read_waroona_iris(dtime=um_hour, 
                                         constraints = [constr_z &
                                                        constr_lons &
                                                        constr_lats])
@@ -95,17 +97,33 @@ qc1,qc2 = th2.extract(['mass_fraction_of_cloud_ice_in_air','mass_fraction_of_clo
 
 qc = qc1+qc2
 
+## fire front
+# read 6 time steps:
+ff_dtimes = np.array([um_hour + timedelta(hours=x/60.) for x in range(10,61,10)])
+ff = fio.read_fire('data/waroona_fire/firefront.csiro.01.nc',dtimes=ff_dtimes,cube=True)
+ff = ff.extract(constr_lats & constr_lons)
 
 # datetime of outputs
 tdim = p.coord('time')
 
-d0 = datetime.strptime(str(p.units),'seconds since %Y-%m-%d %H:%M:00')
-timesteps = utils.date_from_gregorian(tdim.points, d0=do)
+
+
+d0 = datetime.strptime(str(tdim.units),'hours since %Y-%m-%d %H:%M:00')
+timesteps = utils.date_from_gregorian(tdim.points, d0=d0)
 
 # also loop over different transects
 for i_transect in np.arange(1,6.5,1, dtype=int):
     for tstep in range(len(timesteps)):
-        clouds_2panel(
+        '''topog,s,u,v,
+            qc,rh,
+            ff,
+            z,lat,lon,
+            dtime,
+            extentname='waroona' '''
+        clouds_2panel(topog.data, s[tstep,0].data, u[tstep,0].data, v[tstep,0].data,
+                      qc[tstep].data, rh[tstep].data, 
+                      ff[tstep].data,
+                      zro.data, lat, lon,
                       dtime=timesteps[tstep],
                       extentname=extentname,
                       vectorskip=vectorskip, 

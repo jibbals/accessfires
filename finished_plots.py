@@ -32,9 +32,9 @@ import cartopy.crs as ccrs
 
 def clouds_2panel(topog,s,u,v,
                   qc,rh,
+                  ff,
                   z,lat,lon,
                   dtime,
-                  ffcube=None,
                   extentname='waroona',
                   transect=1, 
                   vectorskip=9,
@@ -57,20 +57,7 @@ def clouds_2panel(topog,s,u,v,
         ext is the plot extension { '.png' | '.eps' }
     '''
     
-    # Take required data from cubes (assume already sliced to right time?)
-    
-    #topog=data['topog']
-    #w=data['upward_air_velocity'][tstep]
-    #sh=data['specific_humidity'][tstep]
-    #s=data['wind_speed'][tstep]
-    #u=data['x_wind_destaggered'][tstep]
-    #v=data['y_wind_destaggered'][tstep]
-    #z=data['zth'][tstep]
-    #lat=data['latitude']
-    #lon=data['longitude']
-    #qc=data['qc'][tstep]
-    #Ta=cubes.extract('air_temperature')
-    #rh = utils.relative_humidity_from_specific(sh,Ta)
+    ## Plot data, inputs will be [[z],lat,lon]
     
     # datetime timestamp for file,title
     dstamp = dtime.strftime("%Y%m%d%H%M")
@@ -89,7 +76,7 @@ def clouds_2panel(topog,s,u,v,
     plt.subplot(3,1,1)
     
     # top panel is wind speed surface values
-    plotting.map_contourf(extent,s[0],lat,lon,
+    plotting.map_contourf(extent,s,lat,lon,
                           cmap=plotting._cmaps_['windspeed'],
                           clabel='m/s')
     plt.title('Horizontal wind speed')
@@ -128,11 +115,12 @@ def clouds_2panel(topog,s,u,v,
     # just surface, and one every N points to reduce density
     skip = (slice(None,None,vectorskip),slice(None,None,vectorskip))
     #mlon,mlat = np.meshgrid(lon,lat)
-    plt.quiver(lon[skip[1]],lat[skip[0]],u[0][skip],v[0][skip], scale=quiverscale)
+    plt.quiver(lon[skip[1]],lat[skip[0]],u[skip],v[skip], scale=quiverscale)
     
     
     ## Second row is transect plots
     plt.subplot(3,1,2)
+    print("DEBUG:",rh.shape,z.shape,lat.shape,lon.shape)
     plotting.transect(rh,z,lat,lon,start,end,topog=topog,
                       cmap='plasma',
                       ztop=ztop)

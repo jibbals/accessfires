@@ -134,6 +134,8 @@ def transect(data, z, lat, lon, start, end, npoints=100,
     xaxis=np.linspace(0,1,npoints)
     slicex=np.tile(xaxis,(len(z),1))
     
+    print("DEBUG: transect: ",slicedata.shape, slicetopog.shape, slicez.shape,slicex.shape)
+    
     if ax is not None:
         plt.sca(ax)
     # Note that contourf can work with non-plaid coordinate grids provided both are 2-d

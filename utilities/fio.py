@@ -342,6 +342,7 @@ def read_fire(fpath='data/waroona_fire/firefront.CSIRO_24h.20160105T1500Z.nc',
         # Check that fire times are within 2 minutes of desired dtimes
         #print("DEBUG: diffs")
         #print([(ffdt[tinds][i] - dtimes[i]).seconds < 121 for i in range(len(dtimes))])
+        
         assert np.all([(ffdt[tinds][i] - dtimes[i]).seconds < 121 for i in range(len(dtimes))]), "fire times are > 2 minutes from requested dtimes"
         
         # subset cube to desired times
