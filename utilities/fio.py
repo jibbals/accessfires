@@ -104,13 +104,21 @@ def read_nc(fpath, keepvars=None):
     return variables
 
 
-def read_nc_iris(fpath, keepvars=None):
+def read_nc_iris(fpath, constraints=None, keepvars=None):
     '''
     Try using iris and see if it's way faster or whatever
     '''
     
     print("INFO: Reading(iris) ",fpath)
-    cubes = iris.load(fpath,keepvars)
+    # First read all cubes in file using constraints
+    if constraints is not None:
+        cubes=iris.load(fpath, constraints)
+    else:
+        cubes = iris.load(fpath)
+    
+    # If just some variables are wanted, pull them out
+    if keepvars is not None:
+        cubes = cubes.extract(keepvars)
     
     return cubes
     
@@ -362,10 +370,10 @@ def read_z(fpath='data/waroona/umnsaa_2016010515_mdl_th1.nc'):
     # read the cube
     z, = read_nc_iris(fpath,'height_above_reference_ellipsoid')
     #height_above_reference_ellipsoid / (m) (model_level_number: 140; latitude: 576; longitude: 576)
-    
+    return z
     
 
-def read_waroona_iris(dtime):
+def read_waroona_iris(dtime, constraints=None):
     '''
         Read the converted waroona model output files
         returns list of 4 iris cube lists:
@@ -392,7 +400,7 @@ def read_waroona_iris(dtime):
     cubelists = []
     for filetype,varnames in _file_types_waroona_.items():
         path = _files_waroona_%(dstamp,filetype)
-        cubelists.append(read_nc_iris(path,varnames))
+        cubelists.append(read_nc_iris(path,constraints=constraints,keepvars=varnames))
 
     return cubelists
 
