@@ -105,9 +105,6 @@ ff = ff.extract(constr_lats & constr_lons)
 
 # datetime of outputs
 tdim = p.coord('time')
-
-
-
 d0 = datetime.strptime(str(tdim.units),'hours since %Y-%m-%d %H:%M:00')
 timesteps = utils.date_from_gregorian(tdim.points, d0=d0)
 
