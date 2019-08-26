@@ -315,7 +315,6 @@ def read_fire_front(fpath='data/waroona_fire/firefront.CSIRO_24h.20160105T1500Z.
     if tsteps is set to a list of datetimes, use this to make a slice of the time dimension
     '''
     
-    print("INFO: reading fire file ",fpath, '...')
     # read the cube
     ff, = read_nc_iris(fpath)
     
@@ -532,7 +531,7 @@ def subset_time_iris(cube,dtimes,seconds=True,seccheck=121):
     #print("DEBUG: diffs")
     #print([(ffdt[tinds][i] - dtimes[i]).seconds < 121 for i in range(len(dtimes))])
     
-    assert np.all([(tdim[tinds][i] - dtimes[i]).seconds < seccheck for i in range(len(dtimes))]), "fire times are > 2 minutes from requested dtimes"
+    assert np.all([(dt[tinds][i] - dtimes[i]).seconds < seccheck for i in range(len(dtimes))]), "fire times are > 2 minutes from requested dtimes"
     
     # subset cube to desired times
     return cube[tinds]

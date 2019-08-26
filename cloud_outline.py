@@ -120,7 +120,7 @@ def clouds_2panel(topog,s,u,v,
     #print("DEBUG:",rh.shape,z.shape,lat.shape,lon.shape)
     plotting.transect(theta,z,lat,lon,start,end,topog=topog,
                       cmap='plasma',
-                      contours=np.linspace(0,1.05,22),
+                      contours=np.linspace(290,400,111),
                       ztop=ztop)
     plt.title("Potential temperature (K)")
     #plotting.transect_w(w,z, lat, lon,start,end,topog=topog)
@@ -238,4 +238,8 @@ def waroona_cloud_loop(dtime):
 if __name__ == '__main__':
     
     print("INFO: testing cloud_outline.py")
-    waroona_cloud_loop(datetime(2016,1,6,15))
+    
+    for dtime in [ datetime(2016,1,6,7) + timedelta(hours=x) for x in range(4) ]:
+        
+        waroona_cloud_loop(dtime)
+
