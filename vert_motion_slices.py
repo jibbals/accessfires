@@ -4,6 +4,8 @@ Created on Mon Aug 26 15:22:49 2019
     Show vertical motion slices
 @author: jgreensl
 """
+import matplotlib
+matplotlib.use("Agg")
 
 import matplotlib.colors as col
 import matplotlib.pyplot as plt
