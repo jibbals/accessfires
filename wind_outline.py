@@ -120,6 +120,10 @@ def winds_2panel(s,u,v,w,
     plotting.transect_w(w,z, lat, lon,start,end,topog=topog)
     plt.ylabel('height (m)')
     #plt.xlabel('transect')
+    ## Add contour where clouds occur
+    #qcslice = utils.cross_section(qc,lat,lon,start,end)
+    plotting.transect_qc(qc,z,lat,lon,start,end,contours=None, lines=np.array([0.1]), 
+                         title=None)
     
     ax3 = plt.subplot(3,1,3)
     trs, trx, trz = plotting.transect_s(s,z,lat,lon,start,end,topog=topog)

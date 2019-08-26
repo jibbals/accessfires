@@ -19,7 +19,7 @@ import iris
 from utilities import fio,plotting
 
 
-def vert_motion_slices(w,lh,lat,lon,dtime, extentname='waroona',ext='.png',dpi=400):
+def vert_motion_slices(qc,w,lh,lat,lon,dtime, extentname='waroona',ext='.png',dpi=400):
     '''
     43i showing vertical motion contourf plots, at different model levels
     Trying to see pyroCB cloud
@@ -59,6 +59,10 @@ def vert_motion_slices(w,lh,lat,lon,dtime, extentname='waroona',ext='.png',dpi=4
                                  cbar=False,)#clabel='m/s', cbarform=cbarform)
         
         plt.title("~ %5.0f m"%lh[m_lvls[i]])
+        
+        ## Add contour where clouds occur
+        plt.contour(lon,lat,qc[m_lvls[i]],np.array([0.1]), 
+                    colors='k')
         
         # add nearby towns
         if extentname == 'waroona':
@@ -106,15 +110,23 @@ constr_lats = iris.Constraint(latitude = lambda cell: South <= cell <= North )
 ### pyrocb utc time window:
 pyrocb_hours = [datetime(2016,1,6,7) + timedelta(hours=x) for x in range(6)]
 
+#test hours
+pyrocb_hours = [datetime(2016,1,5,15)]
+
 for dtime in pyrocb_hours:
     
     # Read vert motion
-    _,_,th1cubes,_ = fio.read_waroona_iris(dtime,constraints=constr_z&constr_lats&constr_lons)
+    _,_,th1cubes,th2cubes = fio.read_waroona_iris(dtime,constraints=constr_z&constr_lats&constr_lons)
     w, = th1cubes.extract('upward_air_velocity')
     lh = w.coord('level_height').points
     lat=w.coord('latitude').points
     lon=w.coord('longitude').points
-
+    
+    qc1,qc2  = th2cubes.extract(['mass_fraction_of_cloud_ice_in_air', 
+                                 'mass_fraction_of_cloud_liquid_water_in_air'])
+    
+    qc = ( qc1+qc2 )*1000 # change to g/kg
+    
     for i in range(6):
         subtime = dtime+timedelta(seconds=600*(i+1))
-        vert_motion_slices(w[i].data,lh,lat,lon,dtime=subtime)
+        vert_motion_slices(qc[i].data, w[i].data,lh,lat,lon,dtime=subtime)
