@@ -26,7 +26,7 @@ import matplotlib.patches as mpatches
 
 from utilities import utils,fio,plotting
 
-from finished_plots import clouds_2panel
+from finished_plots import clouds_2panel, horizontal_slices
 
 # Try reading file using iris
 import iris
@@ -69,4 +69,27 @@ water,ice = fio.read_nc_iris('data/waroona/umnsaa_2016010515_mdl_th2.nc',
                              constraints = constr_lats & constr_lons).extract(['mass_fraction_of_cloud_liquid_water_in_air',
                                             'mass_fraction_of_cloud_ice_in_air'])
 
-print(np.max(water.data),np.min(water.data), np.max(ice.data))
+
+
+dpi=400
+dtime=datetime(2016,1,6,8) # utc 8-10 should be pyrocb
+dtime=datetime(2016,1,5,15) # this is output I have on windows
+extentname='waroona'
+ext='.png'
+
+
+# Constraints on dimensions (testing on local machine, need to save ram)
+West,East,South,North = plotting._extents_[extentname]
+constr_z = iris.Constraint(model_level_number=lambda cell: cell < 100)
+constr_lons = iris.Constraint(longitude = lambda cell: West <= cell <= East )
+constr_lats = iris.Constraint(latitude = lambda cell: South <= cell <= North )
+# Read vert motion
+_,_,th1cubes,_ = fio.read_waroona_iris(dtime,constraints=constr_z&constr_lats&constr_lons)
+w, = th1cubes.extract('upward_air_velocity')
+lh = w.coord('level_height').points
+lat=w.coord('latitude').points
+lon=w.coord('longitude').points
+
+for i in range(6):
+    subtime = dtime+timedelta(seconds=600*(i+1))
+    horizontal_slices(w[i].data,lh,lat,lon,dtime=subtime)

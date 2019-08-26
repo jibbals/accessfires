@@ -150,6 +150,8 @@ def clouds_2panel(topog,s,u,v,
     plt.close()
     return pname
 
+
+
 def outline_waroona(pname='figures/site_outline_waroona.png'):
     
     plotting.init_plots()
