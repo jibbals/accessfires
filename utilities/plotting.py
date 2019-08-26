@@ -235,7 +235,7 @@ def transect_w(w, z, lat, lon, start, end, npoints=100,
 
 def transect_qc(qc, z, lat, lon, start, end, npoints=100, 
                topog=None, latt=None, lont=None, ztop=4000,
-               title="Water and ice (kg/kg air)", ax=None, 
+               title="Water and ice (g/kg air)", ax=None, 
                cmap=_cmaps_['qc'] , norm=None, cbarform=None,
                contours=np.arange(0.0,0.151,0.01),
                lines=np.array([0.1])):

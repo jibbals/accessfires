@@ -9,6 +9,7 @@ import numpy as np
 from matplotlib import pyplot as plt
 from datetime import datetime, timedelta
 import iris
+import iris.quickplot as qplt
 import timeit
 
 from utilities import fio, utils, plotting
@@ -38,6 +39,40 @@ def read_time_comparison():
     print(ff.data.shape)
     read10th = timeit.default_timer() - tstart
     print("took %6.5f seconds to read %d timesteps"%(read10th, len(ff.coord('time').points)))
+
+def check_height():
+    '''
+    look at z heights and see if they contain topography or not
+    '''
+    
+    plotting.init_plots()
+    
+    um_dtimes = np.array([datetime(2016,1,5,15,10) + timedelta(hours=x) for x in range(24)])
+    
+    dtime = um_dtimes[0]
+    um_hour=datetime(dtime.year,dtime.month,dtime.day,dtime.hour)
+    
+    # Constraints on dimensions
+    West,East,South,North = plotting._extents_['waroona']
+    constr_z = iris.Constraint(model_level_number=lambda cell: cell < 60)
+    constr_lons = iris.Constraint(longitude = lambda cell: West <= cell <= East )
+    constr_lats = iris.Constraint(latitude = lambda cell: South <= cell <= North )
+    
+    # metres [z, lat, lon]
+    zro, = iris.load('data/waroona/umnsaa_2016010515_mdl_ro1.nc', ['height_above_reference_ellipsoid' &
+                                                                   constr_z & 
+                                                                   constr_lats & 
+                                                                   constr_lons])
+    
+    topog, = fio.read_nc_iris('data/waroona/umnsaa_2016010515_slv.nc',
+                             constraints = 'surface_altitude'  & 
+                                         constr_lats & 
+                                         constr_lons)
+    
+    plt.subplot(211)
+    qplt.contourf(topog)
+    plt.subplot(212)
+    qplt.contourf(zro[0])
 
 def check_interp():
     '''

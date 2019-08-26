@@ -101,7 +101,7 @@ def waroona_cloud_loop(dtime):
     ## fire front
     # read 6 time steps:
     ff_dtimes = np.array([um_hour + timedelta(hours=x/60.) for x in range(10,61,10)])
-    ff = fio.read_fire(ffpath,dtimes=ff_dtimes,cube=True)
+    ff = fio.read_fire_front(ffpath,dtimes=ff_dtimes)
     ff = ff.extract(constr_lats & constr_lons) # subset lats,lons
     
     # datetime of outputs
@@ -199,7 +199,7 @@ if __name__=='__main__':
     
     if args.winds:
         ## READ FIRE FRONT:
-        ff, fft, latff, lonff = fio.read_fire()
+        ff, fft, latff, lonff = fio.read_fire_old()
         ffdt = utils.date_from_gregorian(fft/3600.,d0=datetime(2016,1,5,15))
         # ff is every 10 minutes, day1times is hourly
         # For everything except the first minute, we can send FF data 

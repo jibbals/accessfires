@@ -307,52 +307,51 @@ def read_sirivan(fpaths, toplev=80, keepvars=None):
     
 
     return data
-
-def read_fire(fpath='data/waroona_fire/firefront.CSIRO_24h.20160105T1500Z.nc', 
-              dtimes=None,
-              cube=False):
+    
+def read_fire_front(fpath='data/waroona_fire/firefront.CSIRO_24h.20160105T1500Z.nc', 
+                    dtimes=None):
     '''
-    from dpath, read some the firefront and heat flux
+    from dpath, read some the firefront
     if tsteps is set to a list of datetimes, use this to make a slice of the time dimension
     '''
-    # Read fire front, taking one point from each 10 minutes
-    #fpath=['C:/Users/jgreensl/Desktop/data/waroona_fire/firefront.CSIRO_24h.20160105T1500Z.nc',
-    #   'C:/Users/jgreensl/Desktop/data/waroona_fire/firefront.CSIRO_24h.20160106T1500Z.nc'
-    #   ]
     
     print("INFO: reading fire file ",fpath, '...')
     # read the cube
     ff, = read_nc_iris(fpath)
     
-    # just want one entry every 10 minutes:
-    if dtimes is None:
-        ff = ff[9::10]
-    else:
+    if dtimes is not None:
         # We need to match the time coord in fire data to our dtimes list
-        # pull datetimes from time dimension
-        fft  = ff.coord('time')
-        d0 = datetime.strptime(str(fft.units),'seconds since %Y-%m-%d %H:%M:00')
-        # datetimes from ff
-        ffdt = np.array([d0 + timedelta(seconds=secs) for secs in fft.points])
-        # for each datetime in dtimes argument, find closest index in dt
-        tinds = []
-        for dtime in dtimes:
-            tinds.append(np.argmin(abs(ffdt-dtime)))
-        tinds = np.array(tinds)
-        # Check that fire times are within 2 minutes of desired dtimes
-        #print("DEBUG: diffs")
-        #print([(ffdt[tinds][i] - dtimes[i]).seconds < 121 for i in range(len(dtimes))])
+        ff = subset_time_iris(ff,dtimes,seconds=True,seccheck=121)
         
-        assert np.all([(ffdt[tinds][i] - dtimes[i]).seconds < 121 for i in range(len(dtimes))]), "fire times are > 2 minutes from requested dtimes"
-        
-        # subset cube to desired times
-        ff = ff[tinds]
-        
+    # Return the iris cube
+    return ff
+
+def read_fire_flux(fpath='data/waroona_fire/sensible_heat.CSIRO_24h.20160105T1500Z.nc', 
+                    dtimes=None):
+    '''
+    from dpath, read some the sensible heat flux from fire output
+    if tsteps is set to a list of datetimes, use this to make a slice of the time dimension
+    '''
     
-    # maybe just return the iris cube
-    if cube:
-        return ff
+    print("INFO: reading fire file ",fpath, '...')
+    # read the cube
+    ff, = read_nc_iris(fpath)
     
+    if dtimes is not None:
+        ff = subset_time_iris(ff,dtimes,seconds=True,seccheck=121)
+        
+    # Return the iris cube
+    return ff
+
+def read_fire_old(fpath='data/waroona_fire/firefront.CSIRO_24h.20160105T1500Z.nc'):
+    '''
+    '''
+    print("INFO: reading fire file ",fpath, '...')
+    # read the cube
+    ff, = read_nc_iris(fpath)
+    
+    # just want one entry every 10 minutes:
+    ff = ff[9::10]
     
     lats = ff.coord('latitude').points
     lons = ff.coord('longitude').points
@@ -362,7 +361,6 @@ def read_fire(fpath='data/waroona_fire/firefront.CSIRO_24h.20160105T1500Z.nc',
     tarr = ff.coord('time').points # seconds since d0
     
     return ffdata, tarr, lats, lons 
-    
     
 def read_z(fpath='data/waroona/umnsaa_2016010515_mdl_th1.nc'):
     '''
@@ -405,14 +403,11 @@ def read_waroona_iris(dtime, constraints=None):
 
     return cubelists
 
-def read_waroona_fire():
-    '''
-    '''
-
 def read_waroona(dtime,slv=True,ro=True,th1=True,th2=True):
     '''
         Read the converted waroona model output files
         returns list of 4 file output dictionaries
+        Doesn't use iris, needs lots of RAM (10GB+)
     '''
     dstamp=dtime.strftime('%Y%m%d%H')
     
@@ -511,3 +506,33 @@ def read_topog(pafile='data/waroona/topog.nc'):
         latt = ncfile.variables['latitude' ][:]
         lont = ncfile.variables['longitude'][:]
     return topog,latt,lont
+
+def subset_time_iris(cube,dtimes,seconds=True,seccheck=121):
+    '''
+    take a cube with the time dimension and subset it to just have dtimes
+    can handle iris seconds or hours time dim formats
+    assert times are available within seccheck seconds of dtimes
+    '''
+    tdim  = cube.coord('time')
+    secmult = 1
+    if seconds:
+        unitformat = 'seconds since %Y-%m-%d %H:%M:00'
+    else:
+        unitformat = 'hours since %Y-%m-%d %H:%M:00'
+        secmult=3600
+    d0 = datetime.strptime(str(tdim.units),unitformat)
+    # datetimes from ff
+    dt = np.array([d0 + timedelta(seconds=secs*secmult) for secs in tdim.points])
+    # for each datetime in dtimes argument, find closest index in dt
+    tinds = []
+    for dtime in dtimes:
+        tinds.append(np.argmin(abs(dt-dtime)))
+    tinds = np.array(tinds)
+    # Check that fire times are within 2 minutes of desired dtimes
+    #print("DEBUG: diffs")
+    #print([(ffdt[tinds][i] - dtimes[i]).seconds < 121 for i in range(len(dtimes))])
+    
+    assert np.all([(tdim[tinds][i] - dtimes[i]).seconds < seccheck for i in range(len(dtimes))]), "fire times are > 2 minutes from requested dtimes"
+    
+    # subset cube to desired times
+    return cube[tinds]

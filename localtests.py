@@ -31,20 +31,24 @@ from finished_plots import clouds_2panel
 # Try reading file using iris
 import iris
 import iris.quickplot as qplt
-from iris.fileformats.netcdf import load_cubes
 
+
+#### SETUP PLOTTING:
 plotting.init_plots()
 
+### DATETIMES FOR UM AND FIRE OUTPUT
 um_dtimes = np.array([datetime(2016,1,5,15,10) + timedelta(hours=x) for x in range(24)])
 
+dtime0 = um_dtimes[0]
+dtimeE = um_dtimes[-1]
+um_hour=datetime(dtime0.year,dtime0.month,dtime0.day,dtime0.hour)
+ff_dtimes = np.array([um_hour + timedelta(hours=x/60.) for x in range(10,61,10)])
 
-dtime = um_dtimes[0]
-um_hour=datetime(dtime.year,dtime.month,dtime.day,dtime.hour)
-extentname='waroona'
-vectorskip=9
+
+##### TEST CODE HERE
 
 
-# Constraints on dimensions
+# Constraints on dimensions (testing on local machine, need to save ram)
 West,East,South,North = plotting._extents_['waroona']
 constr_z = iris.Constraint(model_level_number=lambda cell: cell < 60)
 constr_lons = iris.Constraint(longitude = lambda cell: West <= cell <= East )
@@ -56,76 +60,13 @@ zro, = iris.load('data/waroona/umnsaa_2016010515_mdl_ro1.nc', ['height_above_ref
                                                                constr_lats & 
                                                                constr_lons])
 
-topog = fio.read_nc_iris('data/waroona/umnsaa_2016010515_slv.nc',
+topog, = fio.read_nc_iris('data/waroona/umnsaa_2016010515_slv.nc',
                          constraints = 'surface_altitude'  & 
                                      constr_lats & 
-                                     constr_lons)[0]
+                                     constr_lons)
 
+water,ice = fio.read_nc_iris('data/waroona/umnsaa_2016010515_mdl_th2.nc', 
+                             constraints = constr_lats & constr_lons).extract(['mass_fraction_of_cloud_liquid_water_in_air',
+                                            'mass_fraction_of_cloud_ice_in_air'])
 
-# Read the cubes
-slv,ro1,th1,th2 = fio.read_waroona_iris(dtime=um_hour, 
-                                        constraints = [constr_z &
-                                                       constr_lons &
-                                                       constr_lats])
-
-# wind speeds need to be interpolated onto non-staggered latlons
-# u is on lon1 dim
-# v is on lat1 dim
-
-# pull out wind speed
-p, u1, v1 = ro1.extract(['air_pressure','x_wind','y_wind'])
-# DESTAGGER u and v using iris interpolate
-# u1: [t,z, lat, lon1]
-# v1: [t,z, lat1, lon]  # put these both onto [t,z,lat,lon]
-u = u1.interpolate([('longitude',p.coord('longitude').points)],
-                   iris.analysis.Linear())
-v = v1.interpolate([('latitude',p.coord('latitude').points)],
-                   iris.analysis.Linear())
-lon=u.coord('longitude').points
-lat=u.coord('latitude').points
-lon1=u1.coord('longitude').points
-lat1=v1.coord('latitude').points
-
-# Get wind speed cube
-s = iris.analysis.maths.apply_ufunc(np.hypot,u,v)
-
-sh,Ta = th1.extract(['specific_humidity','air_temperature'])
-
-rh = utils.relative_humidity_from_specific(sh.data,Ta.data)
-
-qc1,qc2 = th2.extract(['mass_fraction_of_cloud_ice_in_air','mass_fraction_of_cloud_liquid_water_in_air'])
-
-qc = qc1+qc2
-
-## fire front
-# read 6 time steps:
-ff_dtimes = np.array([um_hour + timedelta(hours=x/60.) for x in range(10,61,10)])
-ff = fio.read_fire('data/waroona_fire/firefront.csiro.01.nc',dtimes=ff_dtimes,cube=True)
-ff = ff.extract(constr_lats & constr_lons)
-
-# datetime of outputs
-tdim = p.coord('time')
-d0 = datetime.strptime(str(tdim.units),'hours since %Y-%m-%d %H:%M:00')
-timesteps = utils.date_from_gregorian(tdim.points, d0=d0)
-
-# also loop over different transects
-for i_transect in np.arange(1,6.5,1, dtype=int):
-    for tstep in range(len(timesteps)):
-        '''topog,s,u,v,
-            qc,rh,
-            ff,
-            z,lat,lon,
-            dtime,
-            extentname='waroona' '''
-        clouds_2panel(topog.data, s[tstep,0].data, u[tstep,0].data, v[tstep,0].data,
-                      qc[tstep].data, rh[tstep].data, 
-                      ff[tstep].data,
-                      zro.data, lat, lon,
-                      dtime=timesteps[tstep],
-                      extentname=extentname,
-                      vectorskip=vectorskip, 
-                      transect=i_transect)
-
-
-
-
+print(np.max(water.data),np.min(water.data), np.max(ice.data))
