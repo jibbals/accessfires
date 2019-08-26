@@ -25,4 +25,6 @@ module use /g/data3/hh5/public/modules
 module load conda/analysis3
 
 # run script with winds flag
-./make_loops.py --quarterday ${quarterday} --winds
+#./make_loops.py --quarterday ${quarterday} --winds
+# run script with clouds flag
+./make_loops.py --quarterday ${quarterday} --clouds

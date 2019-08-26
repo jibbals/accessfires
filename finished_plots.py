@@ -37,7 +37,7 @@ def clouds_2panel(topog,s,u,v,
                   dtime,
                   extentname='waroona',
                   transect=1, 
-                  vectorskip=9,
+                  vectorskip=13,
                   quiverscale=60,
                   ztop=13000,
                   ext='.png',
@@ -77,6 +77,7 @@ def clouds_2panel(topog,s,u,v,
     
     # top panel is wind speed surface values
     plotting.map_contourf(extent,s,lat,lon,
+                          clevs = np.linspace(0,15,31),
                           cmap=plotting._cmaps_['windspeed'],
                           clabel='m/s')
     plt.title('Horizontal wind speed')
@@ -117,14 +118,18 @@ def clouds_2panel(topog,s,u,v,
     #mlon,mlat = np.meshgrid(lon,lat)
     plt.quiver(lon[skip[1]],lat[skip[0]],u[skip],v[skip], scale=quiverscale)
     
+    # Add fire outline
+    plt.contour(lon,lat,np.transpose(ff),np.array([0]), 
+                colors='red')
     
     ## Second row is transect plots
     plt.subplot(3,1,2)
-    print("DEBUG:",rh.shape,z.shape,lat.shape,lon.shape)
+    #print("DEBUG:",rh.shape,z.shape,lat.shape,lon.shape)
     plotting.transect(rh,z,lat,lon,start,end,topog=topog,
                       cmap='plasma',
+                      contours=np.linspace(0,1.05,22),
                       ztop=ztop)
-    plt.title("Specific humidity")
+    plt.title("Relative humidity")
     #plotting.transect_w(w,z, lat, lon,start,end,topog=topog)
     
     plt.ylabel('height (m)')

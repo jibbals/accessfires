@@ -37,16 +37,22 @@ def waroona_cloud_loop(dtime):
     then send all the data to plotting method
     '''
     um_hour=datetime(dtime.year,dtime.month,dtime.day,dtime.hour)
-    extentname='waroona'
-    vectorskip=9
+    if um_hour < datetime(2016,1,6,15):
+        ffpath = 'data/waroona_fire/firefront.CSIRO_24h.20160105T1500Z.nc'
+    elif um_hour < datetime(2016,1,7,15):
+        ffpath = 'data/waroona_fire/firefront.CSIRO_24h.20160106T1500Z.nc'
+    else:
+        ffpath = 'data/waroona_fire/firefront.CSIRO_24h.20160107T1500Z.nc'
     
+    extentname='waroona'
     
     # Constraints on dimensions (save ram and reading time)
     West,East,South,North = plotting._extents_['waroona']
-    constr_z = iris.Constraint(model_level_number=lambda cell: cell < 120)
+    constr_z = iris.Constraint(model_level_number=lambda cell: cell < 140) # for the clouds panel don't bother with cutting away strat
     constr_lons = iris.Constraint(longitude = lambda cell: West <= cell <= East )
     constr_lats = iris.Constraint(latitude = lambda cell: South <= cell <= North )
     
+    ## Model level heights and topography don't depend on time
     # metres [z, lat, lon]
     zro, = iris.load('data/waroona/umnsaa_2016010515_mdl_ro1.nc', ['height_above_reference_ellipsoid' &
                                                                    constr_z & 
@@ -95,7 +101,6 @@ def waroona_cloud_loop(dtime):
     ## fire front
     # read 6 time steps:
     ff_dtimes = np.array([um_hour + timedelta(hours=x/60.) for x in range(10,61,10)])
-    ffpath = um_hour.strftime('data/waroona_fire/firefront.CSIRO_24h.%Y%m%dT1500Z.nc')
     ff = fio.read_fire(ffpath,dtimes=ff_dtimes,cube=True)
     ff = ff.extract(constr_lats & constr_lons) # subset lats,lons
     
@@ -113,7 +118,6 @@ def waroona_cloud_loop(dtime):
                           zro.data, lat, lon,
                           dtime=timesteps[tstep],
                           extentname=extentname,
-                          vectorskip=vectorskip, 
                           transect=i_transect)
     
 

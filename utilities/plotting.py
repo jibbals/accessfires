@@ -134,8 +134,6 @@ def transect(data, z, lat, lon, start, end, npoints=100,
     xaxis=np.linspace(0,1,npoints)
     slicex=np.tile(xaxis,(len(z),1))
     
-    print("DEBUG: transect: ",slicedata.shape, slicetopog.shape, slicez.shape,slicex.shape)
-    
     if ax is not None:
         plt.sca(ax)
     # Note that contourf can work with non-plaid coordinate grids provided both are 2-d
@@ -237,9 +235,9 @@ def transect_w(w, z, lat, lon, start, end, npoints=100,
 
 def transect_qc(qc, z, lat, lon, start, end, npoints=100, 
                topog=None, latt=None, lont=None, ztop=4000,
-               title="Water and Ice (kg/kg air)", ax=None, 
+               title="Water and ice (kg/kg air)", ax=None, 
                cmap=_cmaps_['qc'] , norm=None, cbarform=None,
-               contours=np.arange(0.0,0.251,0.025),
+               contours=np.arange(0.0,0.151,0.01),
                lines=np.array([0.1])):
     '''
     Draw theta cross section
