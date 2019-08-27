@@ -22,7 +22,7 @@ from datetime import datetime,timedelta
 import iris # file reading and constraints etc
 
 # local modules
-from utilities import plotting, utils, fio
+from utilities import plotting, utils, fio, constants
 
 
 def emberstorm_clouds(dtime,

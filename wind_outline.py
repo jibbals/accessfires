@@ -21,7 +21,7 @@ from datetime import datetime,timedelta
 import iris # file reading and constraints etc
 
 # local modules
-from utilities import plotting, utils, fio
+from utilities import plotting, utils, fio, constants
 
 
 def winds_2panel(s,u,v,w,
@@ -32,6 +32,7 @@ def winds_2panel(s,u,v,w,
                  transect=1, 
                  vectorskip=9,
                  quiverscale=60,
+                 cloud_threshold=constants.cloud_threshold,
                  ext='.png'
                 ):
     '''
@@ -123,7 +124,7 @@ def winds_2panel(s,u,v,w,
     plt.ylabel('height (m)')
     ## Add contour where clouds occur
     qcslice = utils.cross_section(qc,lat,lon,start,end, npoints=100)
-    plt.contour(xslice,zslice,qcslice,np.array([0.1]),colors='teal')
+    plt.contour(xslice,zslice,qcslice,np.array([cloud_threshold]),colors='teal')
     
     ax3 = plt.subplot(3,1,3)
     trs, trx, trz = plotting.transect_s(s,z,lat,lon,start,end,topog=topog)

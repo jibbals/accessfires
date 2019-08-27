@@ -16,10 +16,14 @@ from datetime import datetime, timedelta
 
 import iris
 
-from utilities import fio,plotting
+from utilities import fio,plotting, constants
 
 
-def vert_motion_slices(qc,w,lh,lat,lon,dtime, extentname='waroona',ext='.png',dpi=400):
+def vert_motion_slices(qc,w,lh,lat,lon,dtime, 
+                       extentname='waroona',
+                       ext='.png',
+                       cloud_threshold=constants.cloud_threshold,
+                       dpi=400):
     '''
     43i showing vertical motion contourf plots, at different model levels
     Trying to see pyroCB cloud
@@ -61,7 +65,7 @@ def vert_motion_slices(qc,w,lh,lat,lon,dtime, extentname='waroona',ext='.png',dp
         plt.title("~ %5.0f m"%lh[m_lvls[i]])
         
         ## Add contour where clouds occur
-        plt.contour(lon,lat,qc[m_lvls[i]],np.array([0.1]), 
+        plt.contour(lon,lat,qc[m_lvls[i]],np.array([cloud_threshold]), 
                     colors='k')
         
         # add nearby towns

@@ -20,7 +20,7 @@ from datetime import datetime,timedelta
 import iris # file reading and constraints etc
 
 # local modules
-from utilities import plotting, utils, fio
+from utilities import plotting, utils, fio, constants
 
 
 def clouds_2panel(topog,s,u,v,
@@ -34,6 +34,7 @@ def clouds_2panel(topog,s,u,v,
                   quiverscale=60,
                   ztop=13000,
                   ext='.png',
+                  cloud_threshold=constants.cloud_threshold,
                   dpi=400,
                   ):
     '''
@@ -152,74 +153,38 @@ def waroona_cloud_loop(dtime):
     then send all the data to plotting method
     '''
     um_hour=datetime(dtime.year,dtime.month,dtime.day,dtime.hour)
-    if um_hour < datetime(2016,1,6,15):
-        ffpath = 'data/waroona_fire/firefront.CSIRO_24h.20160105T1500Z.nc'
-    elif um_hour < datetime(2016,1,7,15):
-        ffpath = 'data/waroona_fire/firefront.CSIRO_24h.20160106T1500Z.nc'
-    else:
-        ffpath = 'data/waroona_fire/firefront.CSIRO_24h.20160107T1500Z.nc'
-    
     extentname='waroona'
-    
-    # Constraints on dimensions (save ram and reading time)
-    West,East,South,North = plotting._extents_['waroona']
-    constr_z = iris.Constraint(model_level_number=lambda cell: cell < 140) # for the clouds panel don't bother with cutting away strat
-    constr_lons = iris.Constraint(longitude = lambda cell: West <= cell <= East )
-    constr_lats = iris.Constraint(latitude = lambda cell: South <= cell <= North )
-    
-    ## Model level heights and topography don't depend on time
-    # metres [z, lat, lon]
-    zro, = iris.load('data/waroona/umnsaa_2016010515_mdl_ro1.nc', ['height_above_reference_ellipsoid' &
-                                                                   constr_z & 
-                                                                   constr_lats & 
-                                                                   constr_lons])
-    
-    topog = fio.read_nc_iris('data/waroona/umnsaa_2016010515_slv.nc',
-                             constraints = 'surface_altitude'  & 
-                                         constr_lats & 
-                                         constr_lons)[0]
-    
+    extent=plotting._extents_[extentname]
+    um_hour=datetime(dtime.year,dtime.month,dtime.day,dtime.hour)
     
     # Read the cubes
-    slv,ro1,th1,th2 = fio.read_waroona_iris(dtime=um_hour, 
-                                            constraints = [constr_z &
-                                                           constr_lons &
-                                                           constr_lats])
+    slv,ro1,th1,th2 = fio.read_waroona_iris(dtime=um_hour, extent=extent,
+                                            add_winds=True, add_theta=True)
     
-    # wind speeds need to be interpolated onto non-staggered latlons
-    p, u1, v1 = ro1.extract(['air_pressure','x_wind','y_wind'])
-    # DESTAGGER u and v using iris interpolate
-    # u1: [t,z, lat, lon1]
-    # v1: [t,z, lat1, lon]  # put these both onto [t,z,lat,lon]
-    u = u1.interpolate([('longitude',p.coord('longitude').points)],
-                       iris.analysis.Linear())
-    v = v1.interpolate([('latitude',p.coord('latitude').points)],
-                       iris.analysis.Linear())
-    lon=u.coord('longitude').points
-    lat=u.coord('latitude').points
+    zro, = ro1.extract('z_ro')
     
-    # Get wind speed cube using hypotenuse of u,v (I think this is the first action that actually reads any file data)
-    s = iris.analysis.maths.apply_ufunc(np.hypot,u,v) 
+    topog, = slv.extract('topog')
     
+    u,v,s = ro1.extract(['u','v','s'])
+
+    qc, = th2.extract('qc')
     
-    sh,Ta = th1.extract(['specific_humidity','air_temperature'])
-    
-    theta = utils.potential_temperature(p.data,Ta.data)
-    
-    #rh = utils.relative_humidity_from_specific(sh.data,Ta.data)
-    
-    qc1,qc2 = th2.extract(['mass_fraction_of_cloud_ice_in_air','mass_fraction_of_cloud_liquid_water_in_air'])
-    
-    qc = ( qc1+qc2 )*1000 # change to g/kg
+    w, = th1.extract('upward_air_velocity')
     
     ## fire front
     # read 6 time steps:
     ff_dtimes = np.array([um_hour + timedelta(hours=x/60.) for x in range(10,61,10)])
-    ff = fio.read_fire_front(ffpath,dtimes=ff_dtimes)
-    ff = ff.extract(constr_lats & constr_lons) # subset lats,lons
+    ff, = fio.read_fire(dtimes=ff_dtimes,extent=extent, firefront=True)
+    
+    sh,Ta = th1.extract(['specific_humidity','air_temperature'])
+    
+    print(th1)
+    theta, = th1.extract('potential_temperature')
+    
+    lat,lon = w.coord('latitude').points, w.coord('longitude').points
     
     # datetime of outputs
-    tdim = p.coord('time')
+    tdim = w.coord('time')
     d0 = datetime.strptime(str(tdim.units),'hours since %Y-%m-%d %H:%M:00')
     timesteps = utils.date_from_gregorian(tdim.points, d0=d0)
     
@@ -227,7 +192,7 @@ def waroona_cloud_loop(dtime):
     for i_transect in np.arange(1,6.5,1, dtype=int):
         for tstep in range(len(timesteps)):
             clouds_2panel(topog.data, s[tstep,0].data, u[tstep,0].data, v[tstep,0].data,
-                          qc[tstep].data, theta[tstep], 
+                          qc[tstep].data, theta[tstep].data, 
                           ff[tstep].data,
                           zro.data, lat, lon,
                           dtime=timesteps[tstep],
@@ -237,8 +202,8 @@ def waroona_cloud_loop(dtime):
 if __name__ == '__main__':
     
     print("INFO: testing cloud_outline.py")
-    
-    for dtime in [ datetime(2016,1,6,7) + timedelta(hours=x) for x in range(4) ]:
+    waroona_cloud_loop(datetime(2016,1,5,15))
+    #for dtime in [ datetime(2016,1,6,7) + timedelta(hours=x) for x in range(4) ]:
         
-        waroona_cloud_loop(dtime)
+    #    waroona_cloud_loop(dtime)
 

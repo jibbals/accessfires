@@ -20,9 +20,21 @@ import numpy as np
 import timeit # for timing stuff
 from datetime import datetime, timedelta
 
-#from .context import utils
-
 from glob import glob
+
+#from .context import utils
+def potential_temperature(p,T):
+    '''
+    calculate theta from pressure and air temperature
+    # Potential temperature based on https://en.wikipedia.org/wiki/Potential_temperature
+    # with gas constant R = 287.05 and specific heat capacity c_p = 1004.64
+    '''
+    nt,nz,ny,nx = p.shape
+    Ta  = T[:,0:1,:,:] # [t,1,lat,lon] at surface
+    repTa = np.repeat(Ta[:,:,:,:], nz, axis=1) # repeat Ta along z axis
+    assert np.all(repTa[:,0,:,:] - repTa[:,1,:,:] == 0), "Repeated z dim is not the same"
+    return repTa*(1e5/p)**(287.05/1004.64)
+
 ###
 ## GLOBALS
 ###
@@ -509,7 +521,20 @@ def read_waroona_iris(dtime, constraints=None, extent=None, add_winds=False, add
         cubelists[1].append(u)
         cubelists[1].append(v)
         cubelists[1].append(s)
-        
+    
+    if add_theta:
+        p, Ta = cubelists[2].extract(['air_pressure','air_temperature'])
+        theta = potential_temperature(p.data,Ta.data)
+        print("DEBUG:", theta.shape, p.shape)
+        # create cube 
+        iris.std_names.STD_NAMES['potential_temperature'] = {'canonical_units': 'K'}
+        cubetheta = iris.cube.Cube(theta, standard_name="potential_temperature", 
+                                   var_name="theta", units="K",
+                                   dim_coords_and_dims=[(p.coord('time'),0),
+                                                        (p.coord('model_level_number'),1),
+                                                        (p.coord('latitude'),2),
+                                                        (p.coord('longitude'),3)])
+        cubelists[2].append(cubetheta)
     return cubelists
 
 def read_waroona(dtime,slv=True,ro=True,th1=True,th2=True):
