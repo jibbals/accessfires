@@ -117,13 +117,13 @@ def winds_2panel(s,u,v,w,
     
     ## Second row is transect plots
     plt.subplot(3,1,2)
-    plotting.transect_w(w,z, lat, lon,start,end,topog=topog)
+    wslice, xslice, zslice  = plotting.transect_w(w,z, lat, lon,start,end,
+                                                  npoints=100,topog=topog,
+                                                  lines=None)
     plt.ylabel('height (m)')
-    #plt.xlabel('transect')
     ## Add contour where clouds occur
-    #qcslice = utils.cross_section(qc,lat,lon,start,end)
-    plotting.transect_qc(qc,z,lat,lon,start,end,contours=None, lines=np.array([0.1]), 
-                         title=None)
+    qcslice = utils.cross_section(qc,lat,lon,start,end, npoints=100)
+    plt.contour(xslice,zslice,qcslice,np.array([0.1]),colors='teal')
     
     ax3 = plt.subplot(3,1,3)
     trs, trx, trz = plotting.transect_s(s,z,lat,lon,start,end,topog=topog)
@@ -152,69 +152,30 @@ def waroona_wind_loop(dtime):
     '''
     Loop over transects over waroona and make the wind outline figures
     '''
-    um_hour=datetime(dtime.year,dtime.month,dtime.day,dtime.hour)
-    if um_hour < datetime(2016,1,6,15):
-        ffpath = 'data/waroona_fire/firefront.CSIRO_24h.20160105T1500Z.nc'
-    elif um_hour < datetime(2016,1,7,15):
-        ffpath = 'data/waroona_fire/firefront.CSIRO_24h.20160106T1500Z.nc'
-    else:
-        ffpath = 'data/waroona_fire/firefront.CSIRO_24h.20160107T1500Z.nc'
-    
     extentname='waroona'
-    
-    # Constraints on dimensions (save ram and reading time)
-    West,East,South,North = plotting._extents_['waroona']
-    constr_z = iris.Constraint(model_level_number=lambda cell: cell < 90)
-    constr_lons = iris.Constraint(longitude = lambda cell: West <= cell <= East )
-    constr_lats = iris.Constraint(latitude = lambda cell: South <= cell <= North )
-    
-    ## Model level heights and topography don't depend on time
-    # metres
-    zth, = iris.load('data/waroona/umnsaa_2016010515_mdl_th1.nc',
-                     ['height_above_reference_ellipsoid' &
-                      constr_z & 
-                      constr_lats & 
-                      constr_lons])
-    
-    topog, = fio.read_nc_iris('data/waroona/umnsaa_2016010515_slv.nc',
-                              constraints = 'surface_altitude'  & 
-                              constr_lats & 
-                              constr_lons)
-    
+    extent=plotting._extents_[extentname]
+    um_hour=datetime(dtime.year,dtime.month,dtime.day,dtime.hour)
     
     # Read the cubes
-    slv,ro1,th1,th2 = fio.read_waroona_iris(dtime=um_hour, 
-                                            constraints = [constr_z &
-                                                           constr_lons &
-                                                           constr_lats])
+    slv,ro1,th1,th2 = fio.read_waroona_iris(dtime=um_hour, extent=extent,add_winds=True)
     
-    # wind speeds need to be interpolated onto non-staggered latlons
-    p, u1, v1 = ro1.extract(['air_pressure','x_wind','y_wind'])
-    # DESTAGGER u and v using iris interpolate
-    # u1: [t,z, lat, lon1]
-    # v1: [t,z, lat1, lon]  # put these both onto [t,z,lat,lon]
-    u = u1.interpolate([('longitude',p.coord('longitude').points)],
-                       iris.analysis.Linear())
-    v = v1.interpolate([('latitude',p.coord('latitude').points)],
-                       iris.analysis.Linear())
+    zth, = th1.extract('z_th')
     
+    topog, = slv.extract('topog')
     
-    # Get wind speed cube using hypotenuse of u,v (I think this is the first action that actually reads any file data)
-    s = iris.analysis.maths.apply_ufunc(np.hypot,u,v)
+    u,v,s = ro1.extract(['u','v','s'])
 
-    # Cloud parameters and upward wind velocity    
-    qc1,qc2 = th2.extract(['mass_fraction_of_cloud_ice_in_air','mass_fraction_of_cloud_liquid_water_in_air'])    
-    qc = ( qc1+qc2 )*1000 # change to g/kg    
+    qc, = th2.extract('qc')
+    
     w, = th1.extract('upward_air_velocity')
     
     ## fire front
     # read 6 time steps:
     ff_dtimes = np.array([um_hour + timedelta(hours=x/60.) for x in range(10,61,10)])
-    ff = fio.read_fire_front(ffpath,dtimes=ff_dtimes)
-    ff = ff.extract(constr_lats & constr_lons) # subset lats,lons
+    ff, = fio.read_fire(dtimes=ff_dtimes,extent=extent, firefront=True)
     
     # datetime of outputs
-    tdim = p.coord('time')
+    tdim = w.coord('time')
     d0 = datetime.strptime(str(tdim.units),'hours since %Y-%m-%d %H:%M:00')
     timesteps = utils.date_from_gregorian(tdim.points, d0=d0)
     
@@ -240,6 +201,6 @@ def waroona_wind_loop(dtime):
 if __name__ == '__main__':
     
     print("INFO: testing wind_outline.py")
-    #waroona_wind_loop(datetime(2016,1,5,15))
-    for dtime in [ datetime(2016,1,6,7) + timedelta(hours=x) for x in range(4) ]:
-        waroona_wind_loop(dtime)
+    waroona_wind_loop(datetime(2016,1,5,15))
+    #for dtime in [ datetime(2016,1,6,7) + timedelta(hours=x) for x in range(4) ]:
+    #    waroona_wind_loop(dtime)
