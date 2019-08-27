@@ -29,7 +29,7 @@ def emberstorm_clouds(dtime,
                       extentname='waroona',
                       vectorskip=13,
                       quiverscale=60,
-                      ztop=4000,
+                      ztop=6000,
                       ext='.png',
                       dpi=400,
                   ):
@@ -96,11 +96,16 @@ def emberstorm_clouds(dtime,
     
         # start to end x=[lon0,lon1], y=[lat0, lat1]
         plt.plot([start[1],end[1]],[start[0],end[0], ], '--m', 
-                 linewidth=2, 
-                 marker='X', markersize=7)
+                 linewidth=2)
+        def myarrow(yx0, yx1):
+            y0,x0=yx0
+            y1,x1=yx1
+            dx,dy = (x1-x0)/15.0,(y1-y0)/15.0
+            plt.arrow(x0-1.4*dx,y0-1.4*dy,dx,dy,width=0.0015)
+        myarrow(start,end)
         plt.plot([startx[1],endx[1]],[startx[0],endx[0], ], '--b', 
                  linewidth=2)
-        
+        myarrow(startx,endx)
         # add nearby towns
         if extentname == 'waroona':
             plotting.map_add_locations(['waroona','yarloop'], 
@@ -134,11 +139,13 @@ def emberstorm_clouds(dtime,
         ax2=plt.subplot(3,1,2)
         
         ## Plot vert motion transect
-        plotting.transect_w(w[i].data,z.data,lat,lon,start,end,
-                            topog=topog.data, ztop=ztop)
+        wslice, xslice, zslice = plotting.transect_w(w[i].data,z.data,lat,lon,start,end, npoints=100,
+                                                     topog=topog.data, ztop=ztop,lines=None)
         ## add cloud outlines
         ## Add contour where clouds occur
-        
+        qcslice = utils.cross_section(qc[i].data,lat,lon,start,end, npoints=100)
+        plt.contour(xslice,zslice,qcslice,np.array([0.1]),colors='teal')
+
         plt.title("Vertical motion (m/s)")
         plt.ylabel('height (m)')
         plt.xlabel('')
@@ -146,14 +153,19 @@ def emberstorm_clouds(dtime,
             spine.set_linestyle('dashed')
             spine.set_capstyle("butt")
             spine.set_color("m")
+            spine.set_linewidth(2)
         
         ax3=plt.subplot(3,1,3)
         
         ## Plot vert motion transect
-        plotting.transect_w(w[i].data,z.data,lat,lon,startx,endx,
-                            topog=topog.data, ztop=ztop)
+        wslicex,xslicex,zslicex = plotting.transect_w(w[i].data,z.data,lat,lon,startx,endx, npoints=100,
+                                                      topog=topog.data, ztop=ztop,lines=None)
         ## add cloud outlines
         ## Add contour where clouds occur
+        qcslicex = utils.cross_section(qc[i].data,lat,lon,startx,endx, npoints=100)
+        plt.contour(xslicex,zslicex,qcslicex,np.array([0.1]),colors='teal')
+
+
         plt.title("Vertical motion (m/s)")
         plt.ylabel('height (m)')
         plt.xlabel('')
@@ -161,6 +173,7 @@ def emberstorm_clouds(dtime,
             spine.set_linestyle('dashed')
             spine.set_capstyle("butt")
             spine.set_color("blue")
+            spine.set_linewidth(2)
         
         # Show transect start and end
         #xticks,xlabels = plotting.transect_ticks_labels(startx,endx)
@@ -176,7 +189,7 @@ def emberstorm_clouds(dtime,
 if __name__ == '__main__':
     
     print("INFO: testing cloud_outline.py")
-    #emberstorm_clouds(datetime(2016,1,5,15))
+    emberstorm_clouds(datetime(2016,1,5,15))
     
     for dtime in [ datetime(2016,1,6,7) + timedelta(hours=x) for x in range(4) ]:
         emberstorm_clouds(dtime)
