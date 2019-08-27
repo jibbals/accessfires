@@ -451,15 +451,15 @@ def read_waroona_iris(dtime, constraints=None, extent=None, add_winds=False, add
         West,East,South,North = extent
         constr_lons = iris.Constraint(longitude = lambda cell: West <= cell <= East )
         constr_lats = iris.Constraint(latitude = lambda cell: South <= cell <= North )
-        topog, = topog.extract(constr_lons & constr_lats) # subset topog
+        topog = topog.extract(constr_lons & constr_lats) # subset topog
         if constraints is not None:
             constraints = constraints & constr_lats & constr_lons
         else:
             constraints = constr_lats & constr_lons
     
     if constraints is not None:
-        zro, = zro.extract(constraints)
-        zth, = zth.extract(constraints)
+        zro = zro.extract(constraints)
+        zth = zth.extract(constraints)
     
     cubelists = []
     for filetype,varnames in _file_types_waroona_.items():

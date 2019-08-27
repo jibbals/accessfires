@@ -223,7 +223,6 @@ def waroona_wind_loop(dtime):
     # also loop over different transects
     for i in range(5):
         for tstep in range(len(timesteps)):
-            print("DEBUG: ", s.shape, qc.shape, ff.shape, topog.shape, zth.shape, timesteps[tstep])
             winds_2panel(s[tstep].data, u[tstep].data, v[tstep].data, w[tstep].data,
                          qc[tstep].data, ff[tstep].data, topog.data,
                          zth.data, lat,lon,
@@ -241,7 +240,6 @@ def waroona_wind_loop(dtime):
 if __name__ == '__main__':
     
     print("INFO: testing wind_outline.py")
-    waroona_wind_loop(datetime(2016,1,5,15))
-    #for dtime in [ datetime(2016,1,6,7) + timedelta(hours=x) for x in range(4) ]:
-        
-    #    waroona_wind_loop(dtime)
+    #waroona_wind_loop(datetime(2016,1,5,15))
+    for dtime in [ datetime(2016,1,6,7) + timedelta(hours=x) for x in range(4) ]:
+        waroona_wind_loop(dtime)

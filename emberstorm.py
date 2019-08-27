@@ -15,6 +15,8 @@ matplotlib.use('Agg')
 
 # plotting stuff
 import matplotlib.pyplot as plt
+import matplotlib.colors as col
+import matplotlib.ticker as tick
 import numpy as np
 from datetime import datetime,timedelta
 import iris # file reading and constraints etc
@@ -64,8 +66,8 @@ def emberstorm_clouds(dtime,
     wmean = w[:,25:48,:,:].collapsed('model_level_number', iris.analysis.MEAN)
     h0,h1 = wmean.coord('level_height').bounds[0]
     #     bounds=array([[ 450.    , 1600.0004]])
-    topog = slv.extract('topog') # [ lat, lon]
-    z     = th1.extract('z_th') # [t, lev, lat, lon]
+    topog,= slv.extract('topog') # [ lat, lon]
+    z,    = th1.extract('z_th') # [t, lev, lat, lon]
     ## Plotting setup
     # set font sizes
     plotting.init_plots()
@@ -76,8 +78,8 @@ def emberstorm_clouds(dtime,
     # for each timestep:
     for i in range(6):
         # datetime timestamp for file,title
-        dstamp = dtime.strftime("%Y%m%d%H%M")
-        stitle = dtime.strftime("%Y %b %d %H:%M (UTC)")
+        dstamp = ffdtimes[i].strftime("%Y%m%d%H%M")
+        stitle = ffdtimes[i].strftime("%Y %b %d %H:%M (UTC)")
         pname = pnames%(extentname,dstamp,ext)
         # figure setup
         plt.figure(figsize=[7,10])
@@ -86,17 +88,17 @@ def emberstorm_clouds(dtime,
         ### Plot 311
         # top panel is wind speed surface values
         plotting.map_contourf(extent,wmean[i].data,lat,lon,
-                              clevs = np.linspace(0,15,31),
-                              cmap=plotting._cmaps_['windspeed'],
+                              clevs = np.union1d(np.union1d(2.0**np.arange(-2,6),-1*(2.0**np.arange(-2,6))),np.array([0])),
+                              cmap=plotting._cmaps_['verticalvelocity'],norm=col.SymLogNorm(0.25),cbarform=tick.ScalarFormatter(),
                               clabel='m/s')
-        plt.title('Vertical motion mean(%.0fm - %0.fm)'%(h0,h1))
+        plt.title('Vertical motion mean(%3.0fm - %4.0fm)'%(h0,h1))
         
     
         # start to end x=[lon0,lon1], y=[lat0, lat1]
         plt.plot([start[1],end[1]],[start[0],end[0], ], '--m', 
                  linewidth=2, 
                  marker='X', markersize=7)
-        plt.plot([startx[1],endx[1]],[startx[0],endx[0], ], '--blue', 
+        plt.plot([startx[1],endx[1]],[startx[0],endx[0], ], '--b', 
                  linewidth=2)
         
         # add nearby towns
@@ -132,37 +134,33 @@ def emberstorm_clouds(dtime,
         ax2=plt.subplot(3,1,2)
         
         ## Plot vert motion transect
-        plotting.transect_w(w[i],z[i].data,lat,lon,start,end,
-                            topog=topog, ztop=ztop)
+        plotting.transect_w(w[i].data,z.data,lat,lon,start,end,
+                            topog=topog.data, ztop=ztop)
         ## add cloud outlines
         ## Add contour where clouds occur
-        plotting.transect_qc(qc[i].data,lat,lon,start,end,
-                             contours=None,
-                             lines=np.array([0.1]),
-                             ztop=ztop)
+        
         plt.title("Vertical motion (m/s)")
         plt.ylabel('height (m)')
         plt.xlabel('')
-        ax2.spines['bottom'].set_linestyle('dashed')
-        ax2.spines['bottom'].set_capstyle("butt")
-        ax2.spines['bottom'].set_color("m")
-        plt.subplot(3,1,3)
+        for spine in [ax2.spines['bottom'], ax2.spines['top']]:
+            spine.set_linestyle('dashed')
+            spine.set_capstyle("butt")
+            spine.set_color("m")
+        
+        ax3=plt.subplot(3,1,3)
         
         ## Plot vert motion transect
-        plotting.transect_w(w[i],z[i].data,lat,lon,startx,endx,
-                            topog=topog, ztop=ztop)
+        plotting.transect_w(w[i].data,z.data,lat,lon,startx,endx,
+                            topog=topog.data, ztop=ztop)
         ## add cloud outlines
         ## Add contour where clouds occur
-        plotting.transect_qc(qc[i].data,lat,lon,startx,endx,
-                             contours=None, colorbar=False,
-                             lines=np.array([0.1]),
-                             ztop=ztop)
         plt.title("Vertical motion (m/s)")
         plt.ylabel('height (m)')
         plt.xlabel('')
-        ax2.spines['bottom'].set_linestyle('dashed')
-        ax2.spines['bottom'].set_capstyle("butt")
-        ax2.spines['bottom'].set_color("blue")
+        for spine in [ax3.spines['bottom'], ax3.spines['top']]:
+            spine.set_linestyle('dashed')
+            spine.set_capstyle("butt")
+            spine.set_color("blue")
         
         # Show transect start and end
         #xticks,xlabels = plotting.transect_ticks_labels(startx,endx)
@@ -178,8 +176,8 @@ def emberstorm_clouds(dtime,
 if __name__ == '__main__':
     
     print("INFO: testing cloud_outline.py")
-    emberstorm_clouds(datetime(2016,1,5,15))
+    #emberstorm_clouds(datetime(2016,1,5,15))
     
-    #for dtime in [ datetime(2016,1,6,7) + timedelta(hours=x) for x in range(4) ]:
-    #    emberstorm_clouds(dtime)
+    for dtime in [ datetime(2016,1,6,7) + timedelta(hours=x) for x in range(4) ]:
+        emberstorm_clouds(dtime)
 

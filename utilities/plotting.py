@@ -77,7 +77,8 @@ _transects_['waroona3'] = [-32.86   , __x0__], [-32.88   , __x1__]
 _transects_['waroona4'] = [-32.92   , __x0__], [-32.82   , __x1__]
 _transects_['waroona5'] = [-32.96   , __x0__], [-32.85   , __x1__] 
 _transects_['waroona6'] = [-32.87   , __x0__], [-32.89   , __x1__]
-
+_transects_['emberstorm'] = [-32.90 , 115.9 ], [-32.88   , __x1__]
+_transects_['emberstormx'] = [-32.95, 116.05], [-32.78   , 116.04]
 
 # looking at sir ivan
 __si0__, __si1__ = 149.4, 149.9

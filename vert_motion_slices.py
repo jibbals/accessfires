@@ -111,7 +111,7 @@ constr_lats = iris.Constraint(latitude = lambda cell: South <= cell <= North )
 pyrocb_hours = [datetime(2016,1,6,7) + timedelta(hours=x) for x in range(6)]
 
 #test hours
-pyrocb_hours = [datetime(2016,1,5,15)]
+#pyrocb_hours = [datetime(2016,1,5,15)]
 
 for dtime in pyrocb_hours:
     
