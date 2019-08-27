@@ -308,6 +308,43 @@ def read_sirivan(fpaths, toplev=80, keepvars=None):
 
     return data
     
+def read_fire(dtimes, constraints=None, extent=None, firefront=True, sensibleheat=False):
+    '''
+    Read fire output cubes matching dtimes time dim
+    '''
+    d0 = dtimes[0]
+    if d0 < datetime(2016,1,6,15):
+        ffpath = 'data/waroona_fire/firefront.CSIRO_24h.20160105T1500Z.nc'
+        fluxpath = 'data/waroona_fire/sensible_heat.CSIRO_24h.20160105T1500Z.nc'
+    elif d0 < datetime(2016,1,7,15):
+        ffpath = 'data/waroona_fire/firefront.CSIRO_24h.20160106T1500Z.nc'
+        fluxpath = 'data/waroona_fire/sensible_heat.CSIRO_24h.20160106T1500Z.nc'
+    else:
+        ffpath = 'data/waroona_fire/firefront.CSIRO_24h.20160107T1500Z.nc'
+        fluxpath = 'data/waroona_fire/sensible_heat.CSIRO_24h.20160107T1500Z.nc'
+    
+    if extent is not None:
+        West,East,South,North = extent
+        constr_lons = iris.Constraint(longitude = lambda cell: West <= cell <= East )
+        constr_lats = iris.Constraint(latitude = lambda cell: South <= cell <= North )
+        if constraints is not None:
+            constraints = constraints & constr_lats & constr_lons
+        else:
+            constraints = constr_lats & constr_lons
+    
+    # Build up cubelist based on which files you want to read
+    cubelist = iris.cube.CubeList()
+    if firefront:
+        ff, = read_nc_iris(ffpath, constraints=constraints)
+        ff = subset_time_iris(ff,dtimes,seconds=True)
+        cubelist.append(ff)
+    if sensibleheat:
+        shf, = read_nc_iris(fluxpath, constraints=constraints)
+        shf = subset_time_iris(shf,dtimes,seconds=True)
+        cubelist.append(shf)
+    
+    return cubelist
+    
 def read_fire_front(fpath='data/waroona_fire/firefront.CSIRO_24h.20160105T1500Z.nc', 
                     dtimes=None):
     '''
@@ -371,7 +408,7 @@ def read_z(fpath='data/waroona/umnsaa_2016010515_mdl_th1.nc'):
     return z
     
 
-def read_waroona_iris(dtime, constraints=None):
+def read_waroona_iris(dtime, constraints=None, extent=None, add_winds=False, add_theta=False):
     '''
         Read the converted waroona model output files
         returns list of 4 iris cube lists:
@@ -380,26 +417,99 @@ def read_waroona_iris(dtime, constraints=None):
         1: surface_air_pressure / (Pa)         (time: 6; latitude: 576; longitude: 576)
         2: air_pressure_at_sea_level / (Pa)    (time: 6; latitude: 576; longitude: 576)
         3: surface_temperature / (K)           (time: 6; latitude: 576; longitude: 576)
+        4: topog / (m)                      # added by jwg
         ========
         0: air_pressure / (Pa)                 (time: 6; model_level_number: 140; latitude: 576; longitude: 576)
         1: x_wind / (m s-1)                    (time: 6; model_level_number: 140; latitude: 576; longitude: 576)
         2: y_wind / (m s-1)                    (time: 6; model_level_number: 140; latitude: 577; longitude: 576)
+        3: z_ro / (m)                       # added by jwg
+        [ u, v, s / (m s-1) ]               # added here on destaggered horizontal grid if add_winds argument is True
+        
         ========
         0: air_pressure / (Pa)                 (time: 6; model_level_number: 140; latitude: 576; longitude: 576)
         1: air_temperature / (K)               (time: 6; model_level_number: 140; latitude: 576; longitude: 576)
         2: specific_humidity / (kg kg-1)       (time: 6; model_level_number: 140; latitude: 576; longitude: 576)
         3: upward_air_velocity / (m s-1)       (time: 6; model_level_number: 140; latitude: 576; longitude: 576)
+        4: z_th / (m)                       # added by jwg
+        [ potential_temperature / (K) ]     # added if add_theta argument is True
         ========
         0: mass_fraction_of_cloud_ice_in_air / (kg kg-1) (time: 6; model_level_number: 140; latitude: 576; longitude: 576)
         1: mass_fraction_of_cloud_liquid_water_in_air / (kg kg-1) (time: 6; model_level_number: 140; latitude: 576; longitude: 576)
+        2: qc / (g kg-1)                    # added by jwg
     '''
     dstamp=dtime.strftime('%Y%m%d%H')
+    
+    # First read topography
+    topog, = read_nc_iris('data/waroona/umnsaa_2016010515_slv.nc',
+                          constraints = 'surface_altitude')
+    # also read 3d model height
+    zro, = iris.load('data/waroona/umnsaa_2016010515_mdl_ro1.nc', ['height_above_reference_ellipsoid'])
+    zth, = iris.load('data/waroona/umnsaa_2016010515_mdl_th1.nc', ['height_above_reference_ellipsoid'])
+    
+    # If we just want a particular extent, subset to that extent using constraints
+    if extent is not None:
+        West,East,South,North = extent
+        constr_lons = iris.Constraint(longitude = lambda cell: West <= cell <= East )
+        constr_lats = iris.Constraint(latitude = lambda cell: South <= cell <= North )
+        topog, = topog.extract(constr_lons & constr_lats) # subset topog
+        if constraints is not None:
+            constraints = constraints & constr_lats & constr_lons
+        else:
+            constraints = constr_lats & constr_lons
+    
+    if constraints is not None:
+        zro, = zro.extract(constraints)
+        zth, = zth.extract(constraints)
     
     cubelists = []
     for filetype,varnames in _file_types_waroona_.items():
         path = _files_waroona_%(dstamp,filetype)
         cubelists.append(read_nc_iris(path,constraints=constraints,keepvars=varnames))
-
+    
+    # Add cloud parameter at g/kg scale
+    water, ice = cubelists[3].extract(['mass_fraction_of_cloud_liquid_water_in_air',
+                                            'mass_fraction_of_cloud_ice_in_air'])
+    qc = (water+ice) * 1000
+    qc.units = 'g kg-1'
+    qc.var_name = 'qc'
+    cubelists[3].append(qc)
+    # add topog cube
+    iris.std_names.STD_NAMES['topog'] = {'canonical_units': 'm'}
+    topog.standard_name = 'topog'
+    cubelists[0].append(topog)
+    # add zro and zth cubes
+    iris.std_names.STD_NAMES['z_ro'] = {'canonical_units': 'm'}
+    iris.std_names.STD_NAMES['z_th'] = {'canonical_units': 'm'}
+    zth.standard_name = 'z_th'
+    zro.standard_name = 'z_ro'
+    cubelists[1].append(zro)
+    cubelists[2].append(zth)
+    
+    if add_winds:
+        # wind speeds need to be interpolated onto non-staggered latlons
+        p, u1, v1 = cubelists[1].extract(['air_pressure','x_wind','y_wind'])
+        
+        ### DESTAGGER u and v using iris interpolate
+        ### (this will trigger the delayed read)
+        # u1: [t,z, lat, lon1]
+        # v1: [t,z, lat1, lon]  # put these both onto [t,z,lat,lon]
+        u = u1.interpolate([('longitude',p.coord('longitude').points)],
+                           iris.analysis.Linear())
+        v = v1.interpolate([('latitude',p.coord('latitude').points)],
+                           iris.analysis.Linear())
+        # Get wind speed cube using hypotenuse of u,v
+        s = iris.analysis.maths.apply_ufunc(np.hypot,u,v)
+        s.units = 'm s-1'
+        # add standard names for these altered variables:
+        iris.std_names.STD_NAMES['u'] = {'canonical_units': 'm s-1'}
+        iris.std_names.STD_NAMES['v'] = {'canonical_units': 'm s-1'}
+        u.standard_name='u'
+        v.standard_name='v'
+        s.var_name='s' # s doesn't come from a var with a std name so can just use var_name
+        cubelists[1].append(u)
+        cubelists[1].append(v)
+        cubelists[1].append(s)
+        
     return cubelists
 
 def read_waroona(dtime,slv=True,ro=True,th1=True,th2=True):

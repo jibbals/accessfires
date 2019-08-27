@@ -107,7 +107,7 @@ def init_plots():
 
 def transect(data, z, lat, lon, start, end, npoints=100, 
              topog=None, latt=None, lont=None, ztop=4000,
-             title="", ax=None, 
+             title="", ax=None, colorbar=True,
              cmap=None, norm=None, cbarform=None,
              contours=None,lines=None):
     '''
@@ -143,9 +143,8 @@ def transect(data, z, lat, lon, start, end, npoints=100,
     else:
         plt.contourf(slicex,slicez,slicedata,contours,cmap=cmap,norm=norm)
     
-    plt.colorbar(format=cbarform, pad=0.01) # pad is distance from axes
-    #if cbarform is not None:
-    #    plt.colorbar(format=cbarform)
+    if colorbar:
+        plt.colorbar(format=cbarform, pad=0.01) # pad is distance from axes
     
     # Add contour lines
     if lines is not None:
@@ -166,7 +165,7 @@ def transect(data, z, lat, lon, start, end, npoints=100,
 
 def transect_s(s, z, lat, lon, start, end, npoints=100, 
                topog=None, latt=None, lont=None, ztop=4000,
-               title="Wind speed (m/s)", ax=None, 
+               title="Wind speed (m/s)", ax=None, colorbar=True,
                cmap='YlGnBu', norm=None, cbarform=None,
                contours=np.arange(0,25,2.5),lines=np.arange(0,25,2.5)):
     '''
@@ -184,13 +183,13 @@ def transect_s(s, z, lat, lon, start, end, npoints=100,
     # call transect using some defaults for potential temperature
     return transect(s,z,lat,lon,start,end,npoints=npoints,
                     topog=topog, latt=latt, lont=lont, ztop=ztop,
-                    title=title, ax=ax, 
+                    title=title, ax=ax, colorbar=colorbar,
                     cmap=cmap, norm=norm, cbarform=cbarform,
                     contours=contours,lines=lines)
 
 def transect_theta(theta, z, lat, lon, start, end, npoints=100, 
                    topog=None, latt=None, lont=None, ztop=4000,
-                   title="$T_{\\theta}$ (K)", ax=None, 
+                   title="$T_{\\theta}$ (K)", ax=None, colorbar=True,
                    cmap='YlOrRd', norm=None, cbarform=None,
                    contours=np.arange(280,320,2),lines=np.arange(280,320,2)):
     '''
@@ -204,13 +203,13 @@ def transect_theta(theta, z, lat, lon, start, end, npoints=100,
     # call transect using some defaults for potential temperature
     return transect(theta,z,lat,lon,start,end,npoints=npoints,
                     topog=topog, latt=latt, lont=lont, ztop=ztop,
-                    title=title, ax=ax, 
+                    title=title, ax=ax, colorbar=colorbar,
                     cmap=cmap, norm=norm, cbarform=cbarform,
                     contours=contours,lines=lines)
 
 def transect_w(w, z, lat, lon, start, end, npoints=100, 
                topog=None, latt=None, lont=None, ztop=4000,
-               title="Vertical motion (m/s)", ax=None, 
+               title="Vertical motion (m/s)", ax=None, colorbar=True,
                cmap=_cmaps_['verticalvelocity'] , norm=col.SymLogNorm(0.25), 
                cbarform=tick.ScalarFormatter(),
                contours=np.union1d(np.union1d(2.0**np.arange(-2,6),-1*(2.0**np.arange(-2,6))),np.array([0])),
@@ -229,13 +228,13 @@ def transect_w(w, z, lat, lon, start, end, npoints=100,
     # call transect using some defaults for vertical velocity w
     return transect(w, z,lat,lon,start,end,npoints=npoints,
                     topog=topog, latt=latt, lont=lont, ztop=ztop,
-                    title=title, ax=ax, 
+                    title=title, ax=ax, colorbar=colorbar,
                     cmap=cmap, norm=norm, cbarform=cbarform,
                     contours=contours,lines=lines)
 
 def transect_qc(qc, z, lat, lon, start, end, npoints=100, 
                topog=None, latt=None, lont=None, ztop=4000,
-               title="Water and ice (g/kg air)", ax=None, 
+               title="Water and ice (g/kg air)", ax=None, colorbar=True,
                cmap=_cmaps_['qc'] , norm=None, cbarform=None,
                contours=np.arange(0.0,0.151,0.01),
                lines=np.array([0.1])):
@@ -251,7 +250,7 @@ def transect_qc(qc, z, lat, lon, start, end, npoints=100,
     # call transect using some defaults for vertical velocity w
     return transect(qc, z,lat,lon,start,end,npoints=npoints,
                     topog=topog, latt=latt, lont=lont, ztop=ztop,
-                    title=title, ax=ax, 
+                    title=title, ax=ax, colorbar=colorbar,
                     cmap=cmap, norm=norm, cbarform=cbarform,
                     contours=contours,lines=lines)
 

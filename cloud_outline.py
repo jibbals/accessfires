@@ -129,7 +129,6 @@ def clouds_2panel(topog,s,u,v,
     plt.xlabel('')
     
     plt.subplot(3,1,3)
-    # qc is in kg/kg, change to g/kg
     plotting.transect_qc(qc,z,lat,lon,start,end,topog=topog,
                         ztop=ztop,)
     # Show transect start and end
