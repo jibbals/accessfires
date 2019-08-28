@@ -5,7 +5,7 @@ Created on Mon Aug 26 15:22:49 2019
 @author: jgreensl
 """
 import matplotlib
-matplotlib.use("Agg")
+matplotlib.use("Agg", warn=False)
 
 import matplotlib.colors as col
 import matplotlib.pyplot as plt
@@ -13,7 +13,7 @@ import matplotlib.ticker as tick
 
 import numpy as np
 from datetime import datetime, timedelta
-
+import warnings
 import iris
 
 from utilities import fio,plotting, constants
@@ -52,7 +52,7 @@ def vert_motion_slices(qc,w,lh,lat,lon,dtime,
     plt.close()
     f=plt.figure(figsize=[10,10])
     # model levels to plot
-    m_lvls = [30,60,90,  20,50,80,  10,40,70,  5,35,75] 
+    m_lvls = [30,60,72,  20,50,69,  10,40,66,  5,35,63] 
     for i in range(12):
         plt.subplot(4,3,i+1)
         
@@ -65,8 +65,11 @@ def vert_motion_slices(qc,w,lh,lat,lon,dtime,
         plt.title("~ %5.0f m"%lh[m_lvls[i]])
         
         ## Add contour where clouds occur
-        plt.contour(lon,lat,qc[m_lvls[i]],np.array([cloud_threshold]), 
-                    colors='k')
+        with warnings.catch_warnings():
+            # ignore warning when there are no clouds:
+            warnings.simplefilter('ignore')
+            plt.contour(lon,lat,qc[m_lvls[i]],np.array([cloud_threshold]), 
+                        colors='k')
         
         # add nearby towns
         if extentname == 'waroona':
@@ -98,39 +101,27 @@ def vert_motion_slices(qc,w,lh,lat,lon,dtime,
 
 
 ### RUN THE CODE:
-
-dpi=400
-extentname='waroona'
-ext='.png'
-
-
-# Constraints on dimensions (testing on local machine, need to save ram)
-West,East,South,North = plotting._extents_[extentname]
-constr_z = iris.Constraint(model_level_number=lambda cell: cell < 100)
-constr_lons = iris.Constraint(longitude = lambda cell: West <= cell <= East )
-constr_lats = iris.Constraint(latitude = lambda cell: South <= cell <= North )
-
-
-### pyrocb utc time window:
-pyrocb_hours = [datetime(2016,1,6,7) + timedelta(hours=x) for x in range(6)]
-
-#test hours
-#pyrocb_hours = [datetime(2016,1,5,15)]
-
-for dtime in pyrocb_hours:
+if __name__ == '__main__':
+    dpi=400
+    extentname='waroona'
+    extent=plotting._extents_[extentname]
+    ext='.png'
     
-    # Read vert motion
-    _,_,th1cubes,th2cubes = fio.read_waroona_iris(dtime,constraints=constr_z&constr_lats&constr_lons)
-    w, = th1cubes.extract('upward_air_velocity')
-    lh = w.coord('level_height').points
-    lat=w.coord('latitude').points
-    lon=w.coord('longitude').points
+    ### pyrocb utc time window:
+    pyrocb_hours = [datetime(2016,1,6,7) + timedelta(hours=x) for x in range(6)]
+    #test hours
+    #pyrocb_hours = [datetime(2016,1,5,15)]
     
-    qc1,qc2  = th2cubes.extract(['mass_fraction_of_cloud_ice_in_air', 
-                                 'mass_fraction_of_cloud_liquid_water_in_air'])
-    
-    qc = ( qc1+qc2 )*1000 # change to g/kg
-    
-    for i in range(6):
-        subtime = dtime+timedelta(seconds=600*(i+1))
-        vert_motion_slices(qc[i].data, w[i].data,lh,lat,lon,dtime=subtime)
+    for dtime in pyrocb_hours:
+        
+        # Read vert motion
+        _,_,th1cubes,th2cubes = fio.read_waroona(dtime,extent=extent)
+        w,  = th1cubes.extract('upward_air_velocity')
+        qc, = th2cubes.extract('qc')
+        lh  = w.coord('level_height').points
+        lat = w.coord('latitude').points
+        lon = w.coord('longitude').points
+        
+        for i in range(6):
+            subtime = dtime+timedelta(seconds=600*(i+1))
+            vert_motion_slices(qc[i].data, w[i].data,lh,lat,lon,dtime=subtime)

@@ -24,7 +24,7 @@ from cartopy.mpl.gridliner import LONGITUDE_FORMATTER, LATITUDE_FORMATTER
 import cartopy.io.img_tiles as cimgt
 
 # local stuff
-from .context import utils
+from .context import utils, constants
 
 ###
 ### GLOBALS
@@ -140,9 +140,9 @@ def transect(data, z, lat, lon, start, end, npoints=100,
     # Note that contourf can work with non-plaid coordinate grids provided both are 2-d
     # Contour inputs: xaxis, yaxis, data, colour gradient 
     if contours is None:
-        plt.contourf(slicex,slicez,slicedata,cmap=cmap,norm=norm)
+        plt.contourf(slicex,slicez,slicedata,cmap=cmap,norm=norm,extend='max')
     else:
-        plt.contourf(slicex,slicez,slicedata,contours,cmap=cmap,norm=norm)
+        plt.contourf(slicex,slicez,slicedata,contours,cmap=cmap,norm=norm,extend='max')
     
     if colorbar:
         plt.colorbar(format=cbarform, pad=0.01) # pad is distance from axes
@@ -236,9 +236,9 @@ def transect_w(w, z, lat, lon, start, end, npoints=100,
 def transect_qc(qc, z, lat, lon, start, end, npoints=100, 
                topog=None, latt=None, lont=None, ztop=4000,
                title="Water and ice (g/kg air)", ax=None, colorbar=True,
-               cmap=_cmaps_['qc'] , norm=None, cbarform=None,
-               contours=np.arange(0.0,0.151,0.01),
-               lines=np.array([0.1])):
+               cmap=_cmaps_['qc'] , norm=col.SymLogNorm(0.02), cbarform=tick.ScalarFormatter(),
+               contours=np.arange(0.0,0.4,0.01),
+               lines=np.array([constants.cloud_threshold])):
     '''
     Draw theta cross section
         qc is 3d vertical motion

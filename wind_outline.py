@@ -9,7 +9,7 @@ Created on Mon Aug 26 20:45:05 2019
 import matplotlib
 # don't plot on screen, send straight to file
 # this is for lack of NCI display
-matplotlib.use('Agg')
+matplotlib.use('Agg',warn=False)
 
 # plotting stuff
 import matplotlib.colors as col
@@ -18,7 +18,7 @@ import matplotlib.pyplot as plt
 #import matplotlib.patches as mpatches
 import numpy as np
 from datetime import datetime,timedelta
-import iris # file reading and constraints etc
+import warnings
 
 # local modules
 from utilities import plotting, utils, fio, constants
@@ -70,7 +70,9 @@ def winds_2panel(s,u,v,w,
     plt.title('Topography, winds')
     
     # Add fire front contour
-    if ff is not None:
+    with warnings.catch_warnings():
+        # ignore warning when there are no fires:
+        warnings.simplefilter('ignore')
         plt.contour(lon,lat,np.transpose(ff),np.array([0]), 
                     colors='red')
     
@@ -124,6 +126,9 @@ def winds_2panel(s,u,v,w,
     plt.ylabel('height (m)')
     ## Add contour where clouds occur
     qcslice = utils.cross_section(qc,lat,lon,start,end, npoints=100)
+    with warnings.catch_warnings():
+        # ignore warning when there are no clouds:
+        warnings.simplefilter('ignore')
     plt.contour(xslice,zslice,qcslice,np.array([cloud_threshold]),colors='teal')
     
     ax3 = plt.subplot(3,1,3)
@@ -158,7 +163,7 @@ def waroona_wind_loop(dtime):
     um_hour=datetime(dtime.year,dtime.month,dtime.day,dtime.hour)
     
     # Read the cubes
-    slv,ro1,th1,th2 = fio.read_waroona_iris(dtime=um_hour, extent=extent,add_winds=True)
+    slv,ro1,th1,th2 = fio.read_waroona(dtime=um_hour, extent=extent,add_winds=True)
     
     zth, = th1.extract('z_th')
     

@@ -8,7 +8,7 @@ Created on Mon Aug 26 15:58:21 2019
 import matplotlib
 # don't plot on screen, send straight to file
 # this is for lack of NCI display
-matplotlib.use('Agg')
+matplotlib.use('Agg',warn=False)
 
 # plotting stuff
 #import matplotlib.colors as col
@@ -17,14 +17,15 @@ import matplotlib.pyplot as plt
 #import matplotlib.patches as mpatches
 import numpy as np
 from datetime import datetime,timedelta
-import iris # file reading and constraints etc
+# ignore some warnings
+import warnings
 
 # local modules
 from utilities import plotting, utils, fio, constants
 
 
 def clouds_2panel(topog,s,u,v,
-                  qc,theta,
+                  qc,w,
                   ff,
                   z,lat,lon,
                   dtime,
@@ -32,7 +33,7 @@ def clouds_2panel(topog,s,u,v,
                   transect=1, 
                   vectorskip=13,
                   quiverscale=60,
-                  ztop=13000,
+                  ztop=10000,
                   ext='.png',
                   cloud_threshold=constants.cloud_threshold,
                   dpi=400,
@@ -76,7 +77,6 @@ def clouds_2panel(topog,s,u,v,
                           clabel='m/s')
     plt.title('Horizontal wind speed')
     
-
     # start to end x=[lon0,lon1], y=[lat0, lat1]
     plt.plot([start[1],end[1]],[start[0],end[0], ], '--k', 
              linewidth=2, 
@@ -118,13 +118,20 @@ def clouds_2panel(topog,s,u,v,
     
     ## Second row is transect plots
     plt.subplot(3,1,2)
-    #print("DEBUG:",rh.shape,z.shape,lat.shape,lon.shape)
-    plotting.transect(theta,z,lat,lon,start,end,topog=topog,
-                      cmap='plasma',
-                      contours=np.linspace(290,400,111),
-                      ztop=ztop)
-    plt.title("Potential temperature (K)")
-    #plotting.transect_w(w,z, lat, lon,start,end,topog=topog)
+    #plotting.transect(theta,z,lat,lon,start,end,topog=topog,
+    #                  cmap='plasma',
+    #                  contours=np.linspace(290,400,111),
+    #                  ztop=ztop)
+    wslice, xslice, zslice = plotting.transect_w(w,z,lat,lon,start,end,topog=topog,
+                                                 npoints=100,lines=None,
+                                                 ztop=ztop)
+    plt.title("Vertical motion (m/s)")
+    
+    qcslice = utils.cross_section(qc,lat,lon,start,end, npoints=100)
+    with warnings.catch_warnings():
+        # ignore warning when there are no clouds:
+        warnings.simplefilter('ignore')
+        plt.contour(xslice,zslice,qcslice,np.array([cloud_threshold]),colors='teal')
     
     plt.ylabel('height (m)')
     plt.xlabel('')
@@ -158,7 +165,7 @@ def waroona_cloud_loop(dtime):
     um_hour=datetime(dtime.year,dtime.month,dtime.day,dtime.hour)
     
     # Read the cubes
-    slv,ro1,th1,th2 = fio.read_waroona_iris(dtime=um_hour, extent=extent,
+    slv,ro1,th1,th2 = fio.read_waroona(dtime=um_hour, extent=extent,
                                             add_winds=True, add_theta=True)
     
     zro, = ro1.extract('z_ro')
@@ -178,7 +185,6 @@ def waroona_cloud_loop(dtime):
     
     sh,Ta = th1.extract(['specific_humidity','air_temperature'])
     
-    print(th1)
     theta, = th1.extract('potential_temperature')
     
     lat,lon = w.coord('latitude').points, w.coord('longitude').points
@@ -192,7 +198,7 @@ def waroona_cloud_loop(dtime):
     for i_transect in np.arange(1,6.5,1, dtype=int):
         for tstep in range(len(timesteps)):
             clouds_2panel(topog.data, s[tstep,0].data, u[tstep,0].data, v[tstep,0].data,
-                          qc[tstep].data, theta[tstep].data, 
+                          qc[tstep].data, w[tstep].data, 
                           ff[tstep].data,
                           zro.data, lat, lon,
                           dtime=timesteps[tstep],
@@ -202,8 +208,8 @@ def waroona_cloud_loop(dtime):
 if __name__ == '__main__':
     
     print("INFO: testing cloud_outline.py")
-    waroona_cloud_loop(datetime(2016,1,5,15))
-    #for dtime in [ datetime(2016,1,6,7) + timedelta(hours=x) for x in range(4) ]:
+    #waroona_cloud_loop(datetime(2016,1,5,15))
+    for dtime in [ datetime(2016,1,6,7) + timedelta(hours=x) for x in range(3) ]:
         
-    #    waroona_cloud_loop(dtime)
+        waroona_cloud_loop(dtime)
 
