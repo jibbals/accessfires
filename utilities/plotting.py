@@ -52,11 +52,12 @@ _latlons_['pyrocb_waroona1'] = 0,0 # ~4pm first day
 _latlons_['pyrocb_waroona2'] = 0,0 # 1100-1400 second day
 
 # Sir Ivan locations
-_extents_['sirivan']    = [149.1, 150.1, -32.3, -31.8]
+_extents_['sirivan']    = [149.2, 150.4, -32.4, -31.6]
 _extents_['sirivans']   = [145,154, -34, -30]
-_latlons_['sirivan']    = -32.039730, 149.531430
-_latlons_['uarbry']      = -32.047280, 149.764510
-_latlons_['fire_sirivan'] = -32.045, 149.6  # check with harvey or find in accessdev
+_latlons_['dunedoo']    = -31.99, 149.53
+_latlons_['uarbry']      = -32.047280, 149.71
+_latlons_['cassillis']      = -32.01, 150.0
+_latlons_['fire_sirivan'] = -32.45, 149.51
 # one pyrocb
 _latlons_['pyrocb_sirivan'] = 0,0 # 0530UTC=XXXX local time
 # The pycb over Sir Ivan was around 0530 UTC on Sunday 12 Feb (or a bit after).
