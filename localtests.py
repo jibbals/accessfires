@@ -52,6 +52,7 @@ ff_dtimes = np.array([um_hour + timedelta(hours=x/60.) for x in range(10,61,10)]
 #dtime, constraints=None, extent=None, add_winds=False, add_theta=False):
 dtime=datetime(2016,1,6,8)
 
+cubes=fio.read_waroona_pcfile(dtime,extent=plotting._extents_['waroona'])
 print(dtime)
 print(cubes)
 

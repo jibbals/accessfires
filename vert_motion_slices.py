@@ -14,14 +14,16 @@ import matplotlib.ticker as tick
 import numpy as np
 from datetime import datetime, timedelta
 import warnings
+import iris
 
-from utilities import fio,plotting, constants
+from utilities import utils,fio,plotting, constants
 
 
 def vert_motion_slices(qc,w,lh,lat,lon,dtime, 
                        ff=None,
                        extentname='waroona',
                        ext='.png',
+                       folder='vert_motion_slices',
                        cloud_threshold=constants.cloud_threshold,
                        dpi=400):
     '''
@@ -34,7 +36,7 @@ def vert_motion_slices(qc,w,lh,lat,lon,dtime,
     stitle = dtime.strftime("%Y %b %d %H:%M (UTC)")
     
     # figure name and location
-    pname="figures/%s/vert_motion_slices/fig_%s%s"%(extentname,dstamp,ext)
+    pname="figures/%s/%s/fig_%s%s"%(extentname,folder,dstamp,ext)
     
     
     # set font sizes etc.
@@ -107,34 +109,54 @@ def vert_motion_slices(qc,w,lh,lat,lon,dtime,
     plt.close()
 
 
-
-### RUN THE CODE:
-if __name__ == '__main__':
+def plot_hour(dtime=datetime(2016,1,6,7), old=False):
+    '''
+    create vert motion slices of an hours output from the old run in mika's folder
+    '''
     dpi=400
     extentname='waroona'
     extent=plotting._extents_[extentname]
     ext='.png'
     
-    ### pyrocb utc time window:
-    pyrocb_hours = [datetime(2016,1,6,7) + timedelta(hours=x) for x in range(6)]
-    #test hours
-    #pyrocb_hours = [datetime(2016,1,5,15)]
-    
-    for dtime in pyrocb_hours:
-        
-        # Read vert motion
+    # Read vert motion, clouds
+    if old:
+        cubes = fio.read_waroona_pcfile(dtime,extent=extent)
+        w,  = cubes.extract('upward_air_velocity')
+        qc, = cubes.extract('qc')
+    else:
         _,_,th1cubes,th2cubes = fio.read_waroona(dtime,extent=extent)
         w,  = th1cubes.extract('upward_air_velocity')
         qc, = th2cubes.extract('qc')
-        lh  = w.coord('level_height').points
-        lat = w.coord('latitude').points
-        lon = w.coord('longitude').points
+    lh  = w.coord('level_height').points
+    lat = w.coord('latitude').points
+    lon = w.coord('longitude').points
+
+    ## fire front
+    ff_dtimes = utils.dates_from_iris(w)
+    ff1, = fio.read_fire(dtimes=ff_dtimes, extent=extent, firefront=True)
+    
+    # interpolat ff onto old lats and lons    
+    ff=ff1
+    if old:
+        ff=ff1.interpolate([('longitude',w.coord('longitude').points), 
+                            ('latitude',w.coord('latitude').points)],
+                           iris.analysis.Linear()) 
+    for i in range(len(ff_dtimes)):
+        subtime = ff_dtimes[i]
         
-        ## fire front
-        # read 6 time steps:
-        ff_dtimes = np.array([dtime + timedelta(hours=x/60.) for x in range(10,61,10)])
-        ff, = fio.read_fire(dtimes=ff_dtimes, extent=extent, firefront=True)
+        vert_motion_slices(qc[i].data, w[i].data,lh,lat,lon,
+                           ff=ff[i].data,
+                           dtime=subtime,
+                           folder='vert_motion_slices%s'%(['','_old'][old]),
+                           dpi=dpi, ext=ext)                
+
+### RUN THE CODE:
+if __name__ == '__main__':
+    ### pyrocb utc time window:
+    pyrocb_hours = [datetime(2016,1,6,7) + timedelta(hours=x) for x in range(6)]
+    #test hours
+    pyrocb_hours = [datetime(2016,1,6,7)]
+    
+    for dtime in pyrocb_hours:
         
-        for i in range(6):
-            subtime = dtime+timedelta(seconds=600*(i+1))
-            vert_motion_slices(qc[i].data, w[i].data,lh,lat,lon,ff=ff[i].data,dtime=subtime)
+        plot_hour(dtime,old=True)

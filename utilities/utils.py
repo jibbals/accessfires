@@ -12,6 +12,7 @@ from datetime import datetime,timedelta
 # interpolation package
 from scipy import interpolate
 
+import iris
 
 # more print statements for testing
 __VERBOSE__=False
@@ -103,6 +104,28 @@ def date_from_gregorian(greg, d0=datetime(1970,1,1,0,0,0)):
         return np.array( [d0+timedelta(seconds=int(greg*3600)),])
     return np.array([d0+timedelta(seconds=int(hr*3600)) for hr in greg])
 
+def dates_from_iris(timedim, grain='seconds',remove_seconds=True):
+    '''
+    input is coord('time') and grain
+    or else input a cube with a 'time' dim
+    output is array of datetimes
+    '''
+    tdim=timedim
+    if isinstance(timedim, iris.cube.Cube):
+        tdim  = timedim.coord('time')
+        grain = str(tdim.units).split(' ')[0]
+
+    unitformat = '%s since %%Y-%%m-%%d %%H:%%M:00'%grain
+    d0 = datetime.strptime(str(tdim.units),unitformat)
+    secmult=1
+    if grain=='minutes':
+        secmult=60
+    elif grain=='hours':
+        secmult=60*60
+    
+    dt = np.array([d0 + timedelta(seconds=secs*secmult) for secs in tdim.points])
+    dtm = np.array([datetime(d.year,d.month,d.day,d.hour,d.minute) for d in dt])
+    return dtm
 
 def lat_lon_index(lat,lon,lats,lons):
     ''' lat,lon index from lats,lons    '''

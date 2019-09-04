@@ -32,6 +32,7 @@ def emberstorm_clouds(dtime,
                       quiverscale=60,
                       ztop=6000,
                       cloud_threshold=constants.cloud_threshold,
+                      old=False,
                       ext='.png',
                       dpi=400,
                   ):
@@ -50,28 +51,48 @@ def emberstorm_clouds(dtime,
     
     # figure name and location
     pnames="figures/%s/emberstorm/fig_%s%s"
-    
-    ## time intervals for model output this hour
-    ffdtimes = [ dtime + timedelta(minutes=x) for x in np.arange(10,61,10,dtype=float)]
-    
+    if old:
+        pnames="figures/%s/emberstorm_old/fig_%s%s"
+        
     ### First use datetime and extentname to read correct outputs:
     extent = plotting._extents_[extentname]
-    ## Read fire front over extent [t, lat, lon]
-    ff, = fio.read_fire(ffdtimes, extent=extent, firefront=True)
+
     ## read um output over extent [t, lev, lat, lon]
-    slv, _, th1, th2 = fio.read_waroona(dtime,extent=extent)
-    qc, = th2.extract('qc')
-    lat = qc.coord('latitude').points
-    lon = qc.coord('longitude').points
-    w,  = th1.extract('upward_air_velocity')
+    if old:
+        cubes = fio.read_waroona_pcfile(dtime,extent=extent)
+        w,  = cubes.extract('upward_air_velocity')
+        qc, = cubes.extract('qc')
+        topog, = cubes.extract('topog')
+        z1, = cubes.extract('z_th') 
+        # just want 1 time step for z
+        z = z1[0]
+    else:
+        slv,_,th1,th2 = fio.read_waroona(dtime,extent=extent)
+        w,  = th1.extract('upward_air_velocity')
+        qc, = th2.extract('qc')
+        topog,= slv.extract('topog') # [ lat, lon]
+        z,    = th1.extract('z_th') # [lev, lat, lon]
+    lat = w.coord('latitude').points
+    lon = w.coord('longitude').points
+
+    ## fire front
+    ffdtimes = utils.dates_from_iris(w)
+    ff1, = fio.read_fire(dtimes=ffdtimes, extent=extent, firefront=True)
+    
+    # interpolat ff onto old lats and lons    
+    ff=ff1
+    if old:
+        ff=ff1.interpolate([('longitude',w.coord('longitude').points), 
+                            ('latitude',w.coord('latitude').points)],
+                           iris.analysis.Linear()) 
+    
     # take mean of vert motion between lvls 25-48 approx 500m - 1500m
     with warnings.catch_warnings():
         # ignore warning from collapsing non-contiguous dimension:
         warnings.simplefilter('ignore')
         wmean = w[:,25:48,:,:].collapsed('model_level_number', iris.analysis.MEAN)
     h0,h1 = wmean.coord('level_height').bounds[0]
-    topog,= slv.extract('topog') # [ lat, lon]
-    z,    = th1.extract('z_th') # [t, lev, lat, lon]
+
     
     ## Plotting setup
     # set font sizes
@@ -81,7 +102,7 @@ def emberstorm_clouds(dtime,
     startx,endx = plotting._transects_["emberstormx"]
     
     # for each timestep:
-    for i in range(6):
+    for i in range(len(ffdtimes)):
         # datetime timestamp for file,title
         dstamp = ffdtimes[i].strftime("%Y%m%d%H%M")
         stitle = ffdtimes[i].strftime("Vertical motion %Y %b %d %H:%M (UTC)")
@@ -221,8 +242,9 @@ def emberstorm_clouds(dtime,
 if __name__ == '__main__':
     
     print("INFO: testing cloud_outline.py")
-    emberstorm_clouds(datetime(2016,1,5,15))
+    #emberstorm_clouds(datetime(2016,1,5,15))
     
-    for dtime in [ datetime(2016,1,6,7) + timedelta(hours=x) for x in range(4) ]:
-        emberstorm_clouds(dtime)
+    for dtime in [ datetime(2016,1,6,7) + timedelta(hours=x) for x in range(2) ]:
+        #emberstorm_clouds(dtime)
+        emberstorm_clouds(dtime,old=True)
 
