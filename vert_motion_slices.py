@@ -14,18 +14,18 @@ import matplotlib.ticker as tick
 import numpy as np
 from datetime import datetime, timedelta
 import warnings
-import iris
 
 from utilities import fio,plotting, constants
 
 
 def vert_motion_slices(qc,w,lh,lat,lon,dtime, 
+                       ff=None,
                        extentname='waroona',
                        ext='.png',
                        cloud_threshold=constants.cloud_threshold,
                        dpi=400):
     '''
-    43i showing vertical motion contourf plots, at different model levels
+    44i showing vertical motion contourf plots, at different model levels
     Trying to see pyroCB cloud
     '''
     
@@ -50,11 +50,11 @@ def vert_motion_slices(qc,w,lh,lat,lon,dtime,
     extent = plotting._extents_[extentname]
     
     plt.close()
-    f=plt.figure(figsize=[10,10])
+    f=plt.figure(figsize=[11,10])
     # model levels to plot
-    m_lvls = [30,60,72,  20,50,69,  10,40,66,  5,35,63] 
-    for i in range(12):
-        plt.subplot(4,3,i+1)
+    m_lvls = [30,60,72,90,  20,50,69,85,  10,40,66,80,  5,35,63,76] 
+    for i in range(16):
+        plt.subplot(4,4,i+1)
         
         # top panel is wind speed surface values
         cs=plotting.map_contourf(extent,w[m_lvls[i]],lat,lon,
@@ -82,6 +82,14 @@ def vert_motion_slices(qc,w,lh,lat,lon,dtime,
                                        color='r', marker='*', 
                                        textcolor='k')
             # add pyroCB
+        # Add fire front to first column
+        if ff is not None:
+            # Add fire outline
+            with warnings.catch_warnings():
+                # ignore warning when there is no fire yet:
+                warnings.simplefilter('ignore')
+                plt.contour(lon,lat,np.transpose(ff),np.array([0]), 
+                            colors='red',linewidths=1, alpha=0.5 + 0.5*(i==12))
     
     # Save figure into animation folder with numeric identifier
     plt.suptitle(stitle)
@@ -122,6 +130,11 @@ if __name__ == '__main__':
         lat = w.coord('latitude').points
         lon = w.coord('longitude').points
         
+        ## fire front
+        # read 6 time steps:
+        ff_dtimes = np.array([dtime + timedelta(hours=x/60.) for x in range(10,61,10)])
+        ff, = fio.read_fire(dtimes=ff_dtimes, extent=extent, firefront=True)
+        
         for i in range(6):
             subtime = dtime+timedelta(seconds=600*(i+1))
-            vert_motion_slices(qc[i].data, w[i].data,lh,lat,lon,dtime=subtime)
+            vert_motion_slices(qc[i].data, w[i].data,lh,lat,lon,ff=ff[i].data,dtime=subtime)

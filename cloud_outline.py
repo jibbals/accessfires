@@ -8,7 +8,7 @@ Created on Mon Aug 26 15:58:21 2019
 import matplotlib
 # don't plot on screen, send straight to file
 # this is for lack of NCI display
-matplotlib.use('Agg',warn=False)
+matplotlib.use('Agg', warn=False)
 
 # plotting stuff
 #import matplotlib.colors as col

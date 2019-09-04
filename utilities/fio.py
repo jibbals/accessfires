@@ -297,6 +297,120 @@ def read_waroona(dtime, constraints=None, extent=None, add_winds=False, add_thet
         cubelists[2].append(cubetheta)
     return cubelists
 
+def read_waroona_pcfile(dtime, constraints=None, extent=None, add_winds=False, add_theta=False):
+    '''
+    0: mass_fraction_of_cloud_liquid_water_in_air / (kg kg-1) (time: 2; model_level_number: 140; latitude: 88; longitude: 106)
+    1: mass_fraction_of_cloud_ice_in_air / (kg kg-1) (time: 2; model_level_number: 140; latitude: 88; longitude: 106)
+    2: upward_air_velocity / (m s-1)       (time: 2; model_level_number: 140; latitude: 88; longitude: 106)
+    3: air_pressure / (Pa)                 (time: 2; model_level_number: 140; latitude: 88; longitude: 106)
+    4: air_temperature / (K)               (latitude: 88; longitude: 106)
+    5: air_temperature / (K)               (time: 2; model_level_number: 140; latitude: 88; longitude: 106)
+    6: x_wind / (m s-1)                    (time: 2; model_level_number: 140; latitude: 88; longitude: 106)
+    7: y_wind / (m s-1)                    (time: 2; model_level_number: 140; latitude: 88; longitude: 106)
+    8: air_pressure_at_sea_level / (Pa)    (time: 2; latitude: 88; longitude: 106)
+    9: qc / (g kg-1)                       (time: 2; model_level_number: 140; latitude: 88; longitude: 106)
+    10: topog / (m)                         (latitude: 88; longitude: 106)
+    11: z_th / (m)                          (time: 2; model_level_number: 140; latitude: 88; longitude: 106)
+    12: u / (m s-1)                         (time: 2; model_level_number: 140; latitude: 88; longitude: 106)
+    13: v / (m s-1)                         (time: 2; model_level_number: 140; latitude: 88; longitude: 106)
+    14: s / (m s-1)                         (time: 2; model_level_number: 140; latitude: 88; longitude: 106)
+    '''
+    dstamp=dtime.strftime('%Y%m%d%H')
+     
+    # First read topography
+    topog, = read_nc_iris('data/waroona/umnsaa_pa2016010515.nc',
+                          constraints = 'surface_altitude')
+    
+    
+    # If we just want a particular extent, subset to that extent using constraints
+    if extent is not None:
+        West,East,South,North = extent
+        constr_lons = iris.Constraint(longitude = lambda cell: West <= cell <= East )
+        constr_lats = iris.Constraint(latitude = lambda cell: South <= cell <= North )
+        topog = topog.extract(constr_lons & constr_lats) # subset topog
+        if constraints is not None:
+            constraints = constraints & constr_lats & constr_lons
+        else:
+            constraints = constr_lats & constr_lons
+    
+    path = 'data/waroona/umnsaa_pc%s.nc'%dstamp
+    varnames = ['mass_fraction_of_cloud_liquid_water_in_air',
+                'mass_fraction_of_cloud_ice_in_air',
+                'upward_air_velocity', # m/s [t,z,lat,lon]
+                'air_pressure', # Pa [t,z,lat,lon]
+                #'air_temperature', # K [lat,lon]
+                'air_temperature_0', # K [t, z, lat, lon]
+                'x_wind','y_wind', # m/s [t,z,lat,lon]
+                'air_pressure_at_sea_level', # Pa [time, lat, lon]
+                ]
+    cubes = read_nc_iris(path,constraints=constraints,keepvars=varnames)
+    
+    # Add cloud parameter at g/kg scale
+    water, ice = cubes.extract(['mass_fraction_of_cloud_liquid_water_in_air',
+                                'mass_fraction_of_cloud_ice_in_air'])
+    qc = (water+ice) * 1000
+    qc.units = 'g kg-1'
+    qc.var_name = 'qc'
+    cubes.append(qc)
+    # add topog cube
+    iris.std_names.STD_NAMES['topog'] = {'canonical_units': 'm'}
+    topog.standard_name = 'topog'
+    cubes.append(topog)
+    # add zth cube
+    p,pmsl = cubes.extract(['air_pressure','air_pressure_at_sea_level'])
+    nt,nz,ny,nx = p.shape
+    reppmsl = np.repeat(pmsl.data[:,np.newaxis,:,:],nz, axis=1) # repeat surface pressure along z axis
+    zth = -(287*300/9.8)*np.log(p.data/reppmsl)
+    iris.std_names.STD_NAMES['z_th'] = {'canonical_units': 'm'}
+    zthcube=iris.cube.Cube(zth, standard_name='z_th', 
+                           var_name="zth", units="m",
+                           dim_coords_and_dims=[(p.coord('time'),0),
+                                                (p.coord('model_level_number'),1),
+                                                (p.coord('latitude'),2),
+                                                (p.coord('longitude'),3)])
+    cubes.append(zthcube)
+    
+    if add_winds:
+        # wind speeds need to be interpolated onto non-staggered latlons
+        p, u1, v1 = cubes.extract(['air_pressure','x_wind','y_wind'])
+        
+        ### DESTAGGER u and v using iris interpolate
+        ### (this will trigger the delayed read)
+        # u1: [t,z, lat, lon1]
+        # v1: [t,z, lat1, lon]  # put these both onto [t,z,lat,lon]
+        u = u1.interpolate([('longitude',p.coord('longitude').points)],
+                           iris.analysis.Linear())
+        v = v1.interpolate([('latitude',p.coord('latitude').points)],
+                           iris.analysis.Linear())
+        # Get wind speed cube using hypotenuse of u,v
+        s = iris.analysis.maths.apply_ufunc(np.hypot,u,v)
+        s.units = 'm s-1'
+        # add standard names for these altered variables:
+        iris.std_names.STD_NAMES['u'] = {'canonical_units': 'm s-1'}
+        iris.std_names.STD_NAMES['v'] = {'canonical_units': 'm s-1'}
+        u.standard_name='u'
+        v.standard_name='v'
+        s.var_name='s' # s doesn't come from a var with a std name so can just use var_name
+        cubes.append(u)
+        cubes.append(v)
+        cubes.append(s)
+    
+    if add_theta:
+        # Estimate potential temp
+        p, Ta = cubes.extract(['air_pressure','air_temperature'])
+        theta = potential_temperature(p.data,Ta.data)
+        # create cube 
+        iris.std_names.STD_NAMES['potential_temperature'] = {'canonical_units': 'K'}
+        cubetheta = iris.cube.Cube(theta, standard_name="potential_temperature", 
+                                   var_name="theta", units="K",
+                                   dim_coords_and_dims=[(p.coord('time'),0),
+                                                        (p.coord('model_level_number'),1),
+                                                        (p.coord('latitude'),2),
+                                                        (p.coord('longitude'),3)])
+        cubes.append(cubetheta)
+    return cubes
+    
+
 def read_topog(extentname='waroona'):
     '''
     Read topography cube
