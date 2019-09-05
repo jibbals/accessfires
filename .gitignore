@@ -8,3 +8,6 @@ data.lnk
 # ignore notebook checkpoints
 .ipynb*
 
+# ignore pycache
+**__pycache__
+
