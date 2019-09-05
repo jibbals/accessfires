@@ -25,7 +25,7 @@ import warnings
 from utilities import plotting, utils, fio, constants
 
 
-def f160(press,temps, latlon, nearby=2, alpha=0.4):
+def f160(press,temps, tempd, latlon, nearby=2, alpha=0.4):
     '''
     show skewt logp plot of temperature profile at latlon
     Does model give us dewpoint or equiv to also plot here??
@@ -39,6 +39,7 @@ def f160(press,temps, latlon, nearby=2, alpha=0.4):
     lats=press.coord('latitude')
     press.convert_units('hPa') # convert to hPa
     temps.convert_units('K') # convert to sir Kelvin
+    tempd.convert_units('K') # convert to kelvin
     
     press0 = press.interpolate([('longitude',[latlon[1]]),
                                 ('latitude',[latlon[0]])],
@@ -46,10 +47,14 @@ def f160(press,temps, latlon, nearby=2, alpha=0.4):
     temp0  = temps.interpolate([('longitude',[latlon[1]]),
                                 ('latitude',[latlon[0]])],
                                iris.analysis.Linear())
+    tempd0 = tempd.interpolate([('longitude',[latlon[1]]),
+                                ('latitude',[latlon[0]])],
+                               iris.analysis.Linear())
     
     f160ax = plotting.ax_skewt()
-    lllabel= "%.2f$^{\circ}$S, %.2f$^{\circ}$E"%(-latlon[0],latlon[1])
-    f160ax.semilogy(np.squeeze(temp0.data),np.squeeze(press0.data), 'k',linewidth=2, label=lllabel)
+    f160ax.semilogy(np.squeeze(temp0.data),np.squeeze(press0.data), 'k',linewidth=2, label='T')
+    f160ax.semilogy(np.squeeze(tempd0.data),np.squeeze(press0.data), 'teal',linewidth=2, label='Td')
+    
     
     ## plot a bunch of nearby profiles
     if nearby>0:
@@ -61,6 +66,9 @@ def f160(press,temps, latlon, nearby=2, alpha=0.4):
                         np.squeeze(press[:,lati,loni].data),
                         alpha=alpha, color='k',
                         label='nearby')
+        f160ax.semilogy(np.squeeze(tempd[:,lati,loni].data), 
+                        np.squeeze(press[:,lati,loni].data),
+                        alpha=alpha, color='teal')
         for i in range(1,nearby+1,1):    
             for latii in [lati-i,lati, lati+i]:
                 for lonii in [loni-i, loni, loni+i]:
@@ -70,6 +78,12 @@ def f160(press,temps, latlon, nearby=2, alpha=0.4):
                                     np.squeeze(press[:,latii,lonii].data),
                                     alpha=alpha, color='k',
                                     label='nearby')
+                    f160ax.semilogy(np.squeeze(tempd[:,latii,lonii].data), 
+                                    np.squeeze(press[:,latii,lonii].data),
+                                    alpha=alpha, color='teal',
+                                    label='nearby')
+    # update y ticks (they get scale formatted by semilogy)
+    f160ax.yaxis.set_major_formatter(tick.ScalarFormatter())
         
     
 def f160_hour(dtime=datetime(2016,1,6,7), latlon = [-32.87,116.1]):
@@ -94,11 +108,11 @@ def f160_hour(dtime=datetime(2016,1,6,7), latlon = [-32.87,116.1]):
     
     for i in range(len(ffdtimes)):
         dstamp = ffdtimes[i].strftime("%Y%m%d%H%M")
-        ptitle="T$_{ACCESS}$ %s %s"%(latlon_stamp,ffdtimes[i].strftime("%Y %b %d %H:%M (UTC)"))
+        ptitle="SkewT$_{ACCESS}$   (%s) %s"%(latlon_stamp,ffdtimes[i].strftime("%Y %b %d %H:%M (UTC)"))
         pname=pnames%(extentname,latlon_stamp,dstamp)
         
         plt.close()
-        f160(p[i],T[i], latlon)
+        f160(p[i],T[i],Td[i], latlon)
         plt.title(ptitle)
         plt.savefig(pname)
         print("INFO: Saved figure ",pname)

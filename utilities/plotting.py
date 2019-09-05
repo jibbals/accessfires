@@ -107,7 +107,7 @@ def init_plots():
   #matplotlib.rcParams["figure.dpi"] = 400           # DEFAULT DPI for plot output
   # THIS MESSES UP THE PLOTTING
 
-def ax_skewt(tlims=[250,375],plims=[1050,50]):
+def ax_skewt(tlims=[220,360],plims=[1050,50]):
     '''
     Using Jeff's saturationpoint code, create base for log p skew t plot
     EG: 

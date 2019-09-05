@@ -182,7 +182,7 @@ def read_z(fpath='data/waroona/umnsaa_2016010515_mdl_th1.nc'):
     return z
     
 def read_waroona(dtime, constraints=None, extent=None, 
-                 add_winds=False, add_theta=False,add_dewpoint=True):
+                 add_winds=False, add_theta=False, add_dewpoint=True):
     '''
         Read the converted waroona model output files
         returns list of 4 iris cube lists:
@@ -258,6 +258,37 @@ def read_waroona(dtime, constraints=None, extent=None,
     zro.standard_name = 'z_ro'
     cubelists[1].append(zro)
     cubelists[2].append(zth)
+    
+    if add_dewpoint:
+        # Take pressure and relative humidity
+        
+        p,q = cubelists[2].extract(['air_pressure','specific_humidity'])
+        p_orig_units = p.units
+        q_orig_units = q.units
+        p.convert_units('hPa')
+        q.convert_units('kg kg-1')
+        #print("DEBUG: units", p_orig_units, p.units, q_orig_units,q.units)
+        # calculate vapour pressure:
+        epsilon = 0.6220 # gas constant ratio for dry air to water vapour
+        e = p*q/(epsilon+(1-epsilon)*q)
+        iris.std_names.STD_NAMES['vapour_pressure'] = {'canonical_units': 'hPa'}
+        e.standard_name='vapour_pressure'
+        cubelists[2].append(e)
+        # calculate dewpoint from vapour pressure
+        Td = 234.5 / ((17.67/np.log(e.data/6.112))-1) # in celcius
+        Td = Td + 273.16 # celcius to kelvin
+        
+        # change Td to a Cube
+        iris.std_names.STD_NAMES['dewpoint_temperature'] = {'canonical_units': 'K'}
+        cubeTd = iris.cube.Cube(Td, standard_name="dewpoint_temperature", 
+                                   var_name="Td", units="K",
+                                   dim_coords_and_dims=[(p.coord('time'),0),
+                                                        (p.coord('model_level_number'),1),
+                                                        (p.coord('latitude'),2),
+                                                        (p.coord('longitude'),3)])
+
+        cubelists[2].append(cubeTd)
+        
     
     if add_winds:
         # wind speeds need to be interpolated onto non-staggered latlons
