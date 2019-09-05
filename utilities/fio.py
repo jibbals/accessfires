@@ -181,7 +181,8 @@ def read_z(fpath='data/waroona/umnsaa_2016010515_mdl_th1.nc'):
     #height_above_reference_ellipsoid / (m) (model_level_number: 140; latitude: 576; longitude: 576)
     return z
     
-def read_waroona(dtime, constraints=None, extent=None, add_winds=False, add_theta=False):
+def read_waroona(dtime, constraints=None, extent=None, 
+                 add_winds=False, add_theta=False,add_dewpoint=True):
     '''
         Read the converted waroona model output files
         returns list of 4 iris cube lists:
@@ -204,6 +205,7 @@ def read_waroona(dtime, constraints=None, extent=None, add_winds=False, add_thet
         3: upward_air_velocity / (m s-1)       (time: 6; model_level_number: 140; latitude: 576; longitude: 576)
         4: z_th / (m)                       # added by jwg
         [ potential_temperature / (K) ]     # added if add_theta argument is True
+        [ dewpoint_temperature / (K) ]      # added if add_dewpoint is True
         ========
         0: mass_fraction_of_cloud_ice_in_air / (kg kg-1) (time: 6; model_level_number: 140; latitude: 576; longitude: 576)
         1: mass_fraction_of_cloud_liquid_water_in_air / (kg kg-1) (time: 6; model_level_number: 140; latitude: 576; longitude: 576)

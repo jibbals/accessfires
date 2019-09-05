@@ -27,6 +27,9 @@ import matplotlib.patches as mpatches
 
 from utilities import utils,fio,plotting
 
+
+
+
 # Try reading file using iris
 import iris
 import iris.quickplot as qplt
@@ -51,8 +54,18 @@ ff_dtimes = np.array([um_hour + timedelta(hours=x/60.) for x in range(10,61,10)]
 
 #dtime, constraints=None, extent=None, add_winds=False, add_theta=False):
 dtime=datetime(2016,1,6,8)
+# read some data
+slv,ro1,th1,th2 = fio.read_waroona(dtime,extent=plotting._extents_['waroona'], add_winds=True)
 
-cubes=fio.read_waroona_pcfile(dtime,extent=plotting._extents_['waroona'])
-print(dtime)
-print(cubes)
+print(th1)
+p,T=th1.extract(['air_pressure','air_temperature'])
+
+cubes=fio.read_waroona_pcfile(dtime)
+
+
+ax=ax_skewt(tlims=[250,375],plims=[1050,50])
+ax.semilogy(T[0,:,50,50].data, p[0,:,50,50].data/100., 'k')
+plt.show()
+
+
 
