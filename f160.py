@@ -25,13 +25,15 @@ import warnings
 from utilities import plotting, utils, fio, constants
 
 
-def f160(press,temps, tempd, latlon, nearby=2, alpha=0.4):
+def f160(press,temps, tempd, latlon, p_ro=None,u=None,v=None, nearby=2, alpha=0.4):
     '''
     show skewt logp plot of temperature profile at latlon
     Does model give us dewpoint or equiv to also plot here??
     input cubes: pressures, temperatures are [z,lat,lon]
     profile for cubes interpolated to latlon point will be shown with linewidth of 2
     nearest values to lat lon within <nearby> indices will be plotted at low alpha
+    
+    Wind barbs will be shown if p_ro,u,v are set
     '''
     
     ## first interpolate pressure and temperature to latlon
@@ -55,6 +57,43 @@ def f160(press,temps, tempd, latlon, nearby=2, alpha=0.4):
     f160ax.semilogy(np.squeeze(temp0.data),np.squeeze(press0.data), 'k',linewidth=2, label='T')
     f160ax.semilogy(np.squeeze(tempd0.data),np.squeeze(press0.data), 'teal',linewidth=2, label='Td')
     
+    ## Add wind profile if desired
+    if u is not None and v is not None and p_ro is not None:
+        # interpolate to desired lat/lon
+        p_ro.convert_units('hPa') # convert to hPa
+        u0 = u.interpolate([('longitude',[latlon[1]]),
+                            ('latitude',[latlon[0]])],
+                           iris.analysis.Linear())
+        v0 = v.interpolate([('longitude',[latlon[1]]),
+                            ('latitude',[latlon[0]])],
+                           iris.analysis.Linear())
+        p_ro0 = p_ro.interpolate([('longitude',[latlon[1]]),
+                            ('latitude',[latlon[0]])],
+                           iris.analysis.Linear())
+        n_z, _, _ = p_ro0.shape
+        ## show profile of horizontal winds on the right
+        barbax = plt.twiny(f160ax)
+        plt.sca(barbax)
+        # plt.barbs([X,Y],U,V) # X,Y are barb locations, U,V are directions
+        # all X locations are 1, Y locations should match pressure levels
+        # 2D(surface) plot but just making a single line of barbs
+        X=np.ones(press[:,0,0].shape);Y=np.squeeze(p_ro0.data)
+        U=np.squeeze(u0.data); V=np.squeeze(v0.data)
+        mX,mY = np.meshgrid(X,Y)
+        mV = np.repeat(V[np.newaxis,:],n_z,0) # repeat along unused x direction
+        mV.mask = True
+        mV.mask[0,:]=False
+        mU = np.repeat(U[np.newaxis,:],n_z,0)
+        mU.mask = True
+        mU.mask[0,:]=False
+        # make it not so crowded at low altitudes
+        nicer_z=np.union1d(np.union1d(np.arange(0,41,5), np.arange(43,81,3)), np.arange(81,140,1))
+        skip=(slice(None,None,None),nicer_z)
+        plt.barbs(mX[skip],mY.transpose()[skip],mU[skip],mV[skip])
+        # remove additional new x axis
+        plt.xticks([],[])
+        plt.xlim([0,1.05])
+        plt.sca(f160ax)
     
     ## plot a bunch of nearby profiles
     if nearby>0:
@@ -82,9 +121,11 @@ def f160(press,temps, tempd, latlon, nearby=2, alpha=0.4):
                                     np.squeeze(press[:,latii,lonii].data),
                                     alpha=alpha, color='teal',
                                     label='nearby')
+            
     # update y ticks (they get scale formatted by semilogy)
     f160ax.yaxis.set_major_formatter(tick.ScalarFormatter())
-        
+    plt.yticks(np.linspace(1000,100,10))
+    #f160ax.xaxis.set_major_locator(tick.MultipleLocator(10))
     
 def f160_hour(dtime=datetime(2016,1,6,7), latlon = [-32.87,116.1]):
     '''
@@ -101,8 +142,9 @@ def f160_hour(dtime=datetime(2016,1,6,7), latlon = [-32.87,116.1]):
     pnames = 'figures/%s/skewt/fig_%s_%s.png'
     
     # read pressure and temperature cubes
-    _,_,th1,_= fio.read_waroona(dtime, extent=extent, add_dewpoint=True)#, add_theta=True)
-    p,T,Td = th1.extract(['air_pressure','air_temperature','dewpoint_temperature'])
+    _,ro1,th1,_= fio.read_waroona(dtime, extent=extent, add_dewpoint=True, add_winds=True)#, add_theta=True)
+    p,T,Td  = th1.extract(['air_pressure','air_temperature','dewpoint_temperature'])
+    pro,u,v = ro1.extract(['air_pressure','u','v'])
     
     ffdtimes = utils.dates_from_iris(p)
     
@@ -111,11 +153,12 @@ def f160_hour(dtime=datetime(2016,1,6,7), latlon = [-32.87,116.1]):
         ptitle="SkewT$_{ACCESS}$   (%s) %s"%(latlon_stamp,ffdtimes[i].strftime("%Y %b %d %H:%M (UTC)"))
         pname=pnames%(extentname,latlon_stamp,dstamp)
         
-        plt.close()
-        f160(p[i],T[i],Td[i], latlon)
+        
+        f160(p[i],T[i],Td[i], latlon,p_ro=pro[i], u=u[i], v=v[i])
         plt.title(ptitle)
         plt.savefig(pname)
         print("INFO: Saved figure ",pname)
+        plt.close()
     
 if __name__ == '__main__':
     

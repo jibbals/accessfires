@@ -318,7 +318,7 @@ def read_waroona(dtime, constraints=None, extent=None,
     if add_theta:
         # Estimate potential temp
         p, Ta = cubelists[2].extract(['air_pressure','air_temperature'])
-        theta = potential_temperature(p.data,Ta.data)
+        theta = utils.potential_temperature(p.data,Ta.data)
         # create cube 
         iris.std_names.STD_NAMES['potential_temperature'] = {'canonical_units': 'K'}
         cubetheta = iris.cube.Cube(theta, standard_name="potential_temperature", 
@@ -431,7 +431,7 @@ def read_waroona_pcfile(dtime, constraints=None, extent=None, add_winds=False, a
     if add_theta:
         # Estimate potential temp
         p, Ta = cubes.extract(['air_pressure','air_temperature'])
-        theta = potential_temperature(p.data,Ta.data)
+        theta = utils.potential_temperature(p.data,Ta.data)
         # create cube 
         iris.std_names.STD_NAMES['potential_temperature'] = {'canonical_units': 'K'}
         cubetheta = iris.cube.Cube(theta, standard_name="potential_temperature", 
