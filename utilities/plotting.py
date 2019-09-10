@@ -187,12 +187,11 @@ def ax_skewt(tlims=[240,330],plims=[1050,100], th_bl=None, q_bl=None):
         # Determine set of starting temps if necessary
         if t0 is None:
             xmin, xmax = ax.get_xlim()
-            t0 = np.concatenate((np.arange(xmin, 270, 10),
-                                 np.arange(270, xmax + 1, 5)))
+            t0 = np.arange(240, xmax, 10)
         print("DEBUG: t0",t0.shape, t0)
         # Get pressure levels based on ylims if necessary
         if p is None:
-            p = np.linspace(*ax.get_ylim())
+            p = np.linspace(1050,100, 96)
         print("DEBUG: p",p.shape, p)
         # Assemble into data for plotting
         t = thermo.moist_lapse(p*100, t0[:, np.newaxis], 100000) # in Kelvin

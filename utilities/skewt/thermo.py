@@ -461,9 +461,11 @@ def moist_lapse(pressure, temperature, ref_pressure=None):
         # Everything is easier if pressures are in increasing order
         pressure = pressure[::-1]
         side = 'right'
-
-    ref_pres_idx = np.searchsorted(pressure.m, ref_pressure.m, side=side)
-
+    
+    # What does .m do???
+    #ref_pres_idx = np.searchsorted(pressure.m, ref_pressure.m, side=side)
+    ref_pres_idx = np.searchsorted(pressure, ref_pressure, side=side)
+    print("DEBUG: ref_pres_idx", np.shape(ref_pres_idx), ref_pres_idx )
     ret_temperatures = np.empty((0, temperature.shape[0]))
 
     if ref_pressure > pressure.min():

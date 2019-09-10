@@ -172,7 +172,7 @@ if __name__ == '__main__':
     print("INFO: testing cloud_outline.py")
     #emberstorm_clouds(datetime(2016,1,5,15))
     
-    for dtime in [ datetime(2016,1,6,3) + timedelta(hours=x) for x in range(6) ]:
+    for dtime in [ datetime(2016,1,6,7) + timedelta(hours=x) for x in range(1) ]:
         f160_hour(dtime,old=False)
-        f160_hour(dtime,old=True)
+        #f160_hour(dtime,old=True)
 
