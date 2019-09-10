@@ -16,6 +16,7 @@ import matplotlib.colors as col
 import matplotlib.pyplot as plt
 import matplotlib.ticker as tick
 from matplotlib.projections import register_projection
+from matplotlib.collections import LineCollection
 
 # Mapping stuff
 import cartopy
@@ -147,40 +148,96 @@ def ax_skewt(tlims=[240,330],plims=[1050,100], th_bl=None, q_bl=None):
         loge = np.log(e)
         Td = (243.5*loge - 440.8)/(19.48 - loge) + 273.15
         ax.semilogy(Td,p,'g-',alpha=0.5)
-     
-    def plot_moistadiabat(ax, T, p, p0=1e5):
-        # moist adiabat, 
-        #at the saturated mixing ratios (kg/kg) over pressure (Pa)
+    
+    def plot_moist_adiabats(ax, t0=None, p=None, **kwargs):
+        r"""Plot moist adiabats.
         
-        #for Tk in np.array(T):
-        r_sat = thermo.r_sat(T,p0)# kg/kg = f(K,Pa)
-        th_e = thermo.theta_e(T, r_sat, p0) # K/Pa = f(K, kg/kg, Pa)
-        print("DEBUG: th_e",th_e.shape, th_e)
+        Temperatures in K, pressures in hPa.
+
+        Adds saturated pseudo-adiabats (lines of constant equivalent potential
+        temperature) to the plot. The default style of these lines is dashed
+        blue lines with an alpha value of 0.5. These can be overridden using
+        keyword arguments.
+
+        Parameters
+        ----------
+        t0 : array_like, optional
+            Starting temperature values in Kelvin. If none are given, they will be
+            generated using the current temperature range at the bottom of
+            the plot.
+        p : array_like, optional
+            Pressure values to be included in the moist adiabats. If not
+            specified, they will be linearly distributed across the current
+            plotted pressure range.
+        kwargs
+            Other keyword arguments to pass to :class:`matplotlib.collections.LineCollection`
+
+        Returns
+        -------
+        matplotlib.collections.LineCollection
+            instance created
+
+        See Also
+        --------
+        :func:`~metpy.calc.thermo.moist_lapse`
+        :meth:`plot_dry_adiabats`
+        :class:`matplotlib.collections.LineCollection`
+
+        """
+        # Determine set of starting temps if necessary
+        if t0 is None:
+            xmin, xmax = ax.get_xlim()
+            t0 = np.concatenate((np.arange(xmin, 270, 10),
+                                 np.arange(270, xmax + 1, 5)))
+        print("DEBUG: t0",t0.shape, t0)
+        # Get pressure levels based on ylims if necessary
+        if p is None:
+            p = np.linspace(*ax.get_ylim())
         print("DEBUG: p",p.shape, p)
-        print("DEBUG: r_sat",r_sat.shape,r_sat)
-        e = p * r_sat / (thermo.eps + r_sat) 
-        loge = np.log( 0.01*np.maximum(e, 1e-100) )
-        T_lcl = 2840.0 / (3.5*np.log(T[0]) - loge - 4.805) + 55.0
-        #print("DEBUG:",th_e.shape, p.shape, r_sat.shape, T_lcl.shape)
-        Te = ( th_e * (100000/p0) ** (.079912*r_sat - thermo.kappa) 
-              * np.exp((2.54-3376/T_lcl)*r_sat*(1+.81*r_sat)))
-        print("DEBUG: Te",Te.shape, Te)
-        ax.semilogy(Te,p/100.,'g:',linewidth=2)
-        #for Tk in np.array(T):
-        #    r_sat = thermo.r_sat(Tk,p) # kg/kg = f(K,Pa)
-        #    
-        #    th_e = thermo.theta_e(Tk, r_sat, p) # K/Pa = f(K, kg/kg, Pa)
-        #    e = p * r_sat / (thermo.eps + r_sat) 
-        #    loge = np.log( 0.01*np.maximum(e, 1e-100) )
-        #    T_lcl = 2840.0 / (3.5*np.log(Tk) - loge - 4.805) + 55.0
-        #    #print("DEBUG:",th_e.shape, p.shape, r_sat.shape, T_lcl.shape)
-        #    Te = ( th_e * (100000/p) ** (.079912*r_sat - thermo.kappa) 
-        #          * np.exp((2.54-3376/T_lcl)*r_sat*(1+.81*r_sat)))
-        #    ax.semilogy(Te,p,'g:')
-        #print("DEBUG: Te",Te)
-        #print("DEBUG: p",p)
-        #print("DEBUG: r_sat",r_sat)
-        #print("DEBUG: T_lcl",T_lcl)
+        # Assemble into data for plotting
+        t = thermo.moist_lapse(p*100, t0[:, np.newaxis], 100000) # in Kelvin
+        linedata = [np.vstack((ti, p)).T for ti in t]
+        print("DEBUG: t",t.shape, t)
+        # Add to plot
+        kwargs.setdefault('colors', 'b')
+        kwargs.setdefault('linestyles', 'dashed')
+        kwargs.setdefault('alpha', 0.5)
+        #return ax.add_collection(LineCollection(linedata, **kwargs))
+        ax.add_collection(LineCollection(linedata, **kwargs))
+    
+    #    def plot_moistadiabat(ax, T, p, p0=1e5):
+    #        # moist adiabat, 
+    #        #at the saturated mixing ratios (kg/kg) over pressure (Pa)
+    #        
+    #        #for Tk in np.array(T):
+    #        r_sat = thermo.r_sat(T,p0)# kg/kg = f(K,Pa)
+    #        th_e = thermo.theta_e(T, r_sat, p0) # K/Pa = f(K, kg/kg, Pa)
+    #        print("DEBUG: th_e",th_e.shape, th_e)
+    #        print("DEBUG: p",p.shape, p)
+    #        print("DEBUG: r_sat",r_sat.shape,r_sat)
+    #        e = p * r_sat / (thermo.eps + r_sat) 
+    #        loge = np.log( 0.01*np.maximum(e, 1e-100) )
+    #        T_lcl = 2840.0 / (3.5*np.log(T[0]) - loge - 4.805) + 55.0
+    #        #print("DEBUG:",th_e.shape, p.shape, r_sat.shape, T_lcl.shape)
+    #        Te = ( th_e * (100000/p0) ** (.079912*r_sat - thermo.kappa) 
+    #              * np.exp((2.54-3376/T_lcl)*r_sat*(1+.81*r_sat)))
+    #        print("DEBUG: Te",Te.shape, Te)
+    #        ax.semilogy(Te,p/100.,'g:',linewidth=2)
+    #        #for Tk in np.array(T):
+    #        #    r_sat = thermo.r_sat(Tk,p) # kg/kg = f(K,Pa)
+    #        #    
+    #        #    th_e = thermo.theta_e(Tk, r_sat, p) # K/Pa = f(K, kg/kg, Pa)
+    #        #    e = p * r_sat / (thermo.eps + r_sat) 
+    #        #    loge = np.log( 0.01*np.maximum(e, 1e-100) )
+    #        #    T_lcl = 2840.0 / (3.5*np.log(Tk) - loge - 4.805) + 55.0
+    #        #    #print("DEBUG:",th_e.shape, p.shape, r_sat.shape, T_lcl.shape)
+    #        #    Te = ( th_e * (100000/p) ** (.079912*r_sat - thermo.kappa) 
+    #        #          * np.exp((2.54-3376/T_lcl)*r_sat*(1+.81*r_sat)))
+    #        #    ax.semilogy(Te,p,'g:')
+    #        #print("DEBUG: Te",Te)
+    #        #print("DEBUG: p",p)
+    #        #print("DEBUG: r_sat",r_sat)
+    #        #print("DEBUG: T_lcl",T_lcl)
         
     matplotlib.rcParams['font.size'] = 18.0
     matplotlib.rcParams['mathtext.fontset'] = 'stixsans'
@@ -200,10 +257,11 @@ def ax_skewt(tlims=[240,330],plims=[1050,100], th_bl=None, q_bl=None):
         plot_dryadiabat(ax,thx,yticks,1e3)
     for rx in [1e-4,2e-4,4e-4,1e-3,2e-3,4e-3,1e-2,2e-2,4e-2,0.1,0.2,0.4,1.0]:
         plot_mixrat(ax,rx,yticks)
-    for Tx in range(270,325,10):
-        Tarr = np.zeros([20])+Tx
-        parr = np.logspace(5,4,20)
-        plot_moistadiabat(ax, Tarr,parr)
+    plot_moist_adiabats(ax)
+    #for Tx in range(270,325,10):
+    #    Tarr = np.zeros([20])+Tx
+    #    parr = np.logspace(5,4,20)
+    #    plot_moistadiabat(ax, Tarr,parr)
     
     
     

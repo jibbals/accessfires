@@ -1,11 +1,13 @@
 # -*- coding: utf-8 -*-
 """
 Created on Fri Sep 26 10:16:31 2014
-
+    HISTORY:
+        20190910 - jesse: added moist_lapse method
 @author: Jeff
 """
 
 import numpy as np
+from scipy import integrate
 #import matplotlib.pyplot as plt
 
 # Thermodynamic constants, all from Emanuel Convection 
@@ -382,5 +384,102 @@ def CAPE(Tp,rp,pp, T,r,p):
 
     return cape, Tnb, iflag#, Tup
     
+"""
+Created on Tue Sep 10 13:22:58 2019
+    moist_lapse rate modified from https://unidata.github.io/MetPy/latest/_modules/metpy/calc/thermo.html
+    this seems to be something like moist equivalent potential temp
+@author: jgreensl
+"""
+def moist_lapse(pressure, temperature, ref_pressure=None):
+    r"""Calculate the temperature at a level assuming liquid saturation processes.
+    
+    Pressures in Pa, temp in Kelvin
+    
+    This function lifts a parcel starting at `temperature`. The starting pressure can
+    be given by `ref_pressure`. Essentially, this function is calculating moist
+    pseudo-adiabats.
 
+    Parameters
+    ----------
+    pressure : `pint.Quantity`
+        The atmospheric pressure level(s) of interest
+    temperature : `pint.Quantity`
+        The starting temperature
+    ref_pressure : `pint.Quantity`, optional
+        The reference pressure. If not given, it defaults to the first element of the
+        pressure array.
+
+    Returns
+    -------
+    `pint.Quantity`
+       The temperature corresponding to the starting temperature and
+       pressure levels.
+
+    See Also
+    --------
+    dry_lapse : Calculate parcel temperature assuming dry adiabatic processes
+    parcel_profile : Calculate complete parcel profile
+
+    Notes
+    -----
+    This function is implemented by integrating the following differential
+    equation:
+
+    .. math:: \frac{dT}{dP} = \frac{1}{P} \frac{R_d T + L_v r_s}
+                                {C_{pd} + \frac{L_v^2 r_s \epsilon}{R_d T^2}}
+
+    This equation comes from [Bakhshaii2013]_.
+
+    """
+    def dt(t, p):
+        # make sure t is in (K) and p is in (Pa)
+        #t = units.Quantity(t, temperature.units)
+        #p = units.Quantity(p, pressure.units)
+        rs = r_sat(t,p) # T (K) and pressure p (Pa) returns the saturation mixing ratio in kg/kg
+        #frac = ((mpconsts.Rd * t + mpconsts.Lv * rs)
+        #        / (mpconsts.Cp_d + (mpconsts.Lv * mpconsts.Lv * rs * mpconsts.epsilon
+        #                            / (mpconsts.Rd * t * t)))).to('kelvin')
+        frac = ((Rd * t + Lv0 * rs)
+                / (Cpd + (Lv0 * Lv0 * rs * eps
+                                    / (Rd * t * t))))
+        #JESSE TODO: Make sure frac is in Kelvin!!
+        return frac / p
+
+    if ref_pressure is None:
+        ref_pressure = pressure[0]
+
+    #pressure = pressure.to('mbar')
+    pressure = pressure/100. # Pa to hPa
+    #ref_pressure = ref_pressure.to('mbar')
+    ref_pressure = ref_pressure/100. # Pa to hPa
+    #temperature = atleast_1d(temperature)
+
+    side = 'left'
+
+    pres_decreasing = (pressure[0] > pressure[-1])
+    if pres_decreasing:
+        # Everything is easier if pressures are in increasing order
+        pressure = pressure[::-1]
+        side = 'right'
+
+    ref_pres_idx = np.searchsorted(pressure.m, ref_pressure.m, side=side)
+
+    ret_temperatures = np.empty((0, temperature.shape[0]))
+
+    if ref_pressure > pressure.min():
+        # Integrate downward in pressure
+        pres_down = np.append(ref_pressure, pressure[(ref_pres_idx - 1)::-1])
+        trace_down = integrate.odeint(dt, temperature.squeeze(), pres_down.squeeze())
+        ret_temperatures = np.concatenate((ret_temperatures, trace_down[:0:-1]))
+
+    if ref_pressure < pressure.max():
+        # Integrate upward in pressure
+        pres_up = np.append(ref_pressure, pressure[ref_pres_idx:])
+        trace_up = integrate.odeint(dt, temperature.squeeze(), pres_up.squeeze())
+        ret_temperatures = np.concatenate((ret_temperatures, trace_up[1:]))
+
+    if pres_decreasing:
+        ret_temperatures = ret_temperatures[::-1]
+
+    return ret_temperatures.T.squeeze()
 

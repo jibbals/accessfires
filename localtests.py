@@ -55,6 +55,10 @@ ff_dtimes = np.array([um_hour + timedelta(hours=x/60.) for x in range(10,61,10)]
 #dtime, constraints=None, extent=None, add_winds=False, add_theta=False):
 dtime=datetime(2016,1,6,8)
 # read some data
+cubes=fio.read_waroona_pcfile(dtime,extent=plotting._extents_['waroona'], add_winds=True,add_dewpoint=True)
+print(cubes)
+
+
 slv,ro1,th1,th2 = fio.read_waroona(dtime,extent=plotting._extents_['waroona'], add_dewpoint=True, add_winds=True)
 press,temps,tempd  = th1.extract(['air_pressure','air_temperature','dewpoint_temperature'])
 pro,u,v = ro1.extract(['air_pressure','u','v'])
@@ -65,39 +69,7 @@ lats=press.coord('latitude')
 press.convert_units('hPa') # convert to hPa
 temps.convert_units('K') # convert to sir Kelvin
 tempd.convert_units('K') # convert to kelvin
-latlon = [-32.87,116.1]
-press0 = press[0].interpolate([('longitude',[latlon[1]]),
-                            ('latitude',[latlon[0]])],
-                           iris.analysis.Linear())
-temp0  = temps[0].interpolate([('longitude',[latlon[1]]),
-                            ('latitude',[latlon[0]])],
-                           iris.analysis.Linear())
-tempd0 = tempd[0].interpolate([('longitude',[latlon[1]]),
-                            ('latitude',[latlon[0]])],
-                           iris.analysis.Linear())
 
-# interpolate to desired lat/lon
-u0 = u.interpolate([('longitude',[latlon[1]]),
-                    ('latitude',[latlon[0]])],
-                   iris.analysis.Linear())
-v0 = v[0].interpolate([('longitude',[latlon[1]]),
-                    ('latitude',[latlon[0]])],
-                   iris.analysis.Linear())
-
-
-X=np.ones(press[0][:,0,0].shape);Y=np.squeeze(press0.data); U=np.squeeze(u0.data); V=np.squeeze(v0.data)
-mX,mY = np.meshgrid(X,Y)
-mV = np.repeat(V[np.newaxis,:],140,0)
-mV.mask = True
-mV.mask[0,:]=False
-mU = np.repeat(U[np.newaxis,:],140,0)
-mU.mask = True
-mU.mask[0,:]=False
-np.union1d(np.arange(0,41,5), np.arange(43,81,2), np.arange(81,140,1))
-skip=(slice(None,None,None),np.union1d(np.union1d(np.arange(0,41,5), np.arange(43,81,2)), np.arange(81,140,1)))
-plt.barbs(mX[skip],mY.transpose()[skip],mU[skip],mV[skip])
-plt.xlim([0,1.06])
-plt.ylim([1000,100])
 
 
 
