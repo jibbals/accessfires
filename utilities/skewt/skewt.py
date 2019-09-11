@@ -140,7 +140,7 @@ class SkewXAxes(Axes):
 
 # Now register the projection with matplotlib so the user can select
 # it.
-rot = 30
+rot = 45
 #register_projection(SkewXAxes)
 
 if __name__ == '__main__':

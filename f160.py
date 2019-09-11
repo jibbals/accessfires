@@ -127,7 +127,8 @@ def f160(press,temps, tempd, latlon, p_ro=None,u=None,v=None, nearby=2, alpha=0.
     plt.yticks(np.linspace(1000,100,10))
     #f160ax.xaxis.set_major_locator(tick.MultipleLocator(10))
     
-def f160_hour(dtime=datetime(2016,1,6,7), latlon = [-32.87,116.1], old=False):
+def f160_hour(dtime=datetime(2016,1,6,7), latlon=plotting._latlons_['pyrocb_waroona1'],
+              subfolder='pyrocb_waroona1',old=False):
     '''
     Look at F160 plots over time for a particular location
     INPUTS: hour of interest, latlon, and label to describe latlon (for plotting folder)
@@ -139,7 +140,7 @@ def f160_hour(dtime=datetime(2016,1,6,7), latlon = [-32.87,116.1], old=False):
     extent = plotting._extents_[extentname]
     # also for plotname
     latlon_stamp="%.3fS_%.3fE"%(-latlon[0],latlon[1])
-    pnames = 'figures/%s/skewt/fig_%s_%s.png'
+    pnames = 'figures/%s/skewt/%s/fig_%s_%s.png'
     
     # read pressure and temperature cubes
     if old:
@@ -147,7 +148,6 @@ def f160_hour(dtime=datetime(2016,1,6,7), latlon = [-32.87,116.1], old=False):
         cubes = fio.read_waroona_pcfile(dtime,extent=extent, add_winds=True, add_dewpoint=True)
         p,T,Td = cubes.extract(['air_pressure','air_temperature','dewpoint_temperature'])
         pro, u, v = cubes.extract(['air_pressure','u','v'])
-        pnames = 'figures/%s/skewt_old/fig_%s_%s.png'
     else:
         _,ro1,th1,_= fio.read_waroona(dtime, extent=extent, add_dewpoint=True, add_winds=True)#, add_theta=True)
         p,T,Td  = th1.extract(['air_pressure','air_temperature','dewpoint_temperature'])
@@ -156,15 +156,15 @@ def f160_hour(dtime=datetime(2016,1,6,7), latlon = [-32.87,116.1], old=False):
     ffdtimes = utils.dates_from_iris(p)
     
     for i in range(len(ffdtimes)):
+        # Plot name and title
         dstamp = ffdtimes[i].strftime("%Y%m%d%H%M")
         ptitle="SkewT$_{ACCESS}$   (%s) %s"%(latlon_stamp,ffdtimes[i].strftime("%Y %b %d %H:%M (UTC)"))
-        pname=pnames%(extentname,latlon_stamp,dstamp)
-        
-        
+        pname=pnames%(extentname,subfolder,latlon_stamp,dstamp)
+        # create plot
         f160(p[i],T[i],Td[i], latlon,p_ro=pro[i], u=u[i], v=v[i])
         plt.title(ptitle)
-        plt.savefig(pname)
-        print("INFO: Saved figure ",pname)
+        # save plot
+        fio.save_fig(pname,plt)
         plt.close()
     
 if __name__ == '__main__':
@@ -172,7 +172,7 @@ if __name__ == '__main__':
     print("INFO: testing cloud_outline.py")
     #emberstorm_clouds(datetime(2016,1,5,15))
     
-    for dtime in [ datetime(2016,1,6,7) + timedelta(hours=x) for x in range(1) ]:
-        f160_hour(dtime,old=False)
-        #f160_hour(dtime,old=True)
+    for dtime in [ datetime(2016,1,6,3) + timedelta(hours=x) for x in range(8) ]:
+        f160_hour(dtime,subfolder='pyrocb_waroona1',old=False)
+        f160_hour(dtime,subfolder='pyrocb_waroona1_old',old=True)
 

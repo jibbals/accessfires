@@ -21,6 +21,24 @@ import timeit # for timing stuff
 from datetime import datetime, timedelta
 
 from glob import glob
+import os
+
+def save_fig(pname,plt):
+    '''
+    Create dir if necessary
+    Save figure
+    example: save_fig('my/path/plot.png',plt)
+    INPUTS:
+        pname = path/to/plotname.png
+        plt = matplotlib.pyplot instance 
+    
+    '''
+    folder = '/'.join(pname.split('/')[:-1]) + '/'
+    if not os.path.exists(folder):
+        print("INFO: Creating folder:",folder)
+        os.makedirs(folder)
+    print ("INFO: Saving figure:",pname)
+    plt.savefig(pname)
 
 #from .context import utils
 # Couldn't import utils, just copying this function for now

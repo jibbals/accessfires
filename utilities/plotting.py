@@ -50,7 +50,7 @@ _latlons_['yarloop']    = -32.96, 115.90  # suburb centre: -32.9534, 115.9124
 _latlons_['perth']      = -31.9505, 115.8605
 _latlons_['fire_waroona'] = -32.89, 116.17
 # two PyroCB
-_latlons_['pyrocb_waroona1'] = 0,0 # ~4pm first day
+_latlons_['pyrocb_waroona1'] = -32.87,116.1 # ~4pm first day
 _latlons_['pyrocb_waroona2'] = 0,0 # 1100-1400 second day
 
 # Sir Ivan locations
