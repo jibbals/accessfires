@@ -92,6 +92,8 @@ def f160(press,Temp,Tempd, latlon,
                            iris.analysis.Linear())
         u   = np.squeeze(u0.data.data) * units('m/s')#units(str(uwind.units))
         v   = np.squeeze(v0.data.data) * units('m/s')#units(str(vwind.units))
+        u   = u.to(units.knots)
+        v   = v.to(units.knots)
         pro = np.squeeze(p_ro0.data.data) * units(str(press_ro.units))
         nicer_z=np.union1d(np.union1d(np.arange(0,41,5), np.arange(43,81,3)), np.arange(81,140,1))
         #skip=(slice(None,None,None),nicer_z)
@@ -165,14 +167,17 @@ def f160_hour(dtime=datetime(2016,1,6,7), latlon=plotting._latlons_['pyrocb_waro
         f160(p[i],t[i],td[i], latlon,
              press_ro=pro[i], uwind=u[i], vwind=v[i])
         plt.title(ptitle)
-        #plt.show()
+        
         # save plot
         fio.save_fig(pname,plt)
         plt.close()
 
 if __name__ == '__main__':
     
+    topleft=[-32.75, 115.8] # random point away from the fire influence
     for dtime in [ datetime(2016,1,6,3) + timedelta(hours=x) for x in range(6) ]:
         f160_hour(dtime,subfolder='metpy_pyrocb_waroona1',old=False)
         f160_hour(dtime,subfolder='metpy_pyrocb_waroona1_old',old=True)
+        f160_hour(dtime,latlon=topleft,subfolder='metpy_topleft_waroona',old=False)
+        f160_hour(dtime,latlon=topleft,subfolder='metpy_topleft_waroona_old',old=True)
 
