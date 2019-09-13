@@ -28,8 +28,6 @@ import matplotlib.patches as mpatches
 from utilities import utils,fio,plotting
 
 
-
-
 # Try reading file using iris
 import iris
 import iris.quickplot as qplt
@@ -50,29 +48,29 @@ ff_dtimes = np.array([um_hour + timedelta(hours=x/60.) for x in range(10,61,10)]
 
 ##### TEST CODE HERE
 
-# Read pc file using iris
+# read some data old old run Uncoupled
+extent=plotting._extents_['waroona']
+West,East,South,North = extent
+constr_lons = iris.Constraint(longitude = lambda cell: West <= cell <= East )
+constr_lats = iris.Constraint(latitude = lambda cell: South <= cell <= North )
+constraints = constr_lats & constr_lons
 
-#dtime, constraints=None, extent=None, add_winds=False, add_theta=False):
-dtime=datetime(2016,1,6,8)
-# read some data
-cubes=fio.read_waroona_pcfile(dtime,extent=plotting._extents_['waroona'], add_winds=True,add_dewpoint=True)
-print(cubes)
+orog_path = 'data/waroona_oldold/stage3_sfc_orog.nc'
+orogcubes = fio.read_nc_iris(orog_path)#,constraints=constraints)
+print(orogcubes)
+#qplt.pcolormesh(orogcubes[0][0,0], vmax=500)
+perth = slice(400,475,None), slice(400,425,None)
+qplt.contourf(orogcubes[0][0,0][perth],40,vmin=-30,vmax=400, cmap='terrain')
 
+xwind_path = 'data/waroona_oldold/combined_alltimes_xwind_regridded_stage3.nc'
+xwindcubes = fio.read_nc_iris(xwind_path)#,constraints=constraints)
+print(xwindcubes)
+xwind = xwindcubes[0]
+qplt.contourf(xwind[0,0][perth])
 
-slv,ro1,th1,th2 = fio.read_waroona(dtime,extent=plotting._extents_['waroona'], add_dewpoint=True, add_winds=True)
-press,temps,tempd  = th1.extract(['air_pressure','air_temperature','dewpoint_temperature'])
-pro,u,v = ro1.extract(['air_pressure','u','v'])
-
-## first interpolate pressure and temperature to latlon
-lons=press.coord('longitude')
-lats=press.coord('latitude')
-press.convert_units('hPa') # convert to hPa
-temps.convert_units('K') # convert to sir Kelvin
-tempd.convert_units('K') # convert to kelvin
-
-
-
-
-
-
+ywind_path = 'data/waroona_oldold/combined_alltimes_ywind_regridded_stage3.nc'
+ywindcubes = fio.read_nc_iris(ywind_path,constraints=constraints)
+print(ywindcubes)
+ywind = ywindcubes[0]
+qplt.contourf(ywind[0,0][perth])
 
