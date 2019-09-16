@@ -61,6 +61,28 @@ _file_types_waroona_ = {'slv':['specific_humidity',  # kg/kg [t,lat,lon]
 _files_waroona_ = 'data/waroona/umnsaa_%s_%s.nc' # umnsaa_YYYYMMDDhh_slx.nc
 
 
+def read_nc(fpath, keepvars=None):
+    '''
+    Generic read function for netcdf files
+    Reads all dimensions, and all [or some] variables into a dictionary to be returned
+    '''
+    tstart = timeit.default_timer()
+    ncfile =  Dataset(fpath,'r')
+    print("INFO: Reading ",fpath, " ... ")
+    variables = {}
+    if keepvars is None:
+        for vname in ncfile.variables:
+            variables[vname] = ncfile.variables[vname][:]
+    else:
+        # keep dimensions and whatever is in keepvars
+        #for vname in set(keepvars) | (set(ncfile.dimensions.keys()) & set(ncfile.variables.keys())):
+        for vname in set(keepvars):
+            variables[vname] = ncfile.variables[vname][:]
+
+  
+    print("INFO: finished reading %s (%6.2f minutes) "%( fpath, ( timeit.default_timer()-tstart )/60.0 ))
+    return variables
+
 # Old version of waroona output:
 _files_waroona_old_= sorted(glob('data/waroona/umnsaa_pc*.nc'))
 

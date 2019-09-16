@@ -12,9 +12,6 @@ Created on Mon Aug  5 13:52:09 2019
 ## IMPORTS
 ###
 
-#import numpy as np
-from netCDF4 import Dataset
-#from iris.fileformats.netcdf import load_cubes
 import iris
 import numpy as np
 import timeit # for timing stuff
@@ -22,6 +19,41 @@ from datetime import datetime, timedelta
 
 from glob import glob
 import os
+
+
+### 
+## GLOBALS
+###
+
+model_outputs = {
+        # Attemp to recreate 'old' run weather and pyrocb
+        'waroona_run2':{
+                'path':'data/waroona_run2/',
+                'topog':'',
+                'run':'Run in September 2019',
+                'origdir':'/short/en0/hxy548/tmp/waroona/0p3/',
+                'origfiredir':''},
+        # Run 1 was the first one I looked at, with east west rolls and no pyrocb
+        'waroona_run1':{
+                'path':'data/waroona_run1/',
+                'topog':'umnsaa_2016010515_slv.nc',
+                'run':'Run in august 2019',
+                'origdir':'/short/en0/hxy548/cylc-run/au-aa799/share/cycle/20160105T1500Z/waroona/0p3/ukv_os38/um/',
+                'origfiredir':'/short/en0/hxy548/tmp/waroona/0p3/'},
+        # Old run had pyrocb but also lots of high clouds and hooked F160 bases
+        'waroona_old':{
+                'path':'data/waroona_old/',
+                'topog':'',
+                'run':'Run in August 2018',
+                'origdir':'/g/data1a/en0/mxp548/access-fire/waroona/run3/accessdata'},
+        # Old Old run has bad lat/lons...
+        'waroona_oldold':{
+                'path':'data/waroona_oldold/',
+                'topog':'stage5_sfc_orog.nc',
+                'run':'Run in october 2016',
+                'origdir':'/g/data1/en0/rjf548/fires/waroona.2016010615.vanj'},
+                 }
+
 
 def save_fig(pname,plt):
     '''
@@ -109,29 +141,6 @@ _file_types_waroona_ = {'slv':['specific_humidity',  # kg/kg [t,lat,lon]
                                    ],
                        }
 _files_waroona_ = 'data/waroona/umnsaa_%s_%s.nc' # umnsaa_YYYYMMDDhh_slx.nc
-
-
-def read_nc(fpath, keepvars=None):
-    '''
-    Generic read function for netcdf files
-    Reads all dimensions, and all [or some] variables into a dictionary to be returned
-    '''
-    tstart = timeit.default_timer()
-    ncfile =  Dataset(fpath,'r')
-    print("INFO: Reading ",fpath, " ... ")
-    variables = {}
-    if keepvars is None:
-        for vname in ncfile.variables:
-            variables[vname] = ncfile.variables[vname][:]
-    else:
-        # keep dimensions and whatever is in keepvars
-        #for vname in set(keepvars) | (set(ncfile.dimensions.keys()) & set(ncfile.variables.keys())):
-        for vname in set(keepvars):
-            variables[vname] = ncfile.variables[vname][:]
-
-  
-    print("INFO: finished reading %s (%6.2f minutes) "%( fpath, ( timeit.default_timer()-tstart )/60.0 ))
-    return variables
 
 
 def read_nc_iris(fpath, constraints=None, keepvars=None):
