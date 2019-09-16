@@ -39,6 +39,7 @@ def save_fig(pname,plt):
         os.makedirs(folder)
     print ("INFO: Saving figure:",pname)
     plt.savefig(pname)
+    plt.close()
 
 #from .context import utils
 # Couldn't import utils, just copying this function for now
