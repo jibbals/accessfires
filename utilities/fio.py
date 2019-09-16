@@ -15,6 +15,7 @@ Created on Mon Aug  5 13:52:09 2019
 import iris
 import numpy as np
 import timeit # for timing stuff
+import warnings
 from datetime import datetime, timedelta
 
 from glob import glob
@@ -37,13 +38,14 @@ model_outputs = {
         'waroona_run1':{
                 'path':'data/waroona_run1/',
                 'topog':'umnsaa_2016010515_slv.nc',
+                'filedates':np.array([datetime(2016,1,5,15) + timedelta(hours=x) for x in range(24)]),
                 'run':'Run in august 2019',
                 'origdir':'/short/en0/hxy548/cylc-run/au-aa799/share/cycle/20160105T1500Z/waroona/0p3/ukv_os38/um/',
                 'origfiredir':'/short/en0/hxy548/tmp/waroona/0p3/'},
         # Old run had pyrocb but also lots of high clouds and hooked F160 bases
         'waroona_old':{
                 'path':'data/waroona_old/',
-                'topog':'',
+                'topog':'umnsaa_pa2016010515.nc',
                 'run':'Run in August 2018',
                 'origdir':'/g/data1a/en0/mxp548/access-fire/waroona/run3/accessdata'},
         # Old Old run has bad lat/lons...
@@ -94,7 +96,6 @@ __VERBOSE__=True
 
 ## Sir ivan pc fire files
 _topog_sirivan_ = 'data/sirivan/umnsaa_pa2017021121.nc'
-_topog_waroona_ = 'data/waroona/umnsaa_pa2016010515.nc'
 _files_sirivan_ = sorted(glob('data/sirivan/umnsaa_pc*.nc'))
 
 
@@ -141,8 +142,7 @@ _file_types_waroona_ = {'slv':['specific_humidity',  # kg/kg [t,lat,lon]
                                    'longitude', # = 576
                                    ],
                        }
-_files_waroona_ = 'data/waroona/umnsaa_%s_%s.nc' # umnsaa_YYYYMMDDhh_slx.nc
-
+_files_waroona_ = model_outputs['waroona_run1']['path'] + 'umnsaa_%s_%s.nc' # umnsaa_YYYYMMDDhh_slx.nc
 
 def read_nc_iris(fpath, constraints=None, keepvars=None):
     '''
@@ -168,16 +168,9 @@ def read_fire(dtimes, constraints=None, extent=None, firefront=True, sensiblehea
     '''
     Read fire output cubes matching dtimes time dim
     '''
-    d0 = dtimes[0]
-    if d0 < datetime(2016,1,6,15):
-        ffpath = 'data/waroona_fire/firefront.CSIRO_24h.20160105T1500Z.nc'
-        fluxpath = 'data/waroona_fire/sensible_heat.CSIRO_24h.20160105T1500Z.nc'
-    elif d0 < datetime(2016,1,7,15):
-        ffpath = 'data/waroona_fire/firefront.CSIRO_24h.20160106T1500Z.nc'
-        fluxpath = 'data/waroona_fire/sensible_heat.CSIRO_24h.20160106T1500Z.nc'
-    else:
-        ffpath = 'data/waroona_fire/firefront.CSIRO_24h.20160107T1500Z.nc'
-        fluxpath = 'data/waroona_fire/sensible_heat.CSIRO_24h.20160107T1500Z.nc'
+    ddir=model_outputs['waroona_run1']['path']+'fire/'
+    ffpath = ddir+'firefront.CSIRO_24h.20160105T1500Z.nc'
+    fluxpath = ddir+'sensible_heat.CSIRO_24h.20160105T1500Z.nc'
     
     if extent is not None:
         West,East,South,North = extent
@@ -200,15 +193,17 @@ def read_fire(dtimes, constraints=None, extent=None, firefront=True, sensiblehea
         cubelist.append(shf)
     
     return cubelist
-    
-def read_z(fpath='data/waroona/umnsaa_2016010515_mdl_th1.nc'):
+
+def read_model_run(model_version, **kwargs):
     '''
+    Read output from particular model run into cubelist
+    return cubelist
+    INPUTS: 
+        model_version (see model_outputs keys)
+        kwargs can be sent to reading methods
     '''
-    # read the cube
-    z, = read_nc_iris(fpath,'height_above_reference_ellipsoid')
-    #height_above_reference_ellipsoid / (m) (model_level_number: 140; latitude: 576; longitude: 576)
-    return z
     
+
 def read_waroona(dtime, constraints=None, extent=None, 
                  add_winds=False, add_theta=False, add_dewpoint=True):
     '''
@@ -240,13 +235,13 @@ def read_waroona(dtime, constraints=None, extent=None,
         2: qc / (g kg-1)                    # added by jwg
     '''
     dstamp=dtime.strftime('%Y%m%d%H')
-    
+    ddir = model_outputs['waroona_run1']['path']
     # First read topography
-    topog, = read_nc_iris('data/waroona/umnsaa_2016010515_slv.nc',
+    topog, = read_nc_iris(ddir+model_outputs['waroona_run1']['topog'],
                           constraints = 'surface_altitude')
     # also read 3d model height
-    zro, = iris.load('data/waroona/umnsaa_2016010515_mdl_ro1.nc', ['height_above_reference_ellipsoid'])
-    zth, = iris.load('data/waroona/umnsaa_2016010515_mdl_th1.nc', ['height_above_reference_ellipsoid'])
+    zro, = iris.load(ddir+'umnsaa_2016010515_mdl_ro1.nc', ['height_above_reference_ellipsoid'])
+    zth, = iris.load(ddir+'umnsaa_2016010515_mdl_th1.nc', ['height_above_reference_ellipsoid'])
     
     # If we just want a particular extent, subset to that extent using constraints
     if extent is not None:
@@ -382,11 +377,11 @@ def read_waroona_pcfile(dtime, constraints=None, extent=None, add_winds=False, a
         16: dewpoint_temperature / (K)     (time: 2; model_level_number: 140; latitude: 88; longitude: 106)
     '''
     dstamp=dtime.strftime('%Y%m%d%H')
-     
+    ddir = model_outputs['waroona_old']['path'] 
     # First read topography
-    topog, = read_nc_iris('data/waroona/umnsaa_pa2016010515.nc',
-                          constraints = 'surface_altitude')
     
+    topog, = read_nc_iris(ddir + model_outputs['waroona_old']['topog'],
+                          constraints = 'surface_altitude')
     
     # If we just want a particular extent, subset to that extent using constraints
     if extent is not None:
@@ -399,7 +394,7 @@ def read_waroona_pcfile(dtime, constraints=None, extent=None, add_winds=False, a
         else:
             constraints = constr_lats & constr_lons
     
-    path = 'data/waroona/umnsaa_pc%s.nc'%dstamp
+    path = ddir+'umnsaa_pc%s.nc'%dstamp
     varnames = ['mass_fraction_of_cloud_liquid_water_in_air',
                 'mass_fraction_of_cloud_ice_in_air',
                 'upward_air_velocity', # m/s [t,z,lat,lon]
@@ -524,6 +519,8 @@ def read_waroona_pcfile(dtime, constraints=None, extent=None, add_winds=False, a
 def read_waroona_oldold(constraints=None, extent=None,
                         add_winds=False):
     '''
+        read waroona_oldold model output
+        
     '''
     ddir = model_outputs['waroona_oldold']['path']
     # TODO update to NCI path
@@ -561,40 +558,43 @@ def read_waroona_oldold(constraints=None, extent=None,
         else:
             constraints = constraints & constr_lats & constr_lons
     
-        
-    xwind1, = read_nc_iris(xwind_path)#,constraints=constraints)
-    ywind1, = read_nc_iris(ywind_path)#,constraints=constraints)
-    zwind, = read_nc_iris(zwind_path)#,constraints=constraints)
     
-    topog1, = read_nc_iris(ddir+model_outputs['waroona_oldold']['topog'])
-    topog = topog1[0,0] # length one time dim and levels dim removed
+    ## Read data
+    with warnings.catch_warnings():
+        # ignore UserWarning: Ignoring netCDF variable 'hybrid_ht' invalid units 'level'
+        warnings.simplefilter('ignore')
+        xwind1, = read_nc_iris(xwind_path)
+        ywind1, = read_nc_iris(ywind_path)
+        zwind, = read_nc_iris(zwind_path)
+        ## Read topography
+        topog1, = read_nc_iris(ddir+model_outputs['waroona_oldold']['topog'])
+        ## Read heights of theta and rho levels
+        zth1, = read_nc_iris(ddir+'stage5_ml_htheta.nc')
+        zrho1, = read_nc_iris(ddir+'stage5_ml_hrho.nc')
     
-    
-    ## Read heights of theta and rho levels
-    zth1, = read_nc_iris(ddir+'stage5_ml_htheta.nc')
-    zth   = zth1[0] # remove length 1 time dim
-    zrho1, = read_nc_iris(ddir+'stage5_ml_hrho.nc')
-    zrho   = zrho1[0] # remove length 1 time dim
+    # length one time dim and levels dim removed
+    topog = topog1[0,0] 
+    zth   = zth1[0]
+    zrho   = zrho1[0] 
+    # update z_theta and z_rho names
     iris.std_names.STD_NAMES['z_th'] = {'canonical_units': 'm'}
     iris.std_names.STD_NAMES['z_rho'] = {'canonical_units': 'm'}
     zth.standard_name='z_th'
     zrho.standard_name='z_rho'
     
-    # add latlon dims to 2d data
+    # add latlon dims to data
     topog.add_dim_coord(latdim,0)
     topog.add_dim_coord(londim,1)
     
-    # add lat/lon dims to data
-    xwind1.add_dim_coord(latdim,2) # still staggered
+    xwind1.add_dim_coord(latdim,2)
     xwind1.add_dim_coord(londim1,3)
     
-    ywind1.add_dim_coord(latdim1,2) # still staggered
+    ywind1.add_dim_coord(latdim1,2)
     ywind1.add_dim_coord(londim,3)
     
     zwind.add_dim_coord(latdim,2)
     zwind.add_dim_coord(londim,3)
     
-    # add lat and lon dims for 3d data
     for cube in [zth, zrho]:
         cube.add_dim_coord(latdim,1)
         cube.add_dim_coord(londim,2)
@@ -604,7 +604,9 @@ def read_waroona_oldold(constraints=None, extent=None,
         if constraints is not None:
             cube=cube.extract(constraints)
         cubelist.append(cube)
-    topog, xwind1, ywind1, zwind, zth, zrho = cubelist # for further calculation
+    # Update local cubes to also be constrained
+    topog, xwind1, ywind1, zwind, zth, zrho = cubelist
+    
     # update dims if we are subsetting
     if constraints is not None:
         londim = topog.coord('longitude')
@@ -637,18 +639,19 @@ def read_waroona_oldold(constraints=None, extent=None,
     
     return cubelist
 
-def read_topog(extentname='waroona'):
+def read_topog(model_version, extent=None):
     '''
     Read topography cube
     '''
-    fpath = 'data/waroona/umnsaa_2016010515_slv.nc'
-    if extentname=='sirivan':
-        fpath='data/sirivan/umnsaa_pa2017021121.nc'
-    # First read topography
-    topog, = read_nc_iris(fpath,
-                          constraints = 'surface_altitude')
-    
-    return topog
+    assert False, 'To Be Implemented'
+    #fpath = 
+    #if extentname=='sirivan':
+    #    fpath='data/sirivan/umnsaa_pa2017021121.nc'
+    ## First read topography
+    #topog, = read_nc_iris(fpath,
+    #                      constraints = 'surface_altitude')
+    #
+    #return topog
 
 def subset_time_iris(cube,dtimes,seconds=True,seccheck=121):
     '''

@@ -18,8 +18,9 @@ from utilities import utils, plotting, fio
 
 
 def plot_weather_summary(U,V,W, height, Q=None, 
-                         model_version='waroona_oldold',  
+                         model_version='waroona_oldold',
                          ext='.png', timedim_name='time',
+                         datelimit=None,
                          dvi=150):
     '''
     Show horizontal slices of horizontal and vertical winds averaged between several vertical levels
@@ -36,13 +37,16 @@ def plot_weather_summary(U,V,W, height, Q=None,
     dtimes = utils.dates_from_iris(cubetimes)
     
     extentname=['sirivan','waroona'][dtimes[0].year==2016]
+    row1 = (100<=height) * (height<500)
+    row2 = (500<=height) * (height<1500)
+    row3 = (1500<=height) * (height<3000)
+    row4 = (3000<=height) * (height<5000)
     
     for ti, dtime in enumerate(dtimes):
 
-        row1 = (100<=height) * (height<500)
-        row2 = (500<=height) * (height<1500)
-        row3 = (1500<=height) * (height<3000)
-        row4 = (3000<=height) * (height<5000)
+        if datelimit is not None:
+            if dtime>datelimit:
+                break
         
         plt.figure(figsize=[10,10])
         for ii,row in enumerate([row1,row2,row3,row4]):
@@ -92,7 +96,7 @@ def plot_weather_summary(U,V,W, height, Q=None,
             norm=colors.SymLogNorm(0.25)
             #contours=np.union1d(np.union1d(2.0**np.arange(-2,6),-1*(2.0**np.arange(-2,6))),np.array([0]))
             
-            plt.contourf(X,Y,Wr, cmap=cmap,norm=norm)
+            plt.contourf(X,Y, Wr, cmap=cmap,norm=norm)
             
             plotting.add_map_locations(extentname, hide_text=True)
             
@@ -107,21 +111,35 @@ def plot_weather_summary(U,V,W, height, Q=None,
         pname="figures/%s/weather_summary/%s/fig_%s%s"%(extentname,model_version,dstamp,ext)
         fio.save_fig(pname,plt)
 
-def read_and_plot_oldold_run():
+def read_and_plot_model_run(model_version='waroona_oldold'):
     '''
     '''
-    extentname = 'waroona'
+    extentname = model_version.split('_')[0]
     extent = plotting._extents_[extentname]
-    
-    cubes = fio.read_waroona_oldold(extent=extent, add_winds=True)
-    u,v,s = cubes.extract(['u','v','s'])
-    w, = cubes.extract('upward_air_velocity')
-    height = u.coord('Hybrid height').points
-    
     # font sizes etc
     plotting.init_plots()
+    
+    if model_version=='waroona_oldold':
+        cubes = fio.read_waroona_oldold(extent=extent, add_winds=True)
+        u,v,s = cubes.extract(['u','v','s'])
+        w, = cubes.extract('upward_air_velocity')
+        height = u.coord('Hybrid height').points
 
-    plot_weather_summary(u, v, w, height, timedim_name='t')
-
+        plot_weather_summary(u, v, w, height, 
+                             timedim_name='t',
+                             model_version=model_version)
+    
+    elif model_version=='waroona_run1':
+        for dtime in fio.model_outputs['waroona_run1']['filedates']:
+            cubelists = fio.read_waroona(dtime,extent=extent, add_winds=True)
+            u,v,s = cubelists[1].extract(['u','v','s'])
+            w, = cubelists[2].extract('upward_air_velocity')
+            height = w.coord('level_height').points
+            
+            plot_weather_summary(u, v, w, height, 
+                                 timedim_name='time',
+                                 model_version=model_version)
+            
 #read_and_plot_oldold_run()
-read_and_plot_oldold_run()
+#read_and_plot_model_run('waroona_oldold')
+read_and_plot_model_run('waroona_run1')

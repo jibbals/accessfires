@@ -111,14 +111,12 @@ def dates_from_iris(timedim, grain='seconds',remove_seconds=True):
     output is array of datetimes
     '''
     tdim=timedim
-    print("DEBUG:",type(timedim))
     if isinstance(timedim, iris.cube.Cube):
         tdim  = timedim.coord('time')
         grain = str(tdim.units).split(' ')[0]
     #elif isinstance(timedim, [iris.coords.DimCoord,iris.coords.Coord]):
     elif isinstance(timedim, iris.coords.Coord):
         grain = str(timedim.units).split(' ')[0]
-    print("DEBUG:",grain)
     
     unitformat = '%s since %%Y-%%m-%%d %%H:%%M:00'%grain
     d0 = datetime.strptime(str(tdim.units),unitformat)
