@@ -525,12 +525,23 @@ def read_waroona_oldold(constraints=None, extent=None,
                         add_winds=False):
     '''
     '''
+    ddir = model_outputs['waroona_oldold']['path']
+    
+    #113.916, 113.9208, 113.9256, ... 118.5096, 118.5144, 118.5192
+    lons = np.linspace(113.916, 118.5192, 960, endpoint=True)
+    # -35.73, -35.726, -35.722, -35.718, ... -30.942, -30.938, -30.934
+    lats = np.linspace(-35.73, -30.934, 1200, endpoint=True)
+    
+    # set up dimension coordinates
+    latdim = iris.coords.DimCoord(lats,'latitude')
+    londim = iris.coords.DimCoord(lons,'longitude')
+    
     cubelist=iris.cube.CubeList()
-    if os.path.isfile('data/waroona_oldold/oldold_xwind_s5_subset.nc'):
+    if os.path.isfile(ddir+'oldold_xwind_s5_subset.nc'):
         print("INFO: on local machine, reading subset data")
-        xwind_path = 'data/waroona_oldold/oldold_xwind_s5_subset.nc'
-        ywind_path = 'data/waroona_oldold/oldold_ywind_s5_subset.nc'
-        zwind_path = 'data/waroona_oldold/oldold_zwind_s5_subset.nc'
+        xwind_path = ddir+'oldold_xwind_s5_subset.nc'
+        ywind_path = ddir+'oldold_ywind_s5_subset.nc'
+        zwind_path = ddir+'oldold_zwind_s5_subset.nc'
     
     if extent is not None:
         West,East,South,North = extent
@@ -547,28 +558,28 @@ def read_waroona_oldold(constraints=None, extent=None,
     ywind1, = read_nc_iris(ywind_path)#,constraints=constraints)
     zwind, = read_nc_iris(zwind_path)#,constraints=constraints)
     
+    topog1, = read_nc_iris(ddir+model_outputs['waroona_oldold']['topog'])
+    topog = topog1[0,0] # length one time dim and levels dim removed
     
-    ## figure out lats/lons of this run
-    # TODO
-    # set up dimension coordinates
-    latdim = iris.coords.DimCoord(np.linspace(-36,34,xwind1.shape[2]),'latitude')
-    londim = iris.coords.DimCoord(np.linspace(114,116,xwind1.shape[3]),'longitude')
-    
+    ## Read heights of theta and rho levels
+    zth1, = read_nc_iris(ddir+'stage5_ml_htheta.nc')
+    zth   = zth1[0] # remove length 1 time dim
+    zrho1, = read_nc_iris(ddir+'stage5_ml_hrho.nc')
+    zrho   = zrho1[0] # remove length 1 time dim
+    iris.std_names.STD_NAMES['z_th'] = {'canonical_units': 'm'}
+    iris.std_names.STD_NAMES['z_rho'] = {'canonical_units': 'm'}
+    zth.standard_name='z_th'
+    zrho.standard_name='z_rho'
     
     # These are still staggered
-    xwind1.add_dim_coord(latdim,2)
-    xwind1.add_dim_coord(londim,3)
-    ywind1.add_dim_coord(latdim,2) # still staggered
+    for cube in [xwind1, zwind, topog, zth, zrho]:
+        cube.add_dim_coord(latdim,2)
+        cube.add_dim_coord(londim,3)
+        cubelist.append(cube)
+    
+    ywind1.add_dim_coord(latdim[:-1],2) # still staggered
     ywind1.add_dim_coord(londim,3)
-    zwind.add_dim_coord(latdim,2)
-    zwind.add_dim_coord(londim,3)
-    
     cubelist.append(ywind1)
-    cubelist.append(xwind1)
-    cubelist.append(zwind)
-    
-    ## Read topography
-    # TODO
     
     if add_winds:
         
