@@ -328,6 +328,31 @@ def ax_skewt(tlims=[240,330],plims=[1050,100], th_bl=None, q_bl=None):
     #plt.savefig('skewT_th{:.0f}_q{:.0f}_gam{:.0f}_del{:.0f}.png'.format(th_bl,q_bl*1e3,gamma,delta*1e-3),dpi=200)
     return ax 
 
+def add_map_locations(extentname, hide_text=False):
+    '''
+    
+    '''
+    if extentname == 'waroona':
+        map_add_locations(['waroona','yarloop'], 
+                          text=[['Waroona', 'Yarloop'],['','']][hide_text], 
+                          textcolor='k')
+        # add fire ignition
+        map_add_locations(['fire_waroona'],
+                          text = [['Fire ignition'],['']][hide_text], 
+                          color='r', marker='*', 
+                          textcolor='k')
+        # add pyroCB
+    else:
+        map_add_locations(['sirivan','uarbry'], 
+                          text=[['Sir Ivan','Uarbry'],['','']][hide_text],
+                          dx=[-.02,.05], dy =[-.015,-.03],
+                          textcolor='k')
+        # add fire ignition
+        map_add_locations(['fire_sirivan'],
+                          text = [['Fire ignition']['']][hide_text], dx=.05,
+                          color='r', marker='*', 
+                          textcolor='k')
+
 def transect(data, z, lat, lon, start, end, npoints=100, 
              topog=None, latt=None, lont=None, ztop=4000,
              title="", ax=None, colorbar=True,

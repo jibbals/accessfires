@@ -526,15 +526,23 @@ def read_waroona_oldold(constraints=None, extent=None,
     '''
     '''
     ddir = model_outputs['waroona_oldold']['path']
+    # TODO update to NCI path
+    xwind_path = ddir+'oldold_xwind_s5_subset.nc'
+    ywind_path = ddir+'oldold_ywind_s5_subset.nc'
+    zwind_path = ddir+'oldold_zwind_s5_subset.nc'
     
     #113.916, 113.9208, 113.9256, ... 118.5096, 118.5144, 118.5192
     lons = np.linspace(113.916, 118.5192, 960, endpoint=True)
+    lons1 = np.linspace(113.9184, 118.5216, 960, endpoint=True) # staggered
     # -35.73, -35.726, -35.722, -35.718, ... -30.942, -30.938, -30.934
     lats = np.linspace(-35.73, -30.934, 1200, endpoint=True)
+    lats1 = np.linspace(-35.728, -30.936, 1199, endpoint=True) # staggered
     
     # set up dimension coordinates
     latdim = iris.coords.DimCoord(lats,'latitude')
+    latdim1 = iris.coords.DimCoord(lats1,'latitude')
     londim = iris.coords.DimCoord(lons,'longitude')
+    londim1 = iris.coords.DimCoord(lons1,'longitude')
     
     cubelist=iris.cube.CubeList()
     if os.path.isfile(ddir+'oldold_xwind_s5_subset.nc'):
@@ -548,18 +556,19 @@ def read_waroona_oldold(constraints=None, extent=None,
         constr_lons = iris.Constraint(longitude = lambda cell: West <= cell <= East )
         constr_lats = iris.Constraint(latitude = lambda cell: South <= cell <= North )
     
-    if constraints is None:    
-        constraints = constr_lats & constr_lons
-    else:
-        constraints = constraints & constr_lats & constr_lons
+        if constraints is None:    
+            constraints = constr_lats & constr_lons
+        else:
+            constraints = constraints & constr_lats & constr_lons
     
-    
+        
     xwind1, = read_nc_iris(xwind_path)#,constraints=constraints)
     ywind1, = read_nc_iris(ywind_path)#,constraints=constraints)
     zwind, = read_nc_iris(zwind_path)#,constraints=constraints)
     
     topog1, = read_nc_iris(ddir+model_outputs['waroona_oldold']['topog'])
     topog = topog1[0,0] # length one time dim and levels dim removed
+    
     
     ## Read heights of theta and rho levels
     zth1, = read_nc_iris(ddir+'stage5_ml_htheta.nc')
@@ -571,26 +580,47 @@ def read_waroona_oldold(constraints=None, extent=None,
     zth.standard_name='z_th'
     zrho.standard_name='z_rho'
     
-    # These are still staggered
-    for cube in [xwind1, zwind, topog, zth, zrho]:
-        cube.add_dim_coord(latdim,2)
-        cube.add_dim_coord(londim,3)
-        cubelist.append(cube)
+    # add latlon dims to 2d data
+    topog.add_dim_coord(latdim,0)
+    topog.add_dim_coord(londim,1)
     
-    ywind1.add_dim_coord(latdim[:-1],2) # still staggered
+    # add lat/lon dims to data
+    xwind1.add_dim_coord(latdim,2) # still staggered
+    xwind1.add_dim_coord(londim1,3)
+    
+    ywind1.add_dim_coord(latdim1,2) # still staggered
     ywind1.add_dim_coord(londim,3)
-    cubelist.append(ywind1)
     
+    zwind.add_dim_coord(latdim,2)
+    zwind.add_dim_coord(londim,3)
+    
+    # add lat and lon dims for 3d data
+    for cube in [zth, zrho]:
+        cube.add_dim_coord(latdim,1)
+        cube.add_dim_coord(londim,2)
+    
+    # add cube to list (subset if possible)
+    for cube in [topog, xwind1, ywind1, zwind, zth, zrho]:
+        if constraints is not None:
+            cube=cube.extract(constraints)
+        cubelist.append(cube)
+    topog, xwind1, ywind1, zwind, zth, zrho = cubelist # for further calculation
+    # update dims if we are subsetting
+    if constraints is not None:
+        londim = topog.coord('longitude')
+        latdim = topog.coord('latitude')
+        
     if add_winds:
         
         ### DESTAGGER u and v using iris interpolate
         ### (this will trigger the delayed read)
         # u1: [t,z, lat, lon1]
         # v1: [t,z, lat1, lon]  # put these both onto [t,z,lat,lon]
-        u = xwind1.interpolate([('longitude',ywind1.coord('longitude').points)],
+        u = xwind1.interpolate([('longitude',londim.points)],
                            iris.analysis.Linear())
-        v = ywind1.interpolate([('latitude',xwind1.coord('latitude').points)],
+        v = ywind1.interpolate([('latitude',latdim.points)],
                            iris.analysis.Linear())
+        
         # Get wind speed cube using hypotenuse of u,v
         s = iris.analysis.maths.apply_ufunc(np.hypot,u,v)
         s.units = 'm s-1'
@@ -604,7 +634,6 @@ def read_waroona_oldold(constraints=None, extent=None,
         cubelist.append(u)
         cubelist.append(v)
         cubelist.append(s)
-    
     
     return cubelist
 

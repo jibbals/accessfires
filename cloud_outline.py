@@ -83,28 +83,7 @@ def clouds_2panel(topog,s,u,v,
              marker='X', markersize=7,markerfacecolor='white')
     
     # add nearby towns
-    if extentname == 'waroona':
-        plotting.map_add_locations(['waroona','yarloop'], 
-                                   text=['Waroona', 'Yarloop'], 
-                                   textcolor='k')
-        # add fire ignition
-        plotting.map_add_locations(['fire_waroona'],
-                                   text = ['Fire ignition'], 
-                                   color='r', marker='*', 
-                                   textcolor='k')
-        # add pyroCB
-    else:
-        plotting.map_add_locations(['sirivan','uarbry'], 
-                                   text=['Sir Ivan','Uarbry'],
-                                   dx=[-.02,.05], dy =[-.015,-.03],
-                                   textcolor='k')
-        # add fire ignition
-        plotting.map_add_locations(['fire_sirivan'],
-                                   text = ['Fire ignition'], dx=.05,
-                                   color='r', marker='*', 
-                                   textcolor='k')
-        # add pyroCB
-
+    plotting.add_map_locations(extentname)
     
     # Add vectors for winds
     # just surface, and one every N points to reduce density
