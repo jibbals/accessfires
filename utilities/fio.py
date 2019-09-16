@@ -71,6 +71,7 @@ def save_fig(pname,plt):
         os.makedirs(folder)
     print ("INFO: Saving figure:",pname)
     plt.savefig(pname)
+    plt.close()
 
 #from .context import utils
 # Couldn't import utils, just copying this function for now
@@ -520,6 +521,81 @@ def read_waroona_pcfile(dtime, constraints=None, extent=None, add_winds=False, a
         cubes.append(cubetheta)
     return cubes
     
+def read_waroona_oldold(constraints=None, extent=None,
+                        add_winds=False):
+    '''
+    '''
+    cubelist=iris.cube.CubeList()
+    if os.path.isfile('data/waroona_oldold/oldold_xwind_s5_subset.nc'):
+        print("INFO: on local machine, reading subset data")
+        xwind_path = 'data/waroona_oldold/oldold_xwind_s5_subset.nc'
+        ywind_path = 'data/waroona_oldold/oldold_ywind_s5_subset.nc'
+        zwind_path = 'data/waroona_oldold/oldold_zwind_s5_subset.nc'
+    
+    if extent is not None:
+        West,East,South,North = extent
+        constr_lons = iris.Constraint(longitude = lambda cell: West <= cell <= East )
+        constr_lats = iris.Constraint(latitude = lambda cell: South <= cell <= North )
+    
+    if constraints is None:    
+        constraints = constr_lats & constr_lons
+    else:
+        constraints = constraints & constr_lats & constr_lons
+    
+    
+    xwind1, = read_nc_iris(xwind_path)#,constraints=constraints)
+    ywind1, = read_nc_iris(ywind_path)#,constraints=constraints)
+    zwind, = read_nc_iris(zwind_path)#,constraints=constraints)
+    
+    
+    ## figure out lats/lons of this run
+    # TODO
+    # set up dimension coordinates
+    latdim = iris.coords.DimCoord(np.linspace(-36,34,xwind1.shape[2]),'latitude')
+    londim = iris.coords.DimCoord(np.linspace(114,116,xwind1.shape[3]),'longitude')
+    
+    
+    # These are still staggered
+    xwind1.add_dim_coord(latdim,2)
+    xwind1.add_dim_coord(londim,3)
+    ywind1.add_dim_coord(latdim,2) # still staggered
+    ywind1.add_dim_coord(londim,3)
+    zwind.add_dim_coord(latdim,2)
+    zwind.add_dim_coord(londim,3)
+    
+    cubelist.append(ywind1)
+    cubelist.append(xwind1)
+    cubelist.append(zwind)
+    
+    ## Read topography
+    # TODO
+    
+    if add_winds:
+        
+        ### DESTAGGER u and v using iris interpolate
+        ### (this will trigger the delayed read)
+        # u1: [t,z, lat, lon1]
+        # v1: [t,z, lat1, lon]  # put these both onto [t,z,lat,lon]
+        u = xwind1.interpolate([('longitude',ywind1.coord('longitude').points)],
+                           iris.analysis.Linear())
+        v = ywind1.interpolate([('latitude',xwind1.coord('latitude').points)],
+                           iris.analysis.Linear())
+        # Get wind speed cube using hypotenuse of u,v
+        s = iris.analysis.maths.apply_ufunc(np.hypot,u,v)
+        s.units = 'm s-1'
+        # add standard names for these altered variables:
+        iris.std_names.STD_NAMES['u'] = {'canonical_units': 'm s-1'}
+        iris.std_names.STD_NAMES['v'] = {'canonical_units': 'm s-1'}
+        u.standard_name='u'
+        v.standard_name='v'
+        s.var_name='s' # s doesn't come from a var with a std name so can just use var_name
+        
+        cubelist.append(u)
+        cubelist.append(v)
+        cubelist.append(s)
+    
+    
+    return cubelist
 
 def read_topog(extentname='waroona'):
     '''
