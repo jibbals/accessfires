@@ -88,6 +88,8 @@ def plot_weather_summary(U,V,W, height, Q=None,
             
             plt.contourf(X,Y,Wr, cmap=cmap,norm=norm)
             plt.colorbar(format=ticker.ScalarFormatter(), pad=0)
+            plt.xticks([],[])
+            plt.yticks([],[])
             if ii==0:
                 plt.title('vertical motion (m/s)')
         
@@ -156,4 +158,7 @@ def read_and_plot_oldold_run(xwind_path = 'data/waroona_oldold/oldold_xwind_s5_s
 
     plot_weather_summary(xwind,ywind1,zwind,height,timedim_name='t')
 
-read_and_plot_oldold_run()
+#read_and_plot_oldold_run()
+read_and_plot_oldold_run(xwind_path='data/waroona_oldold/combined_alltimes_ml_xwind_stage5.nc',
+                        ywind_path='data/waroona_oldold/combined_alltimes_ml_ywind_stage5.nc',
+                        zwind_path='data/waroona_oldold/combined_alltimes_ml_zwind_stage5.nc')

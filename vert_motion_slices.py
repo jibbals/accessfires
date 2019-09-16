@@ -109,7 +109,7 @@ def vert_motion_slices(qc,w,lh,lat,lon,dtime,
     plt.close()
 
 
-def plot_hour(dtime=datetime(2016,1,6,7), old=False):
+def vert_motion_hour(dtime=datetime(2016,1,6,7), old=False):
     '''
     create vert motion slices of an hours output from the old run in mika's folder
     '''
@@ -157,6 +157,13 @@ if __name__ == '__main__':
     #test hours
     pyrocb_hours = [datetime(2016,1,6,7)]
     
-    for dtime in pyrocb_hours:
-        
-        plot_hour(dtime,old=True)
+    #for dtime in pyrocb_hours:
+    #    plot_hour(dtime,old=True)
+    
+    #for dtime in [ datetime(2016,1,6,7) + timedelta(hours=x) for x in range(2) ]:
+    for dtime in [ datetime(2016,1,5,15) + timedelta(hours=x) for x in range(8) ]:
+        vert_motion_hour(dtime,old=True)
+    for dtime in [ datetime(2016,1,6,4) + timedelta(hours=x) for x in range(5) ]:
+        vert_motion_hour(dtime,old=True)
+    for dtime in [ datetime(2016,1,5,15) + timedelta(hours=x) for x in range(24) ]:
+        vert_motion_hour(dtime, old=False)
