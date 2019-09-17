@@ -8,7 +8,7 @@
 # don't need spyder (python GUI) on NCI, just use vim or whatever editor you like
 
 # Python3, includes matplotlib, numpy, and scipy?
-module load python3/3.7.2
+#module load python3/3.7.2
 # access module has conda environment with jupyter, cartopy, and lots of stuff
 module use /g/data3/hh5/public/modules
 module load conda/analysis3

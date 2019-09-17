@@ -141,5 +141,5 @@ def read_and_plot_model_run(model_version='waroona_oldold'):
                                  model_version=model_version)
             
 #read_and_plot_oldold_run()
-#read_and_plot_model_run('waroona_oldold')
-read_and_plot_model_run('waroona_run1')
+#read_and_plot_model_run('waroona_run1')
+read_and_plot_model_run('waroona_oldold')
