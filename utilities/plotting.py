@@ -45,6 +45,7 @@ _latlons_               = {}
 # Waroona locations
 _extents_['waroona']    = [115.775,116.2, -33.05,-32.7] # local
 _extents_['waroonas']   = [112,120,-34.5,-31] # synoptic
+_extents_['waroonaz']    = [115.92, 116.19, -32.92,-32.83] # zoom in on fire
 _latlons_['waroona']    = -32.84, 115.93  # suburb centre: -32.8430, 115.8526
 _latlons_['yarloop']    = -32.96, 115.90  # suburb centre: -32.9534, 115.9124
 _latlons_['perth']      = -31.9505, 115.8605
@@ -342,6 +343,15 @@ def add_map_locations(extentname, hide_text=False):
                           color='r', marker='*', 
                           textcolor='k')
         # add pyroCB
+    elif extentname == 'waroonaz':
+        map_add_locations(['waroona'], 
+                          text=[['Waroona'],['']][hide_text], 
+                          textcolor='k')
+        # add fire ignition
+        map_add_locations(['fire_waroona'],
+                          text = [['Fire ignition'],['']][hide_text], 
+                          color='r', marker='*', 
+                          textcolor='k')
     else:
         map_add_locations(['sirivan','uarbry'], 
                           text=[['Sir Ivan','Uarbry'],['','']][hide_text],

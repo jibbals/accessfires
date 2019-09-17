@@ -46,6 +46,7 @@ model_outputs = {
         'waroona_old':{
                 'path':'data/waroona_old/',
                 'topog':'umnsaa_pa2016010515.nc',
+                'filedates':np.array([datetime(2016,1,5,15) + timedelta(hours=x) for x in [0,1,2,3,4,5,6,7,9,10,11,12,13,14,15,16,17]]),
                 'run':'Run in August 2018',
                 'origdir':'/g/data1a/en0/mxp548/access-fire/waroona/run3/accessdata'},
         # Old Old run has bad lat/lons...
@@ -164,13 +165,17 @@ def read_nc_iris(fpath, constraints=None, keepvars=None):
     
     return cubes
     
-def read_fire(dtimes, constraints=None, extent=None, firefront=True, sensibleheat=False):
+def read_fire(dtimes, constraints=None, extent=None, 
+              firefront=True, 
+              sensibleheat=False,
+              firespeed=False):
     '''
     Read fire output cubes matching dtimes time dim
     '''
-    ddir=model_outputs['waroona_run1']['path']+'fire/'
-    ffpath = ddir+'firefront.CSIRO_24h.20160105T1500Z.nc'
-    fluxpath = ddir+'sensible_heat.CSIRO_24h.20160105T1500Z.nc'
+    ddir        = model_outputs['waroona_run1']['path']+'fire/'
+    ffpath      = ddir+'firefront.CSIRO_24h.20160105T1500Z.nc'
+    fluxpath    = ddir+'sensible_heat.CSIRO_24h.20160105T1500Z.nc'
+    fspath      = ddir+'fire_speed.CSIRO_24h.20160105T1500Z.nc'
     
     if extent is not None:
         West,East,South,North = extent
@@ -185,12 +190,16 @@ def read_fire(dtimes, constraints=None, extent=None, firefront=True, sensiblehea
     cubelist = iris.cube.CubeList()
     if firefront:
         ff, = read_nc_iris(ffpath, constraints=constraints)
-        ff = subset_time_iris(ff,dtimes,seconds=True)
+        ff = subset_time_iris(ff, dtimes, seconds=True)
         cubelist.append(ff)
     if sensibleheat:
         shf, = read_nc_iris(fluxpath, constraints=constraints)
-        shf = subset_time_iris(shf,dtimes,seconds=True)
+        shf = subset_time_iris(shf, dtimes, seconds=True)
         cubelist.append(shf)
+    if firespeed:
+        fs, = read_nc_iris(fspath, constraints=constraints)
+        fs  = subset_time_iris(fs, dtimes, seconds=True)
+        cubelist.append(fs)
     
     return cubelist
 
@@ -520,7 +529,16 @@ def read_waroona_oldold(constraints=None, extent=None,
                         add_winds=False):
     '''
         read waroona_oldold model output
-        
+        0: surface_altitude / (m)              (latitude: 88; longitude: 88)
+        1: eastward_wind / (m s-1)             (t: 8; Hybrid height: 70; latitude: 88; longitude: 89)
+        2: northward_wind / (m s-1)            (t: 8; Hybrid height: 70; latitude: 88; longitude: 88)
+        3: upward_air_velocity / (m s-1)       (t: 8; Hybrid height: 70; latitude: 88; longitude: 88)
+        4: z_th / (m)                          (Hybrid height: 70; latitude: 88; longitude: 88)
+        5: z_rho / (m)                         (Hybrid height: 70; latitude: 88; longitude: 88)
+        ## if add_winds is flagged, interpolation to topog latlons is performed 
+        6: u / (m s-1)                         (t: 8; Hybrid height: 70; latitude: 88; longitude: 88)
+        7: v / (m s-1)                         (t: 8; Hybrid height: 70; latitude: 88; longitude: 88)
+        8: s / (m s-1)                         (t: 8; Hybrid height: 70; latitude: 88; longitude: 88)
     '''
     ddir = model_outputs['waroona_oldold']['path']
     # TODO update to NCI path
