@@ -55,9 +55,9 @@ def plot_weather_summary(U,V,W, height, Q=None,
             Ui = U[ti,row]
             Vi = V[ti,row]
             
-            # mean of levels
-            Ur = np.mean(Ui.data,axis=0)
-            Vr = np.mean(Vi.data,axis=0)
+            # mean of levels # .data is masked array, just use base array
+            Ur = np.mean(Ui.data.data,axis=0)
+            Vr = np.mean(Vi.data.data,axis=0)
             windspeed = np.hypot(Ur,Vr)
             
             # value skip to vectors aren't so dense
@@ -67,18 +67,18 @@ def plot_weather_summary(U,V,W, height, Q=None,
             
             Y=Ui.coord('latitude').points
             X=Vi.coord('longitude').points
-            Uvs,Vvs = Ur[skip].data, Vr[skip].data
+            Uvs,Vvs = Ur[skip], Vr[skip]
             
             # Normalize the arrows:
             
             Uvs = Uvs / np.sqrt(Uvs**2 + Vvs**2);
             Vvs = Vvs / np.sqrt(Uvs**2 + Vvs**2);
             
-            plt.contourf(X, Y, windspeed.data)
+            plt.contourf(X, Y, windspeed, 10)
             
-            plotting.add_map_locations(extentname, hide_text=ii>0)
+            plotting.map_add_locations_extent(extentname, hide_text=ii>0)
             
-            plt.colorbar(pad=0)
+            plt.colorbar(ticklocation=ticker.MaxNLocator(5),pad=0)
             plt.quiver(X[::vsu], Y[::vsv], Uvs, Vvs, scale=30)
             plt.xticks([],[])
             plt.yticks([],[])
@@ -89,7 +89,7 @@ def plot_weather_summary(U,V,W, height, Q=None,
             # Now plot vertical motion
             plt.subplot(4,2,ii*2+2)
             Wi = W[ti,row]
-            Wr = np.mean(Wi.data,axis=0)
+            Wr = np.mean(Wi.data.data,axis=0)
             
             # colour bar stuff
             cmap=plotting._cmaps_['verticalvelocity']
@@ -98,7 +98,7 @@ def plot_weather_summary(U,V,W, height, Q=None,
             
             plt.contourf(X,Y, Wr, cmap=cmap,norm=norm)
             
-            plotting.add_map_locations(extentname, hide_text=True)
+            plotting.map_add_locations_extent(extentname, hide_text=True)
             
             plt.colorbar(format=ticker.ScalarFormatter(), pad=0)
             plt.xticks([],[])
@@ -124,7 +124,7 @@ def read_and_plot_model_run(model_version='waroona_oldold'):
         u,v,s = cubes.extract(['u','v','s'])
         w, = cubes.extract('upward_air_velocity')
         height = u.coord('Hybrid height').points
-
+        
         plot_weather_summary(u, v, w, height, 
                              timedim_name='t',
                              model_version=model_version)
@@ -139,7 +139,20 @@ def read_and_plot_model_run(model_version='waroona_oldold'):
             plot_weather_summary(u, v, w, height, 
                                  timedim_name='time',
                                  model_version=model_version)
+    
+    elif model_version == 'waroona_old':
+        for dtime in fio.model_outputs['waroona_old']['filedates']:
+            cubelist = fio.read_waroona_pcfile(dtime,extent=extent, add_winds=True)
+            u,v,s = cubelist.extract(['u','v','s'])
+            w, = cubelist.extract('upward_air_velocity')
+            height = w.coord('level_height').points
             
-#read_and_plot_oldold_run()
+            plot_weather_summary(u, v, w, height, 
+                                 timedim_name='time',
+                                 model_version=model_version)
+    
+    
+    
 #read_and_plot_model_run('waroona_run1')
 read_and_plot_model_run('waroona_oldold')
+#read_and_plot_model_run('waroona_old')

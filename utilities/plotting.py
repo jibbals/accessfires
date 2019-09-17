@@ -331,7 +331,7 @@ def ax_skewt(tlims=[240,330],plims=[1050,100], th_bl=None, q_bl=None):
 
 def map_add_locations_extent(extentname, hide_text=False):
     '''
-    
+    wrapper for map_add_locations that adds all the points for that extent
     '''
     if extentname == 'waroona':
         map_add_locations(['waroona','yarloop'], 
