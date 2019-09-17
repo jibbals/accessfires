@@ -328,7 +328,7 @@ def ax_skewt(tlims=[240,330],plims=[1050,100], th_bl=None, q_bl=None):
     #plt.savefig('skewT_th{:.0f}_q{:.0f}_gam{:.0f}_del{:.0f}.png'.format(th_bl,q_bl*1e3,gamma,delta*1e-3),dpi=200)
     return ax 
 
-def add_map_locations(extentname, hide_text=False):
+def map_add_locations_extent(extentname, hide_text=False):
     '''
     
     '''
