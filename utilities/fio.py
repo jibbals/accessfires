@@ -541,10 +541,9 @@ def read_waroona_oldold(constraints=None, extent=None,
         8: s / (m s-1)                         (t: 8; Hybrid height: 70; latitude: 88; longitude: 88)
     '''
     ddir = model_outputs['waroona_oldold']['path']
-    # TODO update to NCI path
-    xwind_path = ddir+'oldold_xwind_s5_subset.nc'
-    ywind_path = ddir+'oldold_ywind_s5_subset.nc'
-    zwind_path = ddir+'oldold_zwind_s5_subset.nc'
+    xwind_path = ddir+'combined_alltimes_ml_xwind_stage5.nc'
+    ywind_path = ddir+'combined_alltimes_ml_ywind_stage5.nc'
+    zwind_path = ddir+'combined_alltimes_ml_zwind_stage5.nc'
     
     #113.916, 113.9208, 113.9256, ... 118.5096, 118.5144, 118.5192
     lons = np.linspace(113.916, 118.5192, 960, endpoint=True)
