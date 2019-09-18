@@ -42,13 +42,19 @@ def plot_weather_summary(U,V,W, height, Q=None,
     row3 = (1500<=height) * (height<3000)
     row4 = (3000<=height) * (height<5000)
     
+    # vertical wind colourbar is constant
+    wcmap=plotting._cmaps_['verticalvelocity']
+    wnorm=colors.SymLogNorm(0.25) # linear to +- 0.25, then log scale
+    wcontours=np.union1d(np.union1d(2.0**np.arange(-2,6),-1*(2.0**np.arange(-2,6))),np.array([0]))
+    
     for ti, dtime in enumerate(dtimes):
 
         if datelimit is not None:
             if dtime>datelimit:
                 break
         
-        plt.figure(figsize=[10,10])
+        
+        fig = plt.figure(figsize=[10,10])
         for ii,row in enumerate([row1,row2,row3,row4]):
             plt.subplot(4,2,ii*2+1)
             
@@ -91,20 +97,17 @@ def plot_weather_summary(U,V,W, height, Q=None,
             Wi = W[ti,row]
             Wr = np.mean(Wi.data.data,axis=0)
             
-            # colour bar stuff
-            cmap=plotting._cmaps_['verticalvelocity']
-            norm=colors.SymLogNorm(0.25)
-            #contours=np.union1d(np.union1d(2.0**np.arange(-2,6),-1*(2.0**np.arange(-2,6))),np.array([0]))
-            
-            plt.contourf(X,Y, Wr, cmap=cmap,norm=norm)
-            
+            cs = plt.contourf(X,Y, Wr, wcontours, cmap=wcmap,norm=wnorm)
             plotting.map_add_locations_extent(extentname, hide_text=True)
             
-            plt.colorbar(format=ticker.ScalarFormatter(), pad=0)
             plt.xticks([],[])
             plt.yticks([],[])
             if ii==0:
                 plt.title('vertical motion (m/s)')
+        
+        # add vert wind colourbar
+        cbar_ax = fig.add_axes([0.905, 0.4, 0.01, 0.2])# X Y Width Height
+        fig.colorbar(cs, cax=cbar_ax, format=ticker.ScalarFormatter(), pad=0)
         
         plt.suptitle("%s weather "%model_version + dtime.strftime("%Y %b %d %H:%M (UTC)"))
         dstamp = dtime.strftime("%Y%m%d%H%M")
@@ -154,5 +157,19 @@ def read_and_plot_model_run(model_version='waroona_oldold'):
     
     
 #read_and_plot_model_run('waroona_run1')
-read_and_plot_model_run('waroona_oldold')
+#read_and_plot_model_run('waroona_oldold')
 #read_and_plot_model_run('waroona_old')
+
+# TEST RUN FOR ME
+if False:
+    from datetime import datetime
+    cubelist = fio.read_waroona_pcfile(datetime(2016,1,6,8),
+                                       extent=plotting._extents_['waroona'], 
+                                       add_winds=True)
+    u,v,s = cubelist.extract(['u','v','s'])
+    w, = cubelist.extract('upward_air_velocity')
+    height = w.coord('level_height').points
+    
+    plot_weather_summary(u, v, w, height, 
+                         timedim_name='time',
+                         model_version='waroona_old')

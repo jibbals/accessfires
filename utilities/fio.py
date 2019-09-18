@@ -46,7 +46,7 @@ model_outputs = {
         'waroona_old':{
                 'path':'data/waroona_old/',
                 'topog':'umnsaa_pa2016010515.nc',
-                'filedates':np.array([datetime(2016,1,5,15) + timedelta(hours=x) for x in [0,1,2,3,4,5,6,7,9,10,11,12,13,14,15,16,17]]),
+                'filedates':np.array([datetime(2016,1,5,15) + timedelta(hours=x) for x in range(18)]), #[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17]]),
                 'run':'Run in August 2018',
                 'origdir':'/g/data1a/en0/mxp548/access-fire/waroona/run3/accessdata'},
         # Old Old run has bad lat/lons...
