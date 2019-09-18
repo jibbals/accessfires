@@ -32,7 +32,7 @@ plotting.init_plots()
 #f, ax, gproj = plotting.map_google(plotting._extents_['waroona'], zoom=11)
 
 # Australia:
-aust = [110,150,-40,-10]
+aust = [107,140,-40,-10]
 # Request map from google
 request = cimgt.GoogleTiles()
 gproj=request.crs
@@ -44,8 +44,40 @@ ax = fig.add_subplot(1, 1, 1, projection=gproj)
 ax.set_extent(aust)
 
 # default interpolation ruins location names
-ax.add_image(request, 3, interpolation='spline36') 
-
-## ADD nested outlines
+zoom = 4
+ax.add_image(request, zoom, interpolation='spline36') 
 
 ## Show grid resolution maybe with annotations
+## Add box around zoomed in area
+xy=plotting._latlons_['nest_centre'][::-1]
+for i in range(3):
+    res,nres = plotting.__nest_res__[i]
+    width=res*nres
+    botleft = xy[0]-width/2.0, xy[1]-width/2
+    
+    ax.add_patch(patches.Rectangle(xy=botleft,
+                                   width=width, 
+                                   height=width,
+                                   #facecolor=None,
+                                   fill=False,
+                                   edgecolor='red',
+                                   linewidth=2,
+                                   #linestyle='-',
+                                   alpha=0.9,
+                                   transform=cartopy.crs.PlateCarree()
+                                   ))
+    
+    ## add text?
+    ax.annotate(['Nest 1','Nest 2','N3'][i], xy=botleft, 
+                xycoords=cartopy.crs.PlateCarree()._as_mpl_transform(ax), color='k',
+                ha='left', va='top')
+
+    ax.annotate('Nest %d: %dx%d %0.1f km squares'%(i+1, nres, nres, [3.5, 1.0, 0.3][i]),
+                xy=[.055, .95 - .05*i],
+                xycoords='axes fraction',
+                color='k', fontsize=13,
+                ha='left', va='top')
+
+
+## Add zoom of nest 3?
+fio.save_fig('figures/waroona_run1/nested_grid.png', plt)

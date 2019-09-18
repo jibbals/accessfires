@@ -31,6 +31,7 @@ model_outputs = {
         'waroona_run2':{
                 'path':'data/waroona_run2/',
                 'topog':'',
+                'filedates':None,
                 'run':'Run in September 2019',
                 'origdir':'/short/en0/hxy548/tmp/waroona/0p3/',
                 'origfiredir':''},
@@ -46,19 +47,43 @@ model_outputs = {
         'waroona_old':{
                 'path':'data/waroona_old/',
                 'topog':'umnsaa_pa2016010515.nc',
-                'filedates':np.array([datetime(2016,1,5,15) + timedelta(hours=x) for x in range(18)]), #[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17]]),
+                'filedates':np.array([datetime(2016,1,5,15) + timedelta(hours=x) for x in range(18)]),
                 'run':'Run in August 2018',
                 'origdir':'/g/data1a/en0/mxp548/access-fire/waroona/run3/accessdata'},
         # Old Old run has bad lat/lons...
         'waroona_oldold':{
                 'path':'data/waroona_oldold/',
                 'topog':'stage5_sfc_orog.nc',
+                'filedates':None,
                 'run':'Run in october 2016',
                 'origdir':'/g/data1/en0/rjf548/fires/waroona.2016010615.vanj'},
                  }
 
 
-def save_fig(pname,plt):
+def save_fig(model_run,script_name,dtime, plt, subdir=None,
+             ext='.png', dpi=150):
+    """
+    create figurename as figures/model_run/script_name/[subdir/]fig_YYYYMMDDhhmm.png
+    
+    INPUTS:
+        model_run,script_name : strings
+        dtime : can be datetime or string
+        plt : is instance of matplotlib.pyplot
+        subdir : string - optional extra subdir
+    """
+    dstamp=dtime
+    if isinstance(dtime,datetime):
+        dstamp=dtime.strftime('%Y%m%d%H%M')
+    
+    figname='fig_%s%s'%(dstamp,ext)
+    if subdir is not None:
+        figname='%s/'%subdir + figname
+    
+    path='figures/%s/%s/%s'%(model_run,script_name,figname)
+    
+    save_fig_to_path(path,plt, dpi=dpi)
+
+def save_fig_to_path(pname,plt, dpi=150):
     '''
     Create dir if necessary
     Save figure
@@ -73,7 +98,7 @@ def save_fig(pname,plt):
         print("INFO: Creating folder:",folder)
         os.makedirs(folder)
     print ("INFO: Saving figure:",pname)
-    plt.savefig(pname)
+    plt.savefig(pname, dpi=dpi)
     plt.close()
 
 #from .context import utils
