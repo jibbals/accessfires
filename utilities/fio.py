@@ -60,26 +60,31 @@ model_outputs = {
                  }
 
 
-def save_fig(model_run,script_name,dtime, plt, subdir=None,
+def save_fig(model_run,script_name,pname, plt, subdir=None,
              ext='.png', dpi=150):
     """
     create figurename as figures/model_run/script_name/[subdir/]fig_YYYYMMDDhhmm.png
     
     INPUTS:
         model_run,script_name : strings
-        dtime : can be datetime or string
+        pname : can be datetime or string
+            if datetime, pname is set to fig_YYYYMMDDhhmm
         plt : is instance of matplotlib.pyplot
         subdir : string - optional extra subdir
+        ext : optional, only used if pname has no extension
     """
-    dstamp=dtime
-    if isinstance(dtime,datetime):
-        dstamp=dtime.strftime('%Y%m%d%H%M')
     
-    figname='fig_%s%s'%(dstamp,ext)
+    if isinstance(pname,datetime):
+        dstamp=pname.strftime('%Y%m%d%H%M')
+        pname='fig_%s%s'%(dstamp,ext)
+    
     if subdir is not None:
-        figname='%s/'%subdir + figname
+        pname='%s/'%subdir + pname
     
-    path='figures/%s/%s/%s'%(model_run,script_name,figname)
+    if len(pname.split('.')) == 1: # no extension
+        pname=pname+ext
+    
+    path='figures/%s/%s/%s'%(model_run,script_name,pname)
     
     save_fig_to_path(path,plt, dpi=dpi)
 

@@ -33,6 +33,12 @@ import warnings
 # local modules
 from utilities import plotting, utils, fio, constants
 
+###
+## GLOBALS
+###
+_sn_ = 'F160'
+
+
 def f160(press,Temp,Tempd, latlon, 
          press_ro=None,uwind=None,vwind=None, 
          nearby=2, alpha=0.3):
@@ -125,8 +131,10 @@ def f160(press,Temp,Tempd, latlon,
     skew.plot_mixing_lines()
     return skew
 
-def f160_hour(dtime=datetime(2016,1,6,7), latlon=plotting._latlons_['pyrocb_waroona1'],
-              subfolder='metpy_pyrocb_waroona1',old=False):
+def f160_hour(dtime=datetime(2016,1,6,7), 
+              latlon=plotting._latlons_['pyrocb_waroona1'],
+              latlon_stamp='pyrocb1',
+              model_version='waroona_run1'):
     '''
     Look at F160 plots over time for a particular location
     INPUTS: hour of interest, latlon, and label to describe latlon (for plotting folder)
@@ -137,12 +145,12 @@ def f160_hour(dtime=datetime(2016,1,6,7), latlon=plotting._latlons_['pyrocb_waro
     if dtime < datetime(2017,1,1):
         extentname='waroona'
     extent = plotting._extents_[extentname]
-    # also for plotname
-    latlon_stamp="%.3fS_%.3fE"%(-latlon[0],latlon[1])
-    pnames = 'figures/%s/skewt/%s/fig_%s_%s.png'
+    
+    if latlon_stamp is None:
+        latlon_stamp="%.3fS_%.3fE"%(-latlon[0],latlon[1])
     
     # read pressure and temperature cubes
-    if old:
+    if model_version=='waroona_old':
         # I don't know how to calc ro levels, but should be similar I think
         cubes = fio.read_waroona_pcfile(dtime,extent=extent, add_winds=True, add_dewpoint=True)
         p,t,td = cubes.extract(['air_pressure','air_temperature','dewpoint_temperature'])
@@ -154,30 +162,27 @@ def f160_hour(dtime=datetime(2016,1,6,7), latlon=plotting._latlons_['pyrocb_waro
     
     ffdtimes = utils.dates_from_iris(p)
     
-    
-    
     for i in range(len(ffdtimes)):
         # Plot name and title
-        dstamp = ffdtimes[i].strftime("%Y%m%d%H%M")
         ptitle="SkewT$_{ACCESS}$   (%s) %s"%(latlon_stamp,ffdtimes[i].strftime("%Y %b %d %H:%M (UTC)"))
-        pname=pnames%(extentname,subfolder,latlon_stamp,dstamp)
         
         # create plot
-        
         f160(p[i],t[i],td[i], latlon,
              press_ro=pro[i], uwind=u[i], vwind=v[i])
         plt.title(ptitle)
         
         # save plot
-        fio.save_fig(pname,plt)
-        plt.close()
+        fio.save_fig(model_version,_sn_,ffdtimes[i],plt,subdir=latlon_stamp)
 
 if __name__ == '__main__':
     
-    topleft=[-32.75, 115.8] # random point away from the fire influence
-    for dtime in [ datetime(2016,1,6,3) + timedelta(hours=x) for x in range(6) ]:
-        f160_hour(dtime,subfolder='metpy_pyrocb_waroona1',old=False)
-        f160_hour(dtime,subfolder='metpy_pyrocb_waroona1_old',old=True)
-        f160_hour(dtime,latlon=topleft,subfolder='metpy_topleft_waroona',old=False)
-        f160_hour(dtime,latlon=topleft,subfolder='metpy_topleft_waroona_old',old=True)
+    topleft = [-32.75, 115.8] # random point away from the fire influence
+    pyrocb1 = plotting._latlons_['pyrocb_waroona1']
+    for dtime in [ datetime(2016,1,6,5) + timedelta(hours=x) for x in range(2) ]:
+        # dtime, latlon, latlon_stamp, model_version
+        for mv in ['waroona_run1','waroona_old']:
+            for latlon,latlon_stamp in zip([pyrocb1,topleft],['pyrocb1','topleft']):
+                f160_hour(dtime, latlon=latlon,
+                          latlon_stamp=latlon_stamp,
+                          model_version=mv)
 

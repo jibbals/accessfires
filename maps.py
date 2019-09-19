@@ -25,9 +25,13 @@ from matplotlib.transforms import offset_copy
 # LOCAL IMPORTS
 from utilities import utils, fio, constants, plotting
 
+### 
+## GLOBALS
+###
+_sn_ = 'maps' # scriptname
+
 # Plot defaults
 plotting.init_plots()
-
 
 #f, ax, gproj = plotting.map_google(plotting._extents_['waroona'], zoom=11)
 
@@ -80,4 +84,4 @@ for i in range(3):
 
 
 ## Add zoom of nest 3?
-fio.save_fig('figures/waroona_run1/nested_grid.png', plt)
+fio.save_fig('waroona_run1',_sn_,'nested_grid.png',plt)
