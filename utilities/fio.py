@@ -13,6 +13,7 @@ Created on Mon Aug  5 13:52:09 2019
 ###
 
 import iris
+from iris.experimental.equalise_cubes import equalise_attributes
 import numpy as np
 import timeit # for timing stuff
 import warnings
@@ -21,10 +22,15 @@ from datetime import datetime, timedelta
 from glob import glob
 import os
 
-
-### 
+###
 ## GLOBALS
 ###
+__VERBOSE__=True
+
+## Sir ivan pc fire files
+_topog_sirivan_ = 'data/sirivan/umnsaa_pa2017021121.nc'
+_files_sirivan_ = sorted(glob('data/sirivan/umnsaa_pc*.nc'))
+# TODO: Add sirivan run1 to model_outputs list
 
 model_outputs = {
         # Attemp to recreate 'old' run weather and pyrocb
@@ -59,53 +65,9 @@ model_outputs = {
                 'origdir':'/g/data1/en0/rjf548/fires/waroona.2016010615.vanj'},
                  }
 
-
-def save_fig(model_run,script_name,pname, plt, subdir=None,
-             ext='.png', dpi=150):
-    """
-    create figurename as figures/model_run/script_name/[subdir/]fig_YYYYMMDDhhmm.png
-    
-    INPUTS:
-        model_run,script_name : strings
-        pname : can be datetime or string
-            if datetime, pname is set to fig_YYYYMMDDhhmm
-        plt : is instance of matplotlib.pyplot
-        subdir : string - optional extra subdir
-        ext : optional, only used if pname has no extension
-    """
-    
-    if isinstance(pname,datetime):
-        dstamp=pname.strftime('%Y%m%d%H%M')
-        pname='fig_%s%s'%(dstamp,ext)
-    
-    if subdir is not None:
-        pname='%s/'%subdir + pname
-    
-    if len(pname.split('.')) == 1: # no extension
-        pname=pname+ext
-    
-    path='figures/%s/%s/%s'%(model_run,script_name,pname)
-    
-    save_fig_to_path(path,plt, dpi=dpi)
-
-def save_fig_to_path(pname,plt, dpi=150):
-    '''
-    Create dir if necessary
-    Save figure
-    example: save_fig('my/path/plot.png',plt)
-    INPUTS:
-        pname = path/to/plotname.png
-        plt = matplotlib.pyplot instance 
-    
-    '''
-    folder = '/'.join(pname.split('/')[:-1]) + '/'
-    if not os.path.exists(folder):
-        print("INFO: Creating folder:",folder)
-        os.makedirs(folder)
-    print ("INFO: Saving figure:",pname)
-    plt.savefig(pname, dpi=dpi)
-    plt.close()
-
+###
+## METHODS
+###
 #from .context import utils
 # Couldn't import utils, just copying this function for now
 def potential_temperature(p,T):
@@ -120,60 +82,6 @@ def potential_temperature(p,T):
     assert np.all(repTa[:,0,:,:] - repTa[:,1,:,:] == 0), "Repeated z dim is not the same"
     return repTa*(1e5/p)**(287.05/1004.64)
 
-###
-## GLOBALS
-###
-__VERBOSE__=True
-
-## Sir ivan pc fire files
-_topog_sirivan_ = 'data/sirivan/umnsaa_pa2017021121.nc'
-_files_sirivan_ = sorted(glob('data/sirivan/umnsaa_pc*.nc'))
-
-
-# 3 file types for new waroona output
-## slx - single level output
-## mdl_ro1 - multi level, on ro dimension (winds)
-## mdl_th1 - multi level, on theta dimension
-## mdl_th2 - multi level, on theta dimension (since um output file size is limited)
-_file_types_waroona_ = {'slv':['specific_humidity',  # kg/kg [t,lat,lon]
-                               'surface_air_pressure', # Pa 
-                               'air_pressure_at_sea_level', # Pa [t,lat,lon]
-                               #'surface_altitude', # [lat,lon] # topog # only occurs in first output
-                               'surface_temperature', # [t,y,x]
-                               'time', # = 6 ;
-                               #'level_height', # = 140 ;
-                               'latitude', # = 576 ;
-                               'longitude', # = 576
-                               # x_wind and y_wind are here also...
-                               ],
-                        'mdl_ro1':['air_pressure', # [t,z,lat,lon]
-                               'x_wind', # [t,z,y,x]
-                               'y_wind', # [t,z,y,x]
-                               #'height_above_reference_ellipsoid', #[z,y,x] # new level heights? # only occurs in first outfile
-                               'time', # = 6 ;
-                               'level_height', # = 140 ;
-                               'latitude', # = 576 ;
-                               'longitude', # = 576
-                               ],
-                        'mdl_th1':['air_pressure', # Pa [t,z,y,x]
-                                   'air_temperature', # K [t,z,y,x]
-                                   #'height_above_reference_ellipsoid', # m [t,z,y,x] # only occurs in first outfile
-                                   'specific_humidity', # kg/kg [tzyx]
-                                   'upward_air_velocity', # m/s [tzyx]
-                                   'time', # = 6 ;
-                                   'level_height', # = 140 ;
-                                   'latitude', # = 576 ;
-                                   'longitude', # = 576
-                                   ],
-                        'mdl_th2':['mass_fraction_of_cloud_ice_in_air', # kg/kg [tzyx]
-                                   'mass_fraction_of_cloud_liquid_water_in_air',
-                                   'time', # = 6 ;
-                                   'level_height', # = 140 ;
-                                   'latitude', # = 576 ;
-                                   'longitude', # = 576
-                                   ],
-                       }
-_files_waroona_ = model_outputs['waroona_run1']['path'] + 'umnsaa_%s_%s.nc' # umnsaa_YYYYMMDDhh_slx.nc
 
 def read_nc_iris(fpath, constraints=None, keepvars=None):
     '''
@@ -233,17 +141,54 @@ def read_fire(dtimes, constraints=None, extent=None,
     
     return cubelist
 
-def read_model_run(model_version, **kwargs):
+def read_model_run(model_version, fdtime=None, subdtimes=None, extent=None, **kwargs):
     '''
-    Read output from particular model run into cubelist
-    return cubelist
+    Read output from particular model run into cubelist, generally concatenates 
+    along the time dimension.
+    
     INPUTS: 
-        model_version (see model_outputs keys)
+        model_version: string (see model_outputs keys)
+        fdtime: datetime or datetimes, optional
+            file output datetime[s] to be read, if None then read all files
+        subdtimes: list of datetimes, optional
+            after reading files, just keep these datetime slices
+            None will return all datetimes
+        extent: list, optional
+            [West, East, South, North] lon,lon,lat,lat list used to spatially 
+            subset the data (if desired)
         kwargs can be sent to reading methods
+            depending on model_run, includes add_winds, add_dewpoint, ...
+            TODO: take these out of subroutines and put them into this method 
+            AFTER all the subsetting has been done
+            
+    RETURNS:
+        iris.cube.CubeList with standardised dimensions [time, level, latitude, longitude]
+    
     '''
     
+    ## make sure we have model run data
+    assert model_version in model_outputs.keys(), "%s not yet supported by 'read_model_run'"%model_version
+    
+    ## No ftimes? set to all ftimes
+    if fdtime is None:
+        fdtime = model_outputs[model_version]['filedates']
+    fdtimes = np.array(fdtime) # make sure it's iterable
+    
+    ## First read the basics, before combining along time dim
+    allcubes=iris.cube.CubeList()
+    
+    # Start using waroona_old
+    if model_version=='waroona_old':
+         for dtime in fdtimes:
+            cubelist = read_waroona_pcfile(dtime, extent=extent, 
+                                           add_zth=False, add_topog=False)
+            
+            # 
+            
+    
+    
 
-def read_waroona(dtime, constraints=None, extent=None, 
+def read_waroona_run1(dtime, constraints=None, extent=None, 
                  add_winds=False, add_theta=False, add_dewpoint=True):
     '''
         Read the converted waroona model output files
@@ -273,6 +218,7 @@ def read_waroona(dtime, constraints=None, extent=None,
         1: mass_fraction_of_cloud_liquid_water_in_air / (kg kg-1) (time: 6; model_level_number: 140; latitude: 576; longitude: 576)
         2: qc / (g kg-1)                    # added by jwg
     '''
+    
     dstamp=dtime.strftime('%Y%m%d%H')
     ddir = model_outputs['waroona_run1']['path']
     # First read topography
@@ -297,9 +243,39 @@ def read_waroona(dtime, constraints=None, extent=None,
         zro = zro.extract(constraints)
         zth = zth.extract(constraints)
     
+    # 3 file types for new waroona output
+    ## slx - single level output
+    ## mdl_ro1 - multi level, on ro dimension (winds)
+    ## mdl_th1 - multi level, on theta dimension
+    ## mdl_th2 - multi level, on theta dimension (since um output file size is limited)
+    _waroona_run1_files_vars_ = {
+        'slv':[
+            'specific_humidity',  # kg/kg [t,lat,lon]
+            'surface_air_pressure', # Pa 
+            'air_pressure_at_sea_level', # Pa [t,lat,lon]
+            'surface_temperature', # [t,y,x]
+            # x_wind and y_wind are here also...
+            ],
+        'mdl_ro1':[
+            'air_pressure', # [t,z,lat,lon]
+            'x_wind', # [t,z,y,x]
+            'y_wind', # [t,z,y,x]
+            #'height_above_reference_ellipsoid', # m [z,y,x]
+            ],
+        'mdl_th1':[
+            'air_pressure', # Pa [t,z,y,x]
+            'air_temperature', # K [t,z,y,x]
+            'specific_humidity', # kg/kg [tzyx]
+            'upward_air_velocity', # m/s [tzyx]
+            ],
+        'mdl_th2':[
+            'mass_fraction_of_cloud_ice_in_air', # kg/kg [tzyx]
+            'mass_fraction_of_cloud_liquid_water_in_air',
+            ],
+        }
     cubelists = []
-    for filetype,varnames in _file_types_waroona_.items():
-        path = _files_waroona_%(dstamp,filetype)
+    for filetype,varnames in _waroona_run1_files_vars_.items():
+        path = 'umnsaa_%s_%s.nc'%(dstamp,filetype)
         cubelists.append(read_nc_iris(path,constraints=constraints,keepvars=varnames))
     
     # Add cloud parameter at g/kg scale
@@ -325,8 +301,8 @@ def read_waroona(dtime, constraints=None, extent=None,
         # Take pressure and relative humidity
         
         p,q = cubelists[2].extract(['air_pressure','specific_humidity'])
-        p_orig_units = p.units
-        q_orig_units = q.units
+        #p_orig_units = p.units
+        #q_orig_units = q.units
         p.convert_units('hPa')
         q.convert_units('kg kg-1')
         #print("DEBUG: units", p_orig_units, p.units, q_orig_units,q.units)
@@ -392,7 +368,9 @@ def read_waroona(dtime, constraints=None, extent=None,
         cubelists[2].append(cubetheta)
     return cubelists
 
-def read_waroona_pcfile(dtime, constraints=None, extent=None, add_winds=False, add_theta=False, add_dewpoint=False):
+def read_waroona_pcfile(dtime, constraints=None, extent=None, 
+                        add_topog=True, add_zth=True, add_winds=False,
+                        add_theta=False, add_dewpoint=False):
     '''
     WARNING: add_dewpoint changes air_pressure units to hPa
     0: mass_fraction_of_cloud_liquid_water_in_air / (kg kg-1) (time: 2; model_level_number: 140; latitude: 88; longitude: 106)
@@ -405,8 +383,8 @@ def read_waroona_pcfile(dtime, constraints=None, extent=None, add_winds=False, a
     7: air_pressure_at_sea_level / (Pa)    (time: 2; latitude: 88; longitude: 106)
     8: specific_humidity / (kg kg-1)       (time: 2; model_level_number: 140; latitude: 88; longitude: 106)
     9: qc / (g kg-1)                       (time: 2; model_level_number: 140; latitude: 88; longitude: 106)
-    10: topog / (m)                         (latitude: 88; longitude: 106)
-    11: z_th / (m)                          (time: 2; model_level_number: 140; latitude: 88; longitude: 106)
+    10: topog / (m)                        (latitude: 88; longitude: 106)
+    11: z_th / (m)                         (time: 2; model_level_number: 140; latitude: 88; longitude: 106)
     ## Added if add_winds is True
         12: u / (m s-1)                    (time: 2; model_level_number: 140; latitude: 88; longitude: 106)
         13: v / (m s-1)                    (time: 2; model_level_number: 140; latitude: 88; longitude: 106)
@@ -419,15 +397,17 @@ def read_waroona_pcfile(dtime, constraints=None, extent=None, add_winds=False, a
     ddir = model_outputs['waroona_old']['path'] 
     # First read topography
     
-    topog, = read_nc_iris(ddir + model_outputs['waroona_old']['topog'],
-                          constraints = 'surface_altitude')
+    if add_topog:
+        topog, = read_nc_iris(ddir + model_outputs['waroona_old']['topog'],
+                              constraints = 'surface_altitude')
     
     # If we just want a particular extent, subset to that extent using constraints
     if extent is not None:
         West,East,South,North = extent
         constr_lons = iris.Constraint(longitude = lambda cell: West <= cell <= East )
         constr_lats = iris.Constraint(latitude = lambda cell: South <= cell <= North )
-        topog = topog.extract(constr_lons & constr_lats) # subset topog
+        if add_topog:
+            topog = topog.extract(constr_lons & constr_lats) # subset topog
         if constraints is not None:
             constraints = constraints & constr_lats & constr_lons
         else:
@@ -467,23 +447,27 @@ def read_waroona_pcfile(dtime, constraints=None, extent=None, add_winds=False, a
     qc.units = 'g kg-1'
     qc.var_name = 'qc'
     cubes.append(qc)
-    # add topog cube
-    iris.std_names.STD_NAMES['topog'] = {'canonical_units': 'm'}
-    topog.standard_name = 'topog'
-    cubes.append(topog)
-    # add zth cube
-    p,pmsl = cubes.extract(['air_pressure','air_pressure_at_sea_level'])
-    nt,nz,ny,nx = p.shape
-    reppmsl = np.repeat(pmsl.data[:,np.newaxis,:,:],nz, axis=1) # repeat surface pressure along z axis
-    zth = -(287*300/9.8)*np.log(p.data/reppmsl)
-    iris.std_names.STD_NAMES['z_th'] = {'canonical_units': 'm'}
-    zthcube=iris.cube.Cube(zth, standard_name='z_th', 
-                           var_name="zth", units="m",
-                           dim_coords_and_dims=[(p.coord('time'),0),
-                                                (p.coord('model_level_number'),1),
-                                                (p.coord('latitude'),2),
-                                                (p.coord('longitude'),3)])
-    cubes.append(zthcube)
+    
+    if add_topog:
+        # add topog cube
+        #iris.std_names.STD_NAMES['topog'] = {'canonical_units': 'm'}
+        #topog.standard_name = 'topog'
+        cubes.append(topog)
+    
+    if add_zth:
+        # add zth cube
+        p,pmsl = cubes.extract(['air_pressure','air_pressure_at_sea_level'])
+        nt,nz,ny,nx = p.shape
+        reppmsl = np.repeat(pmsl.data[:,np.newaxis,:,:],nz, axis=1) # repeat surface pressure along z axis
+        zth = -(287*300/9.8)*np.log(p.data/reppmsl)
+        iris.std_names.STD_NAMES['z_th'] = {'canonical_units': 'm'}
+        zthcube=iris.cube.Cube(zth, standard_name='z_th', 
+                               var_name="zth", units="m",
+                               dim_coords_and_dims=[(p.coord('time'),0),
+                                                    (p.coord('model_level_number'),1),
+                                                    (p.coord('latitude'),2),
+                                                    (p.coord('longitude'),3)])
+        cubes.append(zthcube)
     
     if add_winds:
         # wind speeds need to be interpolated onto non-staggered latlons
@@ -514,8 +498,8 @@ def read_waroona_pcfile(dtime, constraints=None, extent=None, add_winds=False, a
         # Take pressure and relative humidity
         
         p,q = cubes.extract(['air_pressure','specific_humidity'])
-        p_orig_units = p.units
-        q_orig_units = q.units
+        #p_orig_units = p.units
+        #q_orig_units = q.units
         p.convert_units('hPa')
         q.convert_units('kg kg-1')
         #print("DEBUG: units", p_orig_units, p.units, q_orig_units,q.units)
@@ -737,6 +721,7 @@ def subset_time_iris(cube,dtimes,seconds=True,seccheck=121):
 def read_pcfile(fpath, keepvars=None):
     '''
     Read a umnsaa_pc file, add some extra things such as potential temperature
+    TODO: Fix - currently won't work as it uses old Dataset method
     '''
     variables=read_nc(fpath,keepvars)
     
@@ -894,16 +879,14 @@ def read_sirivan(fpaths, toplev=80, keepvars=None):
             print("DEBUG:",varname,data[varname].shape, datai[varname].shape)
             data[varname] = np.append(data[varname], datai[varname], axis=0)
             print("DEBUG:",varname,data[varname].shape)
-        
+
         # Append time step
         hour.append(datai['time_0']) 
         time.append(datai['time_1'][0])
         time.append(datai['time_1'][1])
-        
+  
         del datai
 
-
-    
     data['hour'] = np.array(hour)
     data['time'] = np.array(time)
     # also for convenience add cloud metric
@@ -915,6 +898,52 @@ def read_sirivan(fpaths, toplev=80, keepvars=None):
     for varname in fulldata:
 		# Just read up to toplev 
         data[varname] = data[varname][:,:toplev,:,:]
-    
 
     return data
+
+
+def save_fig_to_path(pname,plt, dpi=150):
+    '''
+    Create dir if necessary
+    Save figure
+    example: save_fig('my/path/plot.png',plt)
+    INPUTS:
+        pname = path/to/plotname.png
+        plt = matplotlib.pyplot instance 
+    
+    '''
+    folder = '/'.join(pname.split('/')[:-1]) + '/'
+    if not os.path.exists(folder):
+        print("INFO: Creating folder:",folder)
+        os.makedirs(folder)
+    print ("INFO: Saving figure:",pname)
+    plt.savefig(pname, dpi=dpi)
+    plt.close()
+
+def save_fig(model_run,script_name,pname, plt, subdir=None,
+             ext='.png', dpi=150):
+    """
+    create figurename as figures/model_run/script_name/[subdir/]fig_YYYYMMDDhhmm.png
+    
+    INPUTS:
+        model_run,script_name : strings
+        pname : can be datetime or string
+            if datetime, pname is set to fig_YYYYMMDDhhmm
+        plt : is instance of matplotlib.pyplot
+        subdir : string - optional extra subdir
+        ext : optional, only used if pname has no extension
+    """
+    
+    if isinstance(pname,datetime):
+        dstamp=pname.strftime('%Y%m%d%H%M')
+        pname='fig_%s%s'%(dstamp,ext)
+    
+    if subdir is not None:
+        pname='%s/'%subdir + pname
+    
+    if len(pname.split('.')) == 1: # no extension
+        pname=pname+ext
+    
+    path='figures/%s/%s/%s'%(model_run,script_name,pname)
+    
+    save_fig_to_path(path,plt, dpi=dpi)

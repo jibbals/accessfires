@@ -18,26 +18,25 @@ import iris
 
 from utilities import utils,fio,plotting, constants
 
+###
+## GLOBALS
+###
+_sn_ = 'vert_motion_slices'
 
 def vert_motion_slices(qc,w,lh,lat,lon,dtime, 
                        ff=None,
-                       extentname='waroona',
+                       model_run='waroona_run1',
                        ext='.png',
-                       folder='vert_motion_slices',
                        cloud_threshold=constants.cloud_threshold,
-                       dpi=400):
+                       dpi=300):
     '''
     44i showing vertical motion contourf plots, at different model levels
     Trying to see pyroCB cloud
     '''
     
+    extentname=model_run.split('_')[0]
     # datetime timestamp for file,title
-    dstamp = dtime.strftime("%Y%m%d%H%M")
     stitle = dtime.strftime("%Y %b %d %H:%M (UTC)")
-    
-    # figure name and location
-    pname="figures/%s/%s/fig_%s%s"%(extentname,folder,dstamp,ext)
-    
     
     # set font sizes etc.
     plotting.init_plots()
@@ -104,66 +103,61 @@ def vert_motion_slices(qc,w,lh,lat,lon,dtime,
     cbar_ax = f.add_axes(axes)
     f.colorbar(cs, cax=cbar_ax, format=cbarform)
     
-    print("INFO: Saving figure:",pname)
-    plt.savefig(pname,dpi=dpi)
-    plt.close()
+    fio.save_fig(model_run,_sn_,dtime,plt,
+                 ext=ext,dpi=dpi)
+    
 
-
-def vert_motion_hour(dtime=datetime(2016,1,6,7), old=False):
+def vert_motion_hour(dtime=datetime(2016,1,6,7), model_run='waroona_run1'):
     '''
     create vert motion slices of an hours output from the old run in mika's folder
     '''
-    dpi=400
-    extentname='waroona'
+    dpi=200
+    extentname=model_run.split('_')[0]
     extent=plotting._extents_[extentname]
     ext='.png'
     
     # Read vert motion, clouds
-    if old:
+    if model_run=='waroona_old':
         cubes = fio.read_waroona_pcfile(dtime,extent=extent)
         w,  = cubes.extract('upward_air_velocity')
         qc, = cubes.extract('qc')
-    else:
+    elif model_run=='waroona_run1':
         _,_,th1cubes,th2cubes = fio.read_waroona(dtime,extent=extent)
         w,  = th1cubes.extract('upward_air_velocity')
         qc, = th2cubes.extract('qc')
-    lh  = w.coord('level_height').points
-    lat = w.coord('latitude').points
-    lon = w.coord('longitude').points
-
+    else:
+        assert False, '%s not yet implemented for run %s'%(_sn_,model_run)
+    
     ## fire front
     ff_dtimes = utils.dates_from_iris(w)
     ff1, = fio.read_fire(dtimes=ff_dtimes, extent=extent, firefront=True)
-    
-    # interpolat ff onto old lats and lons    
     ff=ff1
-    if old:
+    if model_run=='waroona_old':
         ff=ff1.interpolate([('longitude',w.coord('longitude').points), 
                             ('latitude',w.coord('latitude').points)],
-                           iris.analysis.Linear()) 
+                           iris.analysis.Linear())
+    
+    lh  = w.coord('level_height').points
+    lat = w.coord('latitude').points
+    lon = w.coord('longitude').points
+    
     for i in range(len(ff_dtimes)):
         subtime = ff_dtimes[i]
         
         vert_motion_slices(qc[i].data, w[i].data,lh,lat,lon,
                            ff=ff[i].data,
                            dtime=subtime,
-                           folder='vert_motion_slices%s'%(['','_old'][old]),
+                           model_run=model_run,
                            dpi=dpi, ext=ext)                
 
 ### RUN THE CODE:
 if __name__ == '__main__':
     ### pyrocb utc time window:
-    pyrocb_hours = [datetime(2016,1,6,7) + timedelta(hours=x) for x in range(6)]
-    #test hours
-    pyrocb_hours = [datetime(2016,1,6,7)]
+    run1_hours = [datetime(2016,1,6,7) + timedelta(hours=x) for x in range(2)]
+    old_hours = [datetime(2016,1,6,4) + timedelta(hours=x) for x in range(5)]
     
-    #for dtime in pyrocb_hours:
-    #    plot_hour(dtime,old=True)
+    for dtime in old_hours:
+        vert_motion_hour(dtime, model_run='waroona_old')
+    for dtime in run1_hours:
+        vert_motion_hour(dtime, model_run='waroona_run1')
     
-    #for dtime in [ datetime(2016,1,6,7) + timedelta(hours=x) for x in range(2) ]:
-    for dtime in [ datetime(2016,1,5,15) + timedelta(hours=x) for x in range(8) ]:
-        vert_motion_hour(dtime,old=True)
-    for dtime in [ datetime(2016,1,6,4) + timedelta(hours=x) for x in range(5) ]:
-        vert_motion_hour(dtime,old=True)
-    for dtime in [ datetime(2016,1,5,15) + timedelta(hours=x) for x in range(24) ]:
-        vert_motion_hour(dtime, old=False)
