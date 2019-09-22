@@ -22,6 +22,9 @@ from datetime import datetime, timedelta
 from glob import glob
 import os
 
+# This script is only run from parent folder, so this relative path should work
+from utilities import utils
+
 ###
 ## GLOBALS
 ###
@@ -68,7 +71,6 @@ model_outputs = {
 ###
 ## METHODS
 ###
-#from .context import utils
 # Couldn't import utils, just copying this function for now
 def potential_temperature(p,T):
     '''
@@ -141,7 +143,9 @@ def read_fire(dtimes, constraints=None, extent=None,
     
     return cubelist
 
-def read_model_run(model_version, fdtime=None, subdtimes=None, extent=None, **kwargs):
+def read_model_run(model_version, fdtime=None, subdtimes=None, extent=None,
+                   add_topog=True, add_z=False, add_winds=False, add_theta=False,
+                   add_dewpoint=False):
     '''
     Read output from particular model run into cubelist, generally concatenates 
     along the time dimension.
@@ -150,24 +154,41 @@ def read_model_run(model_version, fdtime=None, subdtimes=None, extent=None, **kw
         model_version: string (see model_outputs keys)
         fdtime: datetime or datetimes, optional
             file output datetime[s] to be read, if None then read all files
-        subdtimes: list of datetimes, optional
+        subdtimes: iterable of datetimes, optional
             after reading files, just keep these datetime slices
             None will return all datetimes
         extent: list, optional
             [West, East, South, North] lon,lon,lat,lat list used to spatially 
             subset the data (if desired)
-        kwargs can be sent to reading methods
-            depending on model_run, includes add_winds, add_dewpoint, ...
-            TODO: take these out of subroutines and put them into this method 
-            AFTER all the subsetting has been done
+        add_<metric>: bool, 
+            add data cubes to returned cubelist
+            WARNING: Some of these will use RAM
             
     RETURNS:
         iris.cube.CubeList with standardised dimensions [time, level, latitude, longitude]
     
+    # if cloud stuff is there
+    9: qc / (g kg-1)                       (time: 2; model_level_number: 140; latitude: 88; longitude: 106)
+    ## if add_topog is True
+    10: surface_altitude / (m)                        (latitude: 88; longitude: 106)
+    ## if add_z is True
+    11: z_th / (m)                         (time: 2; model_level_number: 140; latitude: 88; longitude: 106)
+    ## Added if add_winds is True
+    12: u / (m s-1)                    (time: 2; model_level_number: 140; latitude: 88; longitude: 106)
+    13: v / (m s-1)                    (time: 2; model_level_number: 140; latitude: 88; longitude: 106)
+    14: s / (m s-1)                    (time: 2; model_level_number: 140; latitude: 88; longitude: 106)
+    ## Added if add_dewpoint is True
+    15: vapour_pressure / (100 Pa)     (time: 2; model_level_number: 140; latitude: 88; longitude: 106)
+    16: dewpoint_temperature / (K)     (time: 2; model_level_number: 140; latitude: 88; longitude: 106)
     '''
     
     ## make sure we have model run data
     assert model_version in model_outputs.keys(), "%s not yet supported by 'read_model_run'"%model_version
+    
+    ddir = model_outputs[model_version]['path']
+    
+    timelesscubes=[]
+    allcubes=None
     
     ## No ftimes? set to all ftimes
     if fdtime is None:
@@ -175,21 +196,187 @@ def read_model_run(model_version, fdtime=None, subdtimes=None, extent=None, **kw
     fdtimes = np.array(fdtime) # make sure it's iterable
     
     ## First read the basics, before combining along time dim
-    allcubes=iris.cube.CubeList()
     
-    # Start using waroona_old
+    ### SPECIFIC TO OLD RUN        
     if model_version=='waroona_old':
-         for dtime in fdtimes:
-            cubelist = read_waroona_pcfile(dtime, extent=extent, 
-                                           add_zth=False, add_topog=False)
+        for dtime in fdtimes:
+            cubelist = read_waroona_old(dtime)
+            if allcubes is None:
+                allcubes = cubelist
+            else:
+                allcubes.extend(cubelist)
+        
+    elif model_version=='waroona_run1':
+        for dtime in fdtimes:
+            slv,ro1,th1,th2 = read_waroona_run1(dtime)
             
-            # 
+            # Remove specific humidity from slv, since we get the whole array from th1
+            slv.remove(slv.extract('specific_humidity')[0])
             
+            if allcubes is None:
+                allcubes=slv
+            else:
+                allcubes.extend(slv)
+            # model output on rho levels and theta levels are slightly different
+            # rename the rho levels air pressure (or else it's repeated)
+            ro1.extract('air_pressure')[0].rename('air_pressure_rho')
+            
+            allcubes.extend(ro1)
+            allcubes.extend(th1)
+            allcubes.extend(th2)
     
+        if add_z:
+            # also read 3d model height
+            zro, = read_nc_iris(ddir+'umnsaa_2016010515_mdl_ro1.nc', 
+                                constraints = 'height_above_reference_ellipsoid')
+            zth, = read_nc_iris(ddir+'umnsaa_2016010515_mdl_th1.nc', 
+                                constraints = 'height_above_reference_ellipsoid')
+            zro.rename('z_rho')
+            zth.rename('z_th')
+            timelesscubes.append(zth)
+            timelesscubes.append(zro)
+        
+    
+    ### GENERIC TO ALL MODEL OUTPUT
+
+    ## Concatenate along time dimension
+    ## First need to unify time dimension:
+    iris.util.unify_time_units(allcubes)
+    ## Also need to equalise the attributes list
+    # I think this just deletes attributes which are not the same between matching cubes..
+    equalise_attributes(allcubes) 
+    ## Join along the time dimension
+    allcubes = allcubes.concatenate()
+    ## subset to our subdtimes
+    if subdtimes is not None:
+        cubedates=utils.dates_from_iris(allcubes[0])
+        tslice = np.array([utils.nearest_date_index(dt, cubedates, allowed_seconds=120) for dt in subdtimes])
+        for i in range(len(allcubes)):
+            allcubes[i] = allcubes[i][tslice]
+    
+    ## NOW add any timeless cubes
+    allcubes.extend(timelesscubes)
+        
+    # topography
+    if add_topog:
+        topog, = read_nc_iris(ddir + model_outputs[model_version]['topog'],
+                              constraints = 'surface_altitude')
+        allcubes.append(topog)
+        
+    ## Subset spatially
+    # based on extent
+    if extent is not None:
+        West,East,South,North = extent
+        constr_lons = iris.Constraint(longitude = lambda cell: West <= cell <= East )
+        constr_lats = iris.Constraint(latitude = lambda cell: South <= cell <= North )
+        for i in range(len(allcubes)):
+            allcubes[i] = allcubes[i].extract(constr_lats & constr_lons)
+    
+    ## extras
+    # Add cloud parameter at g/kg scale
+    water_and_ice = allcubes.extract(['mass_fraction_of_cloud_liquid_water_in_air',
+                                      'mass_fraction_of_cloud_ice_in_air'])
+    if len(water_and_ice) == 2:
+        water,ice=water_and_ice
+        qc = (water+ice) * 1000
+        qc.units = 'g kg-1'
+        qc.rename('qc')
+        allcubes.append(qc)
+    
+    if add_z:
+        # This is down here so that it only happens AFTER subsetting
+        if model_version == 'waroona_old':
+            # add zth cube
+            p, pmsl = allcubes.extract(['air_pressure','air_pressure_at_sea_level'])
+            nt,nz,ny,nx = p.shape
+            reppmsl = np.repeat(pmsl.data[:,np.newaxis,:,:],nz, axis=1) # repeat surface pressure along z axis
+            zth = -(287*300/9.8)*np.log(p.data/reppmsl)
+            iris.std_names.STD_NAMES['z_th'] = {'canonical_units': 'm'}
+            zthcube=iris.cube.Cube(zth, standard_name='z_th', 
+                                   var_name="zth", units="m",
+                                   dim_coords_and_dims=[(p.coord('time'),0),
+                                                        (p.coord('model_level_number'),1),
+                                                        (p.coord('latitude'),2),
+                                                        (p.coord('longitude'),3)])
+            allcubes.append(zthcube)
+
+    if add_winds:
+        # wind speeds need to be interpolated onto non-staggered latlons
+        p, u1, v1 = allcubes.extract(['air_pressure','x_wind','y_wind'])
+        
+        ### DESTAGGER u and v using iris interpolate
+        ### (this will trigger the delayed read)
+        # u1: [t,z, lat, lon1]
+        # v1: [t,z, lat1, lon]  # put these both onto [t,z,lat,lon]
+        u = u1.interpolate([('longitude',p.coord('longitude').points)],
+                           iris.analysis.Linear())
+        v = v1.interpolate([('latitude',p.coord('latitude').points)],
+                           iris.analysis.Linear())
+        # Get wind speed cube using hypotenuse of u,v
+        s = iris.analysis.maths.apply_ufunc(np.hypot,u,v)
+        s.units = 'm s-1'
+        # add standard names for these altered variables:
+        iris.std_names.STD_NAMES['u'] = {'canonical_units': 'm s-1'}
+        iris.std_names.STD_NAMES['v'] = {'canonical_units': 'm s-1'}
+        u.standard_name='u'
+        v.standard_name='v'
+        s.var_name='s' # s doesn't come from a var with a std name so can just use var_name
+        allcubes.append(u)
+        allcubes.append(v)
+        allcubes.append(s)
+    
+    if add_dewpoint:
+        # Take pressure and relative humidity
+        #print("DEBUG: add_dewpoint", allcubes)
+        p,q = allcubes.extract(['air_pressure','specific_humidity'])
+        p_orig_units = p.units
+        q_orig_units = q.units
+        p.convert_units('hPa')
+        q.convert_units('kg kg-1')
+        #print("DEBUG: units", p_orig_units, p.units, q_orig_units,q.units)
+        # calculate vapour pressure:
+        epsilon = 0.6220 # gas constant ratio for dry air to water vapour
+        e = p*q/(epsilon+(1-epsilon)*q)
+        e.rename('vapour_pressure')
+        e.units = 'hPa'
+        #e_correct=np.mean(e.data)
+        p.convert_units(p_orig_units)
+        q.convert_units(q_orig_units)
+        #assert np.isclose(np.mean(e.data),e_correct), "Changing units back messes with vapour_presssure"
+        
+        allcubes.append(e)
+        # calculate dewpoint from vapour pressure
+        Td = 234.5 / ((17.67/np.log(e.data/6.112))-1) # in celcius
+        Td = Td + 273.15 # celcius to kelvin
+        
+        # change Td to a Cube
+        iris.std_names.STD_NAMES['dewpoint_temperature'] = {'canonical_units': 'K'}
+        cubeTd = iris.cube.Cube(Td, standard_name="dewpoint_temperature", 
+                                   var_name="Td", units="K",
+                                   dim_coords_and_dims=[(p.coord('time'),0),
+                                                        (p.coord('model_level_number'),1),
+                                                        (p.coord('latitude'),2),
+                                                        (p.coord('longitude'),3)])
+    
+        allcubes.append(cubeTd)
+    
+    if add_theta:
+        # Estimate potential temp
+        p, Ta = allcubes.extract(['air_pressure','air_temperature'])
+        theta = potential_temperature(p.data,Ta.data)
+        # create cube 
+        iris.std_names.STD_NAMES['potential_temperature'] = {'canonical_units': 'K'}
+        cubetheta = iris.cube.Cube(theta, standard_name="potential_temperature", 
+                                   var_name="theta", units="K",
+                                   dim_coords_and_dims=[(p.coord('time'),0),
+                                                        (p.coord('model_level_number'),1),
+                                                        (p.coord('latitude'),2),
+                                                        (p.coord('longitude'),3)])
+        allcubes.append(cubetheta)        
+    return allcubes
     
 
-def read_waroona_run1(dtime, constraints=None, extent=None, 
-                 add_winds=False, add_theta=False, add_dewpoint=True):
+def read_waroona_run1(dtime, constraints=None, extent=None):
     '''
         Read the converted waroona model output files
         returns list of 4 iris cube lists:
@@ -198,50 +385,32 @@ def read_waroona_run1(dtime, constraints=None, extent=None,
         1: surface_air_pressure / (Pa)         (time: 6; latitude: 576; longitude: 576)
         2: air_pressure_at_sea_level / (Pa)    (time: 6; latitude: 576; longitude: 576)
         3: surface_temperature / (K)           (time: 6; latitude: 576; longitude: 576)
-        4: topog / (m)                      # added by jwg
         ========
         0: air_pressure / (Pa)                 (time: 6; model_level_number: 140; latitude: 576; longitude: 576)
         1: x_wind / (m s-1)                    (time: 6; model_level_number: 140; latitude: 576; longitude: 576)
         2: y_wind / (m s-1)                    (time: 6; model_level_number: 140; latitude: 577; longitude: 576)
-        3: z_ro / (m)                       # added by jwg
-        [ u, v, s / (m s-1) ]               # added here on destaggered horizontal grid if add_winds argument is True
         ========
         0: air_pressure / (Pa)                 (time: 6; model_level_number: 140; latitude: 576; longitude: 576)
         1: air_temperature / (K)               (time: 6; model_level_number: 140; latitude: 576; longitude: 576)
         2: specific_humidity / (kg kg-1)       (time: 6; model_level_number: 140; latitude: 576; longitude: 576)
         3: upward_air_velocity / (m s-1)       (time: 6; model_level_number: 140; latitude: 576; longitude: 576)
-        4: z_th / (m)                       # added by jwg
-        [ potential_temperature / (K) ]     # added if add_theta argument is True
-        [ dewpoint_temperature / (K) ]      # added if add_dewpoint is True
         ========
         0: mass_fraction_of_cloud_ice_in_air / (kg kg-1) (time: 6; model_level_number: 140; latitude: 576; longitude: 576)
         1: mass_fraction_of_cloud_liquid_water_in_air / (kg kg-1) (time: 6; model_level_number: 140; latitude: 576; longitude: 576)
-        2: qc / (g kg-1)                    # added by jwg
     '''
     
     dstamp=dtime.strftime('%Y%m%d%H')
     ddir = model_outputs['waroona_run1']['path']
-    # First read topography
-    topog, = read_nc_iris(ddir+model_outputs['waroona_run1']['topog'],
-                          constraints = 'surface_altitude')
-    # also read 3d model height
-    zro, = iris.load(ddir+'umnsaa_2016010515_mdl_ro1.nc', ['height_above_reference_ellipsoid'])
-    zth, = iris.load(ddir+'umnsaa_2016010515_mdl_th1.nc', ['height_above_reference_ellipsoid'])
     
     # If we just want a particular extent, subset to that extent using constraints
     if extent is not None:
         West,East,South,North = extent
         constr_lons = iris.Constraint(longitude = lambda cell: West <= cell <= East )
         constr_lats = iris.Constraint(latitude = lambda cell: South <= cell <= North )
-        topog = topog.extract(constr_lons & constr_lats) # subset topog
         if constraints is not None:
             constraints = constraints & constr_lats & constr_lons
         else:
             constraints = constr_lats & constr_lons
-    
-    if constraints is not None:
-        zro = zro.extract(constraints)
-        zth = zth.extract(constraints)
     
     # 3 file types for new waroona output
     ## slx - single level output
@@ -275,104 +444,13 @@ def read_waroona_run1(dtime, constraints=None, extent=None,
         }
     cubelists = []
     for filetype,varnames in _waroona_run1_files_vars_.items():
-        path = 'umnsaa_%s_%s.nc'%(dstamp,filetype)
+        path = ddir+'umnsaa_%s_%s.nc'%(dstamp,filetype)
         cubelists.append(read_nc_iris(path,constraints=constraints,keepvars=varnames))
     
-    # Add cloud parameter at g/kg scale
-    water, ice = cubelists[3].extract(['mass_fraction_of_cloud_liquid_water_in_air',
-                                            'mass_fraction_of_cloud_ice_in_air'])
-    qc = (water+ice) * 1000
-    qc.units = 'g kg-1'
-    qc.var_name = 'qc'
-    cubelists[3].append(qc)
-    # add topog cube
-    iris.std_names.STD_NAMES['topog'] = {'canonical_units': 'm'}
-    topog.standard_name = 'topog'
-    cubelists[0].append(topog)
-    # add zro and zth cubes
-    iris.std_names.STD_NAMES['z_ro'] = {'canonical_units': 'm'}
-    iris.std_names.STD_NAMES['z_th'] = {'canonical_units': 'm'}
-    zth.standard_name = 'z_th'
-    zro.standard_name = 'z_ro'
-    cubelists[1].append(zro)
-    cubelists[2].append(zth)
-    
-    if add_dewpoint:
-        # Take pressure and relative humidity
-        
-        p,q = cubelists[2].extract(['air_pressure','specific_humidity'])
-        #p_orig_units = p.units
-        #q_orig_units = q.units
-        p.convert_units('hPa')
-        q.convert_units('kg kg-1')
-        #print("DEBUG: units", p_orig_units, p.units, q_orig_units,q.units)
-        # calculate vapour pressure:
-        epsilon = 0.6220 # gas constant ratio for dry air to water vapour
-        e = p*q/(epsilon+(1-epsilon)*q)
-        iris.std_names.STD_NAMES['vapour_pressure'] = {'canonical_units': 'hPa'}
-        e.standard_name='vapour_pressure'
-        cubelists[2].append(e)
-        # calculate dewpoint from vapour pressure
-        Td = 234.5 / ((17.67/np.log(e.data/6.112))-1) # in celcius
-        Td = Td + 273.16 # celcius to kelvin
-        
-        # change Td to a Cube
-        iris.std_names.STD_NAMES['dewpoint_temperature'] = {'canonical_units': 'K'}
-        cubeTd = iris.cube.Cube(Td, standard_name="dewpoint_temperature", 
-                                   var_name="Td", units="K",
-                                   dim_coords_and_dims=[(p.coord('time'),0),
-                                                        (p.coord('model_level_number'),1),
-                                                        (p.coord('latitude'),2),
-                                                        (p.coord('longitude'),3)])
-
-        cubelists[2].append(cubeTd)
-        
-    
-    if add_winds:
-        # wind speeds need to be interpolated onto non-staggered latlons
-        p, u1, v1 = cubelists[1].extract(['air_pressure','x_wind','y_wind'])
-        
-        ### DESTAGGER u and v using iris interpolate
-        ### (this will trigger the delayed read)
-        # u1: [t,z, lat, lon1]
-        # v1: [t,z, lat1, lon]  # put these both onto [t,z,lat,lon]
-        u = u1.interpolate([('longitude',p.coord('longitude').points)],
-                           iris.analysis.Linear())
-        v = v1.interpolate([('latitude',p.coord('latitude').points)],
-                           iris.analysis.Linear())
-        # Get wind speed cube using hypotenuse of u,v
-        s = iris.analysis.maths.apply_ufunc(np.hypot,u,v)
-        s.units = 'm s-1'
-        # add standard names for these altered variables:
-        iris.std_names.STD_NAMES['u'] = {'canonical_units': 'm s-1'}
-        iris.std_names.STD_NAMES['v'] = {'canonical_units': 'm s-1'}
-        u.standard_name='u'
-        v.standard_name='v'
-        s.var_name='s' # s doesn't come from a var with a std name so can just use var_name
-        cubelists[1].append(u)
-        cubelists[1].append(v)
-        cubelists[1].append(s)
-    
-    if add_theta:
-        # Estimate potential temp
-        p, Ta = cubelists[2].extract(['air_pressure','air_temperature'])
-        theta = potential_temperature(p.data,Ta.data)
-        # create cube 
-        iris.std_names.STD_NAMES['potential_temperature'] = {'canonical_units': 'K'}
-        cubetheta = iris.cube.Cube(theta, standard_name="potential_temperature", 
-                                   var_name="theta", units="K",
-                                   dim_coords_and_dims=[(p.coord('time'),0),
-                                                        (p.coord('model_level_number'),1),
-                                                        (p.coord('latitude'),2),
-                                                        (p.coord('longitude'),3)])
-        cubelists[2].append(cubetheta)
     return cubelists
 
-def read_waroona_pcfile(dtime, constraints=None, extent=None, 
-                        add_topog=True, add_zth=True, add_winds=False,
-                        add_theta=False, add_dewpoint=False):
+def read_waroona_old(dtime, constraints=None, extent=None):
     '''
-    WARNING: add_dewpoint changes air_pressure units to hPa
     0: mass_fraction_of_cloud_liquid_water_in_air / (kg kg-1) (time: 2; model_level_number: 140; latitude: 88; longitude: 106)
     1: mass_fraction_of_cloud_ice_in_air / (kg kg-1) (time: 2; model_level_number: 140; latitude: 88; longitude: 106)
     2: upward_air_velocity / (m s-1)       (time: 2; model_level_number: 140; latitude: 88; longitude: 106)
@@ -382,32 +460,17 @@ def read_waroona_pcfile(dtime, constraints=None, extent=None,
     6: y_wind / (m s-1)                    (time: 2; model_level_number: 140; latitude: 88; longitude: 106)
     7: air_pressure_at_sea_level / (Pa)    (time: 2; latitude: 88; longitude: 106)
     8: specific_humidity / (kg kg-1)       (time: 2; model_level_number: 140; latitude: 88; longitude: 106)
-    9: qc / (g kg-1)                       (time: 2; model_level_number: 140; latitude: 88; longitude: 106)
-    10: topog / (m)                        (latitude: 88; longitude: 106)
-    11: z_th / (m)                         (time: 2; model_level_number: 140; latitude: 88; longitude: 106)
-    ## Added if add_winds is True
-        12: u / (m s-1)                    (time: 2; model_level_number: 140; latitude: 88; longitude: 106)
-        13: v / (m s-1)                    (time: 2; model_level_number: 140; latitude: 88; longitude: 106)
-        14: s / (m s-1)                    (time: 2; model_level_number: 140; latitude: 88; longitude: 106)
-    ## Added if add_dewpoint is True
-        15: vapour_pressure / (100 Pa)     (time: 2; model_level_number: 140; latitude: 88; longitude: 106)
-        16: dewpoint_temperature / (K)     (time: 2; model_level_number: 140; latitude: 88; longitude: 106)
+    
     '''
     dstamp=dtime.strftime('%Y%m%d%H')
     ddir = model_outputs['waroona_old']['path'] 
     # First read topography
-    
-    if add_topog:
-        topog, = read_nc_iris(ddir + model_outputs['waroona_old']['topog'],
-                              constraints = 'surface_altitude')
     
     # If we just want a particular extent, subset to that extent using constraints
     if extent is not None:
         West,East,South,North = extent
         constr_lons = iris.Constraint(longitude = lambda cell: West <= cell <= East )
         constr_lats = iris.Constraint(latitude = lambda cell: South <= cell <= North )
-        if add_topog:
-            topog = topog.extract(constr_lons & constr_lats) # subset topog
         if constraints is not None:
             constraints = constraints & constr_lats & constr_lons
         else:
@@ -433,6 +496,7 @@ def read_waroona_pcfile(dtime, constraints=None, extent=None,
         cubes.remove(sh)
     else:
         cubes.remove(sh0)
+    
     # air_temperature is the name of two variables, we just want the good one
     Ta0,Ta = cubes.extract('air_temperature')
     if len(Ta.shape)==2:
@@ -440,103 +504,6 @@ def read_waroona_pcfile(dtime, constraints=None, extent=None,
     else:
         cubes.remove(Ta0)
     
-    # Add cloud parameter at g/kg scale
-    water, ice = cubes.extract(['mass_fraction_of_cloud_liquid_water_in_air',
-                                'mass_fraction_of_cloud_ice_in_air'])
-    qc = (water+ice) * 1000
-    qc.units = 'g kg-1'
-    qc.var_name = 'qc'
-    cubes.append(qc)
-    
-    if add_topog:
-        # add topog cube
-        #iris.std_names.STD_NAMES['topog'] = {'canonical_units': 'm'}
-        #topog.standard_name = 'topog'
-        cubes.append(topog)
-    
-    if add_zth:
-        # add zth cube
-        p,pmsl = cubes.extract(['air_pressure','air_pressure_at_sea_level'])
-        nt,nz,ny,nx = p.shape
-        reppmsl = np.repeat(pmsl.data[:,np.newaxis,:,:],nz, axis=1) # repeat surface pressure along z axis
-        zth = -(287*300/9.8)*np.log(p.data/reppmsl)
-        iris.std_names.STD_NAMES['z_th'] = {'canonical_units': 'm'}
-        zthcube=iris.cube.Cube(zth, standard_name='z_th', 
-                               var_name="zth", units="m",
-                               dim_coords_and_dims=[(p.coord('time'),0),
-                                                    (p.coord('model_level_number'),1),
-                                                    (p.coord('latitude'),2),
-                                                    (p.coord('longitude'),3)])
-        cubes.append(zthcube)
-    
-    if add_winds:
-        # wind speeds need to be interpolated onto non-staggered latlons
-        p, u1, v1 = cubes.extract(['air_pressure','x_wind','y_wind'])
-        
-        ### DESTAGGER u and v using iris interpolate
-        ### (this will trigger the delayed read)
-        # u1: [t,z, lat, lon1]
-        # v1: [t,z, lat1, lon]  # put these both onto [t,z,lat,lon]
-        u = u1.interpolate([('longitude',p.coord('longitude').points)],
-                           iris.analysis.Linear())
-        v = v1.interpolate([('latitude',p.coord('latitude').points)],
-                           iris.analysis.Linear())
-        # Get wind speed cube using hypotenuse of u,v
-        s = iris.analysis.maths.apply_ufunc(np.hypot,u,v)
-        s.units = 'm s-1'
-        # add standard names for these altered variables:
-        iris.std_names.STD_NAMES['u'] = {'canonical_units': 'm s-1'}
-        iris.std_names.STD_NAMES['v'] = {'canonical_units': 'm s-1'}
-        u.standard_name='u'
-        v.standard_name='v'
-        s.var_name='s' # s doesn't come from a var with a std name so can just use var_name
-        cubes.append(u)
-        cubes.append(v)
-        cubes.append(s)
-    
-    if add_dewpoint:
-        # Take pressure and relative humidity
-        
-        p,q = cubes.extract(['air_pressure','specific_humidity'])
-        #p_orig_units = p.units
-        #q_orig_units = q.units
-        p.convert_units('hPa')
-        q.convert_units('kg kg-1')
-        #print("DEBUG: units", p_orig_units, p.units, q_orig_units,q.units)
-        # calculate vapour pressure:
-        epsilon = 0.6220 # gas constant ratio for dry air to water vapour
-        e = p*q/(epsilon+(1-epsilon)*q)
-        iris.std_names.STD_NAMES['vapour_pressure'] = {'canonical_units': 'hPa'}
-        e.standard_name='vapour_pressure'
-        cubes.append(e)
-        # calculate dewpoint from vapour pressure
-        Td = 234.5 / ((17.67/np.log(e.data/6.112))-1) # in celcius
-        Td = Td + 273.15 # celcius to kelvin
-        
-        # change Td to a Cube
-        iris.std_names.STD_NAMES['dewpoint_temperature'] = {'canonical_units': 'K'}
-        cubeTd = iris.cube.Cube(Td, standard_name="dewpoint_temperature", 
-                                   var_name="Td", units="K",
-                                   dim_coords_and_dims=[(p.coord('time'),0),
-                                                        (p.coord('model_level_number'),1),
-                                                        (p.coord('latitude'),2),
-                                                        (p.coord('longitude'),3)])
-
-        cubes.append(cubeTd)
-    
-    if add_theta:
-        # Estimate potential temp
-        p, Ta = cubes.extract(['air_pressure','air_temperature'])
-        theta = potential_temperature(p.data,Ta.data)
-        # create cube 
-        iris.std_names.STD_NAMES['potential_temperature'] = {'canonical_units': 'K'}
-        cubetheta = iris.cube.Cube(theta, standard_name="potential_temperature", 
-                                   var_name="theta", units="K",
-                                   dim_coords_and_dims=[(p.coord('time'),0),
-                                                        (p.coord('model_level_number'),1),
-                                                        (p.coord('latitude'),2),
-                                                        (p.coord('longitude'),3)])
-        cubes.append(cubetheta)
     return cubes
     
 def read_waroona_oldold(constraints=None, extent=None,

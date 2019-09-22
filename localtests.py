@@ -44,32 +44,39 @@ dtimeE = um_dtimes[-1]
 
 ##### TEST CODE HERE
 
+extent = plotting._extents_['waroona']
+model_version='waroona_old'
+
+dpath = fio.model_outputs[model_version]['path']
+topogpath = fio.model_outputs[model_version]['topog']
+
 allcubes=None
-dtimes = [datetime(2016,1,6,6), datetime(2016,1,6,7)]
-for dtime in dtimes:
-    extent = plotting._extents_['waroona']
+
+dtimes = [datetime(2016,1,6,7), datetime(2016,1,6,8)]
+subdtimes = [datetime(2016,1,6,7,30) + timedelta(minutes=30*d) for d in range(3)]
+
+#run1 = fio.read_waroona_run1(dtimes[0],extent=extent)
+#print(run1)
+
+print(dtimes)
+print(subdtimes)
+#subdtimes=None
+
+
+run1 = fio.read_model_run('waroona_run1',fdtime=dtimes, subdtimes=subdtimes,
+                          extent=extent, add_topog=True,
+                          add_z=True,add_winds=True,add_theta=True,
+                          add_dewpoint=True)
+print(run1)
+grabbed_times = utils.dates_from_iris(run1[0])
+print(grabbed_times)
+
+old = fio.read_model_run('waroona_old',fdtime=dtimes, subdtimes=subdtimes,
+                         extent=extent, add_topog=True,
+                         add_z=True,add_winds=True,add_theta=True,
+                         add_dewpoint=True)
     
-    cubelist = fio.read_waroona_pcfile(dtime, extent=extent, 
-                                       add_zth=False, add_topog=False)
-    #print(cubelist)
-    if allcubes is None:
-        allcubes = cubelist
-    else:
-        allcubes.extend(cubelist)
-    
-    # All the old run cubes have a time dim, so I can just concatenate each file
+print(old)
 
-## First need to unify time dimension:
-iris.util.unify_time_units(allcubes)
-## Also need to equalise the attributes list
-# I think this just deletes attributes which are not the same between matching cubes..
-equalise_attributes(allcubes) 
-
-## Join along the time dimension
-allcubes = allcubes.concatenate()
-
-## now subset to our subdtimes
-
-## Now let's add z_th, and topography
-
-## Add optional extras here
+grabbed_times = utils.dates_from_iris(old[0])
+print(grabbed_times)

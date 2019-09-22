@@ -26,7 +26,7 @@ from cartopy.mpl.gridliner import LONGITUDE_FORMATTER, LATITUDE_FORMATTER
 import cartopy.io.img_tiles as cimgt
 
 # local stuff
-from .context import utils, constants
+from utilities import utils, constants
 
 ###
 ### GLOBALS
