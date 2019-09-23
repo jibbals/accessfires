@@ -247,6 +247,11 @@ def read_model_run(model_version, fdtime=None, subdtimes=None, extent=None,
         #4: z_th / (m)                          (Hybrid height: 70; latitude: 88; longitude: 88)
         #5: z_rho / (m)                         (Hybrid height: 70; latitude: 88; longitude: 88)
         oldoldcubes = read_waroona_oldold()
+        
+        # rename height dim to match other runs
+        for i in range(len(oldoldcubes)):
+            oldoldcubes[i].coord('Hybrid height').rename('level_height')
+        
         # rename winds
         oldoldcubes.extract('eastward_wind')[0].rename('x_wind')
         oldoldcubes.extract('northward_wind')[0].rename('y_wind')
@@ -311,16 +316,18 @@ def read_model_run(model_version, fdtime=None, subdtimes=None, extent=None,
         if model_version == 'waroona_old':
             # add zth cube
             p, pmsl = allcubes.extract(['air_pressure','air_pressure_at_sea_level'])
-            nt,nz,ny,nx = p.shape
-            reppmsl = np.repeat(pmsl.data[:,np.newaxis,:,:],nz, axis=1) # repeat surface pressure along z axis
+            # take out time dimension
+            p, pmsl = p[0], pmsl[0]
+            nz,ny,nx = p.shape
+            # repeat surface pressure along z axis
+            reppmsl = np.repeat(pmsl.data[np.newaxis,:,:],nz, axis=0)
             zth = -(287*300/9.8)*np.log(p.data/reppmsl)
             iris.std_names.STD_NAMES['z_th'] = {'canonical_units': 'm'}
-            zthcube=iris.cube.Cube(zth, standard_name='z_th', 
+            zthcube=iris.cube.Cube(zth, standard_name='z_th',
                                    var_name="zth", units="m",
-                                   dim_coords_and_dims=[(p.coord('time'),0),
-                                                        (p.coord('model_level_number'),1),
-                                                        (p.coord('latitude'),2),
-                                                        (p.coord('longitude'),3)])
+                                   dim_coords_and_dims=[(p.coord('model_level_number'),0),
+                                                        (p.coord('latitude'),1),
+                                                        (p.coord('longitude'),2)])
             allcubes.append(zthcube)
 
     if add_winds:

@@ -23,17 +23,22 @@ import warnings
 # local modules
 from utilities import plotting, utils, fio, constants
 
+###
+## GLOBALS
+###
+_sn_ = 'wind_outline'
+
 
 def winds_2panel(s,u,v,w,
-                 qc, ff, topog,
+                 qc, topog,
                  z,lat,lon,
                  dtime,
+                 ff=None,
                  extentname='waroona',
                  transect=1, 
-                 vectorskip=9,
+                 nquivers=18,
                  quiverscale=60,
                  cloud_threshold=constants.cloud_threshold,
-                 ext='.png'
                 ):
     '''
     311 Plot showing contour map and wind speed, along with near sites and transect
@@ -48,12 +53,7 @@ def winds_2panel(s,u,v,w,
         quiverscale changes how long the arrows are (also may need to fiddle)
         ext is the plot extension { '.png' | '.eps' }
     '''
-    
-    dstamp = dtime.strftime("%Y%m%d%H%M")
     stitle = dtime.strftime("%Y %b %d %H:%M (UTC)")
-    
-    # figure name and location
-    pname="figures/%s/winds_outline_X%d/fig_%s%s"%(extentname,transect,dstamp,ext)
     
     # set font sizes
     plotting.init_plots()
@@ -70,11 +70,12 @@ def winds_2panel(s,u,v,w,
     plt.title('Topography, winds')
     
     # Add fire front contour
-    with warnings.catch_warnings():
-        # ignore warning when there are no fires:
-        warnings.simplefilter('ignore')
-        plt.contour(lon,lat,np.transpose(ff),np.array([0]), 
-                    colors='red')
+    if ff is not None:
+        with warnings.catch_warnings():
+            # ignore warning when there are no fires:
+            warnings.simplefilter('ignore')
+            plt.contour(lon,lat,np.transpose(ff),np.array([0]), 
+                        colors='red')
     
     # start to end x=[lon0,lon1], y=[lat0, lat1]
     plt.plot([start[1],end[1]],[start[0],end[0], ], '--k', 
@@ -82,33 +83,13 @@ def winds_2panel(s,u,v,w,
              marker='X', markersize=7,markerfacecolor='white')
     
     # add nearby towns
-    textcolor='k'
-    if extentname == 'waroona':
-        plotting.map_add_locations(['waroona','yarloop'], 
-                                   text=['Waroona', 'Yarloop'], 
-                                   textcolor=textcolor)
-        # add fire ignition
-        plotting.map_add_locations(['fire_waroona'],
-                                   text = ['Fire ignition'], 
-                                   color='r', marker='*', 
-                                   textcolor=textcolor)
-        # add pyroCB
-    else:
-        plotting.map_add_locations(['sirivan','uarbry'], 
-                                   text=['Sir Ivan','Uarbry'],
-                                   dx=[-.02,.05], dy =[-.015,-.03],
-                                   textcolor=textcolor)
-        # add fire ignition
-        plotting.map_add_locations(['fire_sirivan'],
-                                   text = ['Fire ignition'], dx=.05,
-                                   color='r', marker='*', 
-                                   textcolor=textcolor)
-        # add pyroCB
-
+    plotting.map_add_locations_extent(extentname)
     
-    # Add vectors for winds
-    # just surface, and one every 10 points to reduce density
-    skip = (slice(None,None,vectorskip),slice(None,None,vectorskip))
+    # Quiver, reduce arrow density
+    vsu = len(lon)//nquivers
+    vsv = len(lat)//nquivers
+    skip = (slice(None,None,vsv),slice(None,None,vsu))
+    
     ## colour the arrows
     # map wind speed to colour map domain [0, 1]
     norm = col.Normalize()
@@ -116,7 +97,6 @@ def winds_2panel(s,u,v,w,
     plt.get_cmap(plotting._cmaps_['windspeed'])
     plt.quiver(lon[skip[1]],lat[skip[0]],u[0][skip],v[0][skip], scale=quiverscale)
                #color=cmap(norm(s[skip])), 
-    
     
     ## Second row is transect plots
     plt.subplot(3,1,2)
@@ -129,7 +109,7 @@ def winds_2panel(s,u,v,w,
     with warnings.catch_warnings():
         # ignore warning when there are no clouds:
         warnings.simplefilter('ignore')
-    plt.contour(xslice,zslice,qcslice,np.array([cloud_threshold]),colors='teal')
+        plt.contour(xslice,zslice,qcslice,np.array([cloud_threshold]),colors='teal')
     
     ax3 = plt.subplot(3,1,3)
     trs, trx, trz = plotting.transect_s(s,z,lat,lon,start,end,topog=topog)
@@ -148,65 +128,58 @@ def winds_2panel(s,u,v,w,
     
     # Save figure into animation folder with numeric identifier
     plt.suptitle(stitle)
-    print("INFO: Saving figure:",pname)
-    plt.savefig(pname)
-    plt.close()
-    return pname
+    return plt
 
 
-def waroona_wind_loop(dtime):
+def winds_outline_hour(dtime, model_version='waroona_run1', dpi=300):
     '''
     Loop over transects over waroona and make the wind outline figures
     '''
-    extentname='waroona'
+    extentname=model_version.split('_')[0]
     extent=plotting._extents_[extentname]
-    um_hour=datetime(dtime.year,dtime.month,dtime.day,dtime.hour)
     
     # Read the cubes
-    slv,ro1,th1,th2 = fio.read_waroona(dtime=um_hour, extent=extent,add_winds=True)
+    cubes = fio.read_model_run(model_version, fdtime=dtime, 
+                               add_topog=True,
+                               add_z=True, 
+                               add_winds=True)
     
-    zth, = th1.extract('z_th')
-    
-    topog, = slv.extract('topog')
-    
-    u,v,s = ro1.extract(['u','v','s'])
+    zth, topog = cubes.extract('z_th','topog')
+    u,v,s, qc, w = cubes.extract(['u','v','s','qc','upward_air_velocity'])
 
-    qc, = th2.extract('qc')
-    
-    w, = th1.extract('upward_air_velocity')
+    cubetimes = utils.dates_from_iris(u)
     
     ## fire front
-    # read 6 time steps:
-    ff_dtimes = np.array([um_hour + timedelta(hours=x/60.) for x in range(10,61,10)])
-    ff, = fio.read_fire(dtimes=ff_dtimes,extent=extent, firefront=True)
-    
-    # datetime of outputs
-    tdim = w.coord('time')
-    d0 = datetime.strptime(str(tdim.units),'hours since %Y-%m-%d %H:%M:00')
-    timesteps = utils.date_from_gregorian(tdim.points, d0=d0)
+    ff1, = fio.read_fire(dtimes=cubetimes, extent=extent, firefront=True)
     
     lat,lon = w.coord('latitude').points, w.coord('longitude').points
     
     # also loop over different transects
-    for i in range(5):
-        for tstep in range(len(timesteps)):
-            winds_2panel(s[tstep].data, u[tstep].data, v[tstep].data, w[tstep].data,
-                         qc[tstep].data, ff[tstep].data, topog.data,
-                         zth.data, lat,lon,
-                         dtime=timesteps[tstep],
-                         extentname=extentname,
-                         transect=i+1)
-    
-    
+    for i in range(6):
+        for tstep in range(len(cubetimes)):
+            ff = None
+            if model_version == 'waroona_run1':
+                ff = ff1[tstep].data.data
+            
+            plt = winds_2panel(s[tstep].data.data, u[tstep].data.data, v[tstep].data.data, w[tstep].data.data,
+                               qc[tstep].data.data, topog.data.data,
+                               zth.data.data, lat,lon,
+                               dtime=cubetimes[tstep],
+                               ff = ff,
+                               extentname=extentname,
+                               transect=i+1)
+            fio.save_fig(model_version,_sn_,cubetimes[tstep],plt, 
+                         subdir='transect_%d'%i,
+                         dpi=dpi)
 
 #########################################################################
 #########################################################################
 #########################################################################
-    
-    
+
+
 if __name__ == '__main__':
     
-    print("INFO: testing wind_outline.py")
-    waroona_wind_loop(datetime(2016,1,5,15))
-    #for dtime in [ datetime(2016,1,6,7) + timedelta(hours=x) for x in range(4) ]:
-    #    waroona_wind_loop(dtime)
+    for dtime in [ datetime(2016,1,6,7) + timedelta(hours=x) for x in range(2) ]:
+        for mv in ['waroona_run1','waroona_old']:
+            winds_outline_hour(dtime, mv)
+    

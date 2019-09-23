@@ -117,16 +117,9 @@ def vert_motion_hour(dtime=datetime(2016,1,6,7), model_run='waroona_run1'):
     ext='.png'
     
     # Read vert motion, clouds
-    if model_run=='waroona_old':
-        cubes = fio.read_waroona_pcfile(dtime,extent=extent)
-        w,  = cubes.extract('upward_air_velocity')
-        qc, = cubes.extract('qc')
-    elif model_run=='waroona_run1':
-        _,_,th1cubes,th2cubes = fio.read_waroona(dtime,extent=extent)
-        w,  = th1cubes.extract('upward_air_velocity')
-        qc, = th2cubes.extract('qc')
-    else:
-        assert False, '%s not yet implemented for run %s'%(_sn_,model_run)
+    cubes = fio.read_model_run(model_run, fdtime=dtime, extent=extent)
+    w,  = cubes.extract('upward_air_velocity')
+    qc, = cubes.extract('qc')
     
     ## fire front
     ff_dtimes = utils.dates_from_iris(w)

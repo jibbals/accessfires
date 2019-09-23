@@ -162,8 +162,6 @@ def waroona_cloud_loop(dtime,model_version="waroona_run1"):
     ff = None
     if model_version in ['waroona_run1']:
         ff1, = fio.read_fire(dtimes=cubetimes, extent=extent, firefront=True)
-    if model_version in ['waroona_old']:
-        zth = zth[0] # old run has time dim as z_th is estimated from p
     
     # loop over different transects
     for i_transect in np.arange(1,6.5,1, dtype=int):
@@ -189,7 +187,7 @@ if __name__ == '__main__':
     
     print("INFO: testing cloud_outline.py")
     #waroona_cloud_loop(datetime(2016,1,5,15))
-    for dtime in [ datetime(2016,1,6,6) + timedelta(hours=x) for x in range(2) ]:
+    for dtime in [ datetime(2016,1,6,7) + timedelta(hours=x) for x in range(2) ]:
         for mv in ['waroona_old','waroona_run1']:
             waroona_cloud_loop(dtime,model_version=mv)
 

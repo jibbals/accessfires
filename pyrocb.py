@@ -25,16 +25,17 @@ import warnings
 # local modules
 from utilities import plotting, utils, fio, constants
 
+###
+## GLOBALS
+###
+_sn_ = 'pyrocb'
 
 def pyrocb(dtime,
-           extentname='waroona',
-           vectorskip=13,
-           quiverscale=60,
            ztop=15000,
            cloud_threshold=constants.cloud_threshold,
-           old=False,
+           model_version='waroona_run1',
            ext='.png',
-           dpi=400,
+           dpi=300,
            ):
     '''
     311: mean vert windspeed between 500m and 1500m (?)
@@ -43,36 +44,25 @@ def pyrocb(dtime,
     INPUTS:
         datetime is used to read model and fire outputs
         extentname = { 'waroona' | 'sirivan' } choice of two fire locations
-        vectorskip reduces quiver density (may need to fiddle)
+        nquivers reduces quiver density (may need to fiddle)
         quiverscale changes how long the arrows are (also may need to fiddle)
         ext is the plot extension { '.png' | '.eps' }
         dpi is plot quality (100 is default, higher is better for publication)
         old is a flag to look at pcfile output (from older model run)
     '''
     
-    # figure name and location
-    pnames="figures/%s/pyrocb/fig_%s%s"
-    if old:
-        pnames="figures/%s/pyrocb_old/fig_%s%s"
-        
     ### First use datetime and extentname to read correct outputs:
+    extentname=model_version.split('_')[0]
     extent = plotting._extents_[extentname]
 
     ## read um output over extent [t, lev, lat, lon]
-    if old:
-        cubes = fio.read_waroona_pcfile(dtime,extent=extent)
-        w,  = cubes.extract('upward_air_velocity')
-        qc, = cubes.extract('qc')
-        topog, = cubes.extract('topog')
-        z1, = cubes.extract('z_th') 
-        # just want 1 time step for z
-        z = z1[0]
-    else:
-        slv,_,th1,th2 = fio.read_waroona(dtime,extent=extent)
-        w,  = th1.extract('upward_air_velocity')
-        qc, = th2.extract('qc')
-        topog,= slv.extract('topog') # [ lat, lon]
-        z,    = th1.extract('z_th') # [lev, lat, lon]
+    cubes = fio.read_model_run(model_version, fdtime=dtime, extent=extent,
+                               add_z=True, add_topog=True)
+    w,  = cubes.extract('upward_air_velocity')
+    qc, = cubes.extract('qc')
+    topog, = cubes.extract('surface_altitude')
+    z, = cubes.extract('z_th') 
+    
     lat = w.coord('latitude').points
     lon = w.coord('longitude').points
 
@@ -80,12 +70,13 @@ def pyrocb(dtime,
     ffdtimes = utils.dates_from_iris(w)
     ff1, = fio.read_fire(dtimes=ffdtimes, extent=extent, firefront=True)
     
-    # interpolat ff onto old lats and lons    
     ff=ff1
-    if old:
+    if model_version=="waroona_old":
+        # just want 1 time step for z
+        # interpolat ff onto old lats and lons    
         ff=ff1.interpolate([('longitude',w.coord('longitude').points), 
                             ('latitude',w.coord('latitude').points)],
-                           iris.analysis.Linear()) 
+                            iris.analysis.Linear()) 
     
     # take mean of vert motion between lvls 25-48 approx 500m - 1500m
     with warnings.catch_warnings():
@@ -99,7 +90,7 @@ def pyrocb(dtime,
     # set font sizes
     plotting.init_plots()
     # get plot extent, and transect
-    start,end   = plotting._transects_["pyrocb_waroona"]
+    start,end = plotting._transects_["pyrocb_waroona"]
     startx1,endx1 = plotting._transects_["pyrocbx1_waroona"]
     startx2,endx2 = plotting._transects_["pyrocbx2_waroona"]
     colorx1='b'
@@ -108,9 +99,8 @@ def pyrocb(dtime,
     # for each timestep:
     for i in range(len(ffdtimes)):
         # datetime timestamp for file,title
-        dstamp = ffdtimes[i].strftime("%Y%m%d%H%M")
         stitle = ffdtimes[i].strftime("Vertical motion %Y %b %d %H:%M (UTC)")
-        pname = pnames%(extentname,dstamp,ext)
+        
         # figure setup
         f=plt.figure(figsize=[7,10])
         plt.subplot(3,1,1)
@@ -126,7 +116,6 @@ def pyrocb(dtime,
                                   clabel='m/s')
         plt.title('Mean(%3.0fm - %4.0fm)'%(h0,h1))
         
-    
         # start to end x=[lon0,lon1], y=[lat0, lat1]
         plt.plot([start[1],end[1]],[start[0],end[0], ], '--m', 
                  linewidth=2)
@@ -141,29 +130,9 @@ def pyrocb(dtime,
                      color=xcolor,
                      linewidth=2)
             myarrow(startx,endx)
+        
         # add nearby towns
-        if extentname == 'waroona':
-            plotting.map_add_locations(['waroona','yarloop'], 
-                                       text=['Waroona', 'Yarloop'], 
-                                       textcolor='k')
-            # add fire ignition
-            plotting.map_add_locations(['fire_waroona'],
-                                       text = ['Fire ignition'], 
-                                       color='r', marker='*', 
-                                       textcolor='k')
-            # add pyroCB
-        else:
-            plotting.map_add_locations(['sirivan','uarbry'], 
-                                       text=['Sir Ivan','Uarbry'],
-                                       dx=[-.02,.05], dy =[-.015,-.03],
-                                       textcolor='k')
-            # add fire ignition
-            plotting.map_add_locations(['fire_sirivan'],
-                                       text = ['Fire ignition'], dx=.05,
-                                       color='r', marker='*', 
-                                       textcolor='k')
-        # add pyroCB
-
+        plotting.map_add_locations_extent(extentname)
     
         # Add fire outline
         with warnings.catch_warnings():
@@ -244,17 +213,14 @@ def pyrocb(dtime,
         
         # Save figure into animation folder with numeric identifier
         plt.suptitle(stitle)
-        print("INFO: Saving figure:",pname)
-        plt.savefig(pname,dpi=dpi)
-        plt.close()
-    
+        fio.save_fig(model_version, _sn_, ffdtimes[i], plt, dpi=dpi)
             
 if __name__ == '__main__':
     
     print("INFO: testing cloud_outline.py")
     #emberstorm_clouds(datetime(2016,1,5,15))
     
-    for dtime in [ datetime(2016,1,6,3) + timedelta(hours=x) for x in range(6) ]:
-        pyrocb(dtime)
-        pyrocb(dtime,old=True)
+    for dtime in [ datetime(2016,1,6,7) + timedelta(hours=x) for x in range(2) ]:
+        for mv in ['waroona_run1','waroona_old']:
+            pyrocb(dtime, model_version=mv)
 
