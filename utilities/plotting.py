@@ -54,6 +54,7 @@ _latlons_['waroona']    = -32.84, 115.93  # suburb centre: -32.8430, 115.8526
 _latlons_['yarloop']    = -32.96, 115.90  # suburb centre: -32.9534, 115.9124
 _latlons_['perth']      = -31.9505, 115.8605
 _latlons_['fire_waroona'] = -32.89, 116.17
+_latlons_['fire_waroona_upwind'] = -32.89 -0.004, 116.17+0.009 # ~ 1km from fire
 
 _latlons_['nest_centre'] = -32.9, 116.1
 __nest_res__ = [[.036, 384], [.01, 576], [.0028,576]] # resolution, nlats for each nest

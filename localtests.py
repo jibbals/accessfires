@@ -54,7 +54,7 @@ allcubes=None
 
 dtimes = [datetime(2016,1,6,7), datetime(2016,1,6,8)]
 subdtimes = [datetime(2016,1,6,7,30) + timedelta(minutes=30*d) for d in range(3)]
-
+oldoldsubdtimes = [datetime(2016, 1, 6, 15, 15), datetime(2016, 1, 7, 6, 15), datetime(2016, 1, 7, 13, 45)]
 #run1 = fio.read_waroona_run1(dtimes[0],extent=extent)
 #print(run1)
 
@@ -62,6 +62,11 @@ print(dtimes)
 print(subdtimes)
 #subdtimes=None
 
+oldold = fio.read_model_run('waroona_oldold', subdtimes = oldoldsubdtimes,
+                            extent=extent, add_winds=True)
+print(oldold)
+grabbed_times = utils.dates_from_iris(oldold[0])
+print(grabbed_times)
 
 run1 = fio.read_model_run('waroona_run1',fdtime=dtimes, subdtimes=subdtimes,
                           extent=extent, add_topog=True,
@@ -80,3 +85,5 @@ print(old)
 
 grabbed_times = utils.dates_from_iris(old[0])
 print(grabbed_times)
+
+

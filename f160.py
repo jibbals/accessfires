@@ -12,26 +12,25 @@ Created on Wed Sep 11 12:28:05 2019
 ## module use /g/data3/hh5/public/modules
 ## module load conda/analysis3
 
-import metpy
+import matplotlib
+matplotlib.use('Agg',warn=False)
+
 from metpy.units import units
 #distance = np.arange(1, 5) * units.meters # easy way to add units (Also units.metre works!)
 #g = 9.81 * units.meter / (units.second * units.second)
 from metpy.plots import SkewT
 
-import matplotlib
-#matplotlib.use('Agg',warn=False)
-
 # plotting stuff
 import matplotlib.pyplot as plt
-import matplotlib.colors as col
-import matplotlib.ticker as tick
+#import matplotlib.colors as col
+#import matplotlib.ticker as tick
 import numpy as np
 from datetime import datetime,timedelta
 import iris # file reading and constraints etc
-import warnings
+#import warnings
 
 # local modules
-from utilities import plotting, utils, fio, constants
+from utilities import plotting, utils, fio
 
 ###
 ## GLOBALS
@@ -40,7 +39,7 @@ _sn_ = 'F160'
 
 
 def f160(press,Temp,Tempd, latlon, 
-         press_ro=None,uwind=None,vwind=None, 
+         press_rho=None,uwind=None,vwind=None, 
          nearby=2, alpha=0.3):
     '''
     show skewt logp plot of temperature profile at latlon
@@ -73,11 +72,14 @@ def f160(press,Temp,Tempd, latlon,
     # Plot T, and Td
     # pull out data array (units don't work with masked arrays)
     p = np.squeeze(press0.data.data) * units(str(press.units))
+    p = p.to(units.mbar)
     T = np.squeeze(temp0.data.data) * units(str(Temp.units))
     T = T.to(units.degC)
     Td = np.squeeze(tempd0.data.data) * units(str(Tempd.units))
     Td = Td.to(units.degC)
     
+    print("DEBUG: f160 interp1", p.shape, T.shape, Td.shape)
+    print("DEBUG: f160 interp1", p, T, Td)
     fig = plt.figure(figsize=(9,9))
     skew = SkewT(fig,rotation=45)
     skew.plot(p,T,tcolor, linewidth=2)
@@ -85,7 +87,7 @@ def f160(press,Temp,Tempd, latlon,
     
     
     ## Add wind profile if desired
-    if uwind is not None and vwind is not None and press_ro is not None:
+    if uwind is not None and vwind is not None and press_rho is not None:
         # interpolate to desired lat/lon
         u0 = uwind.interpolate([('longitude',[latlon[1]]),
                             ('latitude',[latlon[0]])],
@@ -93,14 +95,16 @@ def f160(press,Temp,Tempd, latlon,
         v0 = vwind.interpolate([('longitude',[latlon[1]]),
                             ('latitude',[latlon[0]])],
                            iris.analysis.Linear())
-        p_ro0 = press_ro.interpolate([('longitude',[latlon[1]]),
+        p_rho0 = press_rho.interpolate([('longitude',[latlon[1]]),
                             ('latitude',[latlon[0]])],
                            iris.analysis.Linear())
-        u   = np.squeeze(u0.data.data) * units('m/s')#units(str(uwind.units))
-        v   = np.squeeze(v0.data.data) * units('m/s')#units(str(vwind.units))
-        u   = u.to(units.knots)
-        v   = v.to(units.knots)
-        pro = np.squeeze(p_ro0.data.data) * units(str(press_ro.units))
+        u = np.squeeze(u0.data.data) * units('m/s')#units(str(uwind.units))
+        v = np.squeeze(v0.data.data) * units('m/s')#units(str(vwind.units))
+        u = u.to(units.knots)
+        v = v.to(units.knots)
+        pro = (np.squeeze(p_rho0.data.data) * units(str(press_rho.units))).to(units.mbar)
+        print("DEBUG: f160 interp2", u.shape, v.shape, pro.shape)
+        print("DEBUG: f160 interp2", u,v,pro)
         nicer_z=np.union1d(np.union1d(np.arange(0,41,5), np.arange(43,81,3)), np.arange(81,140,1))
         #skip=(slice(None,None,None),nicer_z)
         skew.plot_barbs(pro[nicer_z],u[nicer_z],v[nicer_z])
@@ -141,24 +145,21 @@ def f160_hour(dtime=datetime(2016,1,6,7),
     '''
 
     # Use datetime and latlon to determine what data to read
-    extentname='sirivan'
-    if dtime < datetime(2017,1,1):
-        extentname='waroona'
+    extentname=model_version.split('_')[0]
     extent = plotting._extents_[extentname]
     
     if latlon_stamp is None:
         latlon_stamp="%.3fS_%.3fE"%(-latlon[0],latlon[1])
     
     # read pressure and temperature cubes
-    if model_version=='waroona_old':
-        # I don't know how to calc ro levels, but should be similar I think
-        cubes = fio.read_waroona_pcfile(dtime,extent=extent, add_winds=True, add_dewpoint=True)
-        p,t,td = cubes.extract(['air_pressure','air_temperature','dewpoint_temperature'])
-        pro, u, v = cubes.extract(['air_pressure','u','v'])
-    else:
-        _,ro1,th1,_= fio.read_waroona(dtime, extent=extent, add_dewpoint=True, add_winds=True)#, add_theta=True)
-        p,t,td = th1.extract(['air_pressure','air_temperature','dewpoint_temperature'])
-        pro, u, v  = ro1.extract(['air_pressure','u','v'])
+    cubes = fio.read_model_run(model_version, fdtime=dtime, extent=extent,
+                               add_winds = True,
+                               add_dewpoint = True,)
+    p, t, td, u, v = cubes.extract(['air_pressure','air_temperature',
+                                    'dewpoint_temperature','u','v'])
+    p_rho = p
+    if model_version=='waroona_run1':
+        p_rho, = cubes.extract('air_pressure_rho')
     
     ffdtimes = utils.dates_from_iris(p)
     
@@ -168,7 +169,7 @@ def f160_hour(dtime=datetime(2016,1,6,7),
         
         # create plot
         f160(p[i],t[i],td[i], latlon,
-             press_ro=pro[i], uwind=u[i], vwind=v[i])
+             press_rho=p_rho[i], uwind=u[i], vwind=v[i])
         plt.title(ptitle)
         
         # save plot
@@ -178,10 +179,13 @@ if __name__ == '__main__':
     
     topleft = [-32.75, 115.8] # random point away from the fire influence
     pyrocb1 = plotting._latlons_['pyrocb_waroona1']
+    upwind  = plotting._latlons_['fire_waroona_upwind'] # ~1 km upwind of fire
+    loc_and_stamp = ([pyrocb1,topleft,upwind],['pyrocb1','topleft','upwind'])
+    #loc_and_stamp = ([upwind],['upwind'])
     for dtime in [ datetime(2016,1,6,5) + timedelta(hours=x) for x in range(2) ]:
         # dtime, latlon, latlon_stamp, model_version
         for mv in ['waroona_run1','waroona_old']:
-            for latlon,latlon_stamp in zip([pyrocb1,topleft],['pyrocb1','topleft']):
+            for latlon,latlon_stamp in zip(loc_and_stamp[0],loc_and_stamp[1]):
                 f160_hour(dtime, latlon=latlon,
                           latlon_stamp=latlon_stamp,
                           model_version=mv)

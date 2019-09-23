@@ -193,7 +193,10 @@ def read_model_run(model_version, fdtime=None, subdtimes=None, extent=None,
     ## No ftimes? set to all ftimes
     if fdtime is None:
         fdtime = model_outputs[model_version]['filedates']
-    fdtimes = np.array(fdtime) # make sure it's iterable
+    # make sure it's iterable
+    if not hasattr(fdtime,'__iter__'):
+        fdtime = [fdtime]
+    fdtimes = np.array(fdtime)
     
     ## First read the basics, before combining along time dim
     
@@ -235,9 +238,27 @@ def read_model_run(model_version, fdtime=None, subdtimes=None, extent=None,
             zth.rename('z_th')
             timelesscubes.append(zth)
             timelesscubes.append(zro)
+            
+    elif model_version == "waroona_oldold":
+        #0: surface_altitude / (m)              (latitude: 88; longitude: 88)
+        #1: eastward_wind / (m s-1)             (t: 8; Hybrid height: 70; latitude: 88; longitude: 89)
+        #2: northward_wind / (m s-1)            (t: 8; Hybrid height: 70; latitude: 88; longitude: 88)
+        #3: upward_air_velocity / (m s-1)       (t: 8; Hybrid height: 70; latitude: 88; longitude: 88)
+        #4: z_th / (m)                          (Hybrid height: 70; latitude: 88; longitude: 88)
+        #5: z_rho / (m)                         (Hybrid height: 70; latitude: 88; longitude: 88)
+        oldoldcubes = read_waroona_oldold()
+        # rename winds
+        oldoldcubes.extract('eastward_wind')[0].rename('x_wind')
+        oldoldcubes.extract('northward_wind')[0].rename('y_wind')
         
+        allcubes = oldoldcubes.extract(['x_wind','y_wind','upward_air_velocity'])
+        # rename time dim to 'time'
+        for i in range(len(allcubes)):
+            allcubes[i].coord('t').rename('time')
+        # topog and z levels added automatically for oldold run (easier)
+        timelesscubes.extend(oldoldcubes.extract(['surface_altitude','z_th','z_rho']))
     
-    ### GENERIC TO ALL MODEL OUTPUT
+    ### GENERIC TO ALL MODEL OUTPUT (some exceptions)
 
     ## Concatenate along time dimension
     ## First need to unify time dimension:
@@ -259,10 +280,12 @@ def read_model_run(model_version, fdtime=None, subdtimes=None, extent=None,
         
     # topography
     if add_topog:
-        topog, = read_nc_iris(ddir + model_outputs[model_version]['topog'],
-                              constraints = 'surface_altitude')
-        allcubes.append(topog)
-        
+        # oldold is special case, topog read in read_waroona_oldold()
+        if model_version != "waroona_oldold":
+            topog, = read_nc_iris(ddir + model_outputs[model_version]['topog'],
+                                  constraints = 'surface_altitude')
+            allcubes.append(topog)
+
     ## Subset spatially
     # based on extent
     if extent is not None:
@@ -302,15 +325,15 @@ def read_model_run(model_version, fdtime=None, subdtimes=None, extent=None,
 
     if add_winds:
         # wind speeds need to be interpolated onto non-staggered latlons
-        p, u1, v1 = allcubes.extract(['air_pressure','x_wind','y_wind'])
+        u1, v1 = allcubes.extract(['x_wind','y_wind'])
         
         ### DESTAGGER u and v using iris interpolate
         ### (this will trigger the delayed read)
         # u1: [t,z, lat, lon1]
         # v1: [t,z, lat1, lon]  # put these both onto [t,z,lat,lon]
-        u = u1.interpolate([('longitude',p.coord('longitude').points)],
+        u = u1.interpolate([('longitude',v1.coord('longitude').points)],
                            iris.analysis.Linear())
-        v = v1.interpolate([('latitude',p.coord('latitude').points)],
+        v = v1.interpolate([('latitude',u1.coord('latitude').points)],
                            iris.analysis.Linear())
         # Get wind speed cube using hypotenuse of u,v
         s = iris.analysis.maths.apply_ufunc(np.hypot,u,v)
@@ -506,8 +529,7 @@ def read_waroona_old(dtime, constraints=None, extent=None):
     
     return cubes
     
-def read_waroona_oldold(constraints=None, extent=None,
-                        add_winds=False):
+def read_waroona_oldold(constraints=None, extent=None):
     '''
         read waroona_oldold model output
         0: surface_altitude / (m)              (latitude: 88; longitude: 88)
@@ -516,10 +538,6 @@ def read_waroona_oldold(constraints=None, extent=None,
         3: upward_air_velocity / (m s-1)       (t: 8; Hybrid height: 70; latitude: 88; longitude: 88)
         4: z_th / (m)                          (Hybrid height: 70; latitude: 88; longitude: 88)
         5: z_rho / (m)                         (Hybrid height: 70; latitude: 88; longitude: 88)
-        ## if add_winds is flagged, interpolation to topog latlons is performed 
-        6: u / (m s-1)                         (t: 8; Hybrid height: 70; latitude: 88; longitude: 88)
-        7: v / (m s-1)                         (t: 8; Hybrid height: 70; latitude: 88; longitude: 88)
-        8: s / (m s-1)                         (t: 8; Hybrid height: 70; latitude: 88; longitude: 88)
     '''
     ddir = model_outputs['waroona_oldold']['path']
     xwind_path = ddir+'combined_alltimes_ml_xwind_stage5.nc'
@@ -602,38 +620,6 @@ def read_waroona_oldold(constraints=None, extent=None,
         if constraints is not None:
             cube=cube.extract(constraints)
         cubelist.append(cube)
-    # Update local cubes to also be constrained
-    topog, xwind1, ywind1, zwind, zth, zrho = cubelist
-    
-    # update dims if we are subsetting
-    if constraints is not None:
-        londim = topog.coord('longitude')
-        latdim = topog.coord('latitude')
-        
-    if add_winds:
-        
-        ### DESTAGGER u and v using iris interpolate
-        ### (this will trigger the delayed read)
-        # u1: [t,z, lat, lon1]
-        # v1: [t,z, lat1, lon]  # put these both onto [t,z,lat,lon]
-        u = xwind1.interpolate([('longitude',londim.points)],
-                           iris.analysis.Linear())
-        v = ywind1.interpolate([('latitude',latdim.points)],
-                           iris.analysis.Linear())
-        
-        # Get wind speed cube using hypotenuse of u,v
-        s = iris.analysis.maths.apply_ufunc(np.hypot,u,v)
-        s.units = 'm s-1'
-        # add standard names for these altered variables:
-        iris.std_names.STD_NAMES['u'] = {'canonical_units': 'm s-1'}
-        iris.std_names.STD_NAMES['v'] = {'canonical_units': 'm s-1'}
-        u.standard_name='u'
-        v.standard_name='v'
-        s.var_name='s' # s doesn't come from a var with a std name so can just use var_name
-        
-        cubelist.append(u)
-        cubelist.append(v)
-        cubelist.append(s)
     
     return cubelist
 

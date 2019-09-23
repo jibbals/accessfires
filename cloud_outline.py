@@ -23,20 +23,25 @@ import warnings
 # local modules
 from utilities import plotting, utils, fio, constants
 
+###
+## GLOBALS
+###
+_sn_ = 'cloud_outline'
+
 
 def clouds_2panel(topog,s,u,v,
                   qc,w,
-                  ff,
                   z,lat,lon,
                   dtime,
+                  ff = None,
                   extentname='waroona',
                   transect=1, 
-                  vectorskip=13,
+                  nquivers=20,
                   quiverscale=60,
                   ztop=10000,
                   ext='.png',
                   cloud_threshold=constants.cloud_threshold,
-                  dpi=400,
+                  dpi=200,
                   ):
     '''
     311 Plot showing windspeed map and wind speed, along with near sites and transect
@@ -54,11 +59,8 @@ def clouds_2panel(topog,s,u,v,
     
     ## Plot data, inputs will be [[z],lat,lon]
     
-    # datetime timestamp for file,title
-    dstamp = dtime.strftime("%Y%m%d%H%M")
+    # datetime timestamp for title
     stitle = dtime.strftime("%Y %b %d %H:%M (UTC)")
-    # figure name and location
-    pname="figures/%s/clouds_outline_X%d/fig_%s%s"%(extentname,transect,dstamp,ext)
     
     # set font sizes
     plotting.init_plots()
@@ -83,17 +85,20 @@ def clouds_2panel(topog,s,u,v,
              marker='X', markersize=7,markerfacecolor='white')
     
     # add nearby towns
-    plotting.add_map_locations(extentname)
+    plotting.map_add_locations_extent(extentname)
     
     # Add vectors for winds
     # just surface, and one every N points to reduce density
-    skip = (slice(None,None,vectorskip),slice(None,None,vectorskip))
+    vsu = len(lon)//nquivers
+    vsv = len(lat)//nquivers
+    skip = (slice(None,None,vsv),slice(None,None,vsu))
     #mlon,mlat = np.meshgrid(lon,lat)
     plt.quiver(lon[skip[1]],lat[skip[0]],u[skip],v[skip], scale=quiverscale)
     
     # Add fire outline
-    plt.contour(lon,lat,np.transpose(ff),np.array([0]), 
-                colors='red')
+    if ff is not None:
+        plt.contour(lon,lat,np.transpose(ff),np.array([0]), 
+                    colors='red')
     
     ## Second row is transect plots
     plt.subplot(3,1,2)
@@ -124,13 +129,11 @@ def clouds_2panel(topog,s,u,v,
     
     # Save figure into animation folder with numeric identifier
     plt.suptitle(stitle)
-    print("INFO: Saving figure:",pname)
-    plt.savefig(pname,dpi=dpi)
-    plt.close()
-    return pname
+    
+    return plt
 
 
-def waroona_cloud_loop(dtime):
+def waroona_cloud_loop(dtime,model_version="waroona_run1"):
     '''
     make an hours worth of clouds_2panel plots starting at argument dtime
     First get iris cubes from each of the data files we will read,
@@ -138,57 +141,55 @@ def waroona_cloud_loop(dtime):
         also read fire front at matching times
     then send all the data to plotting method
     '''
-    um_hour=datetime(dtime.year,dtime.month,dtime.day,dtime.hour)
-    extentname='waroona'
+    extentname=model_version.split("_")[0]
     extent=plotting._extents_[extentname]
-    um_hour=datetime(dtime.year,dtime.month,dtime.day,dtime.hour)
     
     # Read the cubes
-    slv,ro1,th1,th2 = fio.read_waroona(dtime=um_hour, extent=extent,
-                                            add_winds=True, add_theta=True)
-    
-    zro, = ro1.extract('z_ro')
-    
-    topog, = slv.extract('topog')
-    
-    u,v,s = ro1.extract(['u','v','s'])
-
-    qc, = th2.extract('qc')
-    
-    w, = th1.extract('upward_air_velocity')
+    cubes = fio.read_model_run(model_version, fdtime=dtime, 
+                               extent=extent,
+                               add_z=True,
+                               add_winds=True,
+                               add_theta=True)
+    print("DEBUG:",cubes)
+    zth, topog, u,v,s = cubes.extract(['z_th','surface_altitude','u','v','s'])
+    qc, w, sh = cubes.extract(['qc','upward_air_velocity','specific_humidity'])
+    theta, Ta = cubes.extract(['air_temperature','potential_temperature'])
+    cubetimes = utils.dates_from_iris(u)
+    lat,lon = w.coord('latitude').points, w.coord('longitude').points
     
     ## fire front
     # read 6 time steps:
-    ff_dtimes = np.array([um_hour + timedelta(hours=x/60.) for x in range(10,61,10)])
-    ff, = fio.read_fire(dtimes=ff_dtimes,extent=extent, firefront=True)
+    ff = None
+    if model_version in ['waroona_run1']:
+        ff1, = fio.read_fire(dtimes=cubetimes, extent=extent, firefront=True)
+    if model_version in ['waroona_old']:
+        zth = zth[0] # old run has time dim as z_th is estimated from p
     
-    sh,Ta = th1.extract(['specific_humidity','air_temperature'])
-    
-    theta, = th1.extract('potential_temperature')
-    
-    lat,lon = w.coord('latitude').points, w.coord('longitude').points
-    
-    # datetime of outputs
-    tdim = w.coord('time')
-    d0 = datetime.strptime(str(tdim.units),'hours since %Y-%m-%d %H:%M:00')
-    timesteps = utils.date_from_gregorian(tdim.points, d0=d0)
-    
-    # also loop over different transects
+    # loop over different transects
     for i_transect in np.arange(1,6.5,1, dtype=int):
-        for tstep in range(len(timesteps)):
-            clouds_2panel(topog.data, s[tstep,0].data, u[tstep,0].data, v[tstep,0].data,
-                          qc[tstep].data, w[tstep].data, 
-                          ff[tstep].data,
-                          zro.data, lat, lon,
-                          dtime=timesteps[tstep],
-                          extentname=extentname,
-                          transect=i_transect)
+        for tstep in range(len(cubetimes)):
+            if model_version in ['waroona_run1']:
+                ff = ff1[tstep].data.data
+            plt=clouds_2panel(topog.data.data, s[tstep,0].data.data, u[tstep,0].data.data, v[tstep,0].data.data,
+                              qc[tstep].data.data, w[tstep].data.data,
+                              zth.data.data, lat, lon,
+                              dtime=cubetimes[tstep],
+                              ff = ff,
+                              extentname=extentname,
+                              transect=i_transect)
+            # figure name and location
+            #pname="figures/%s/clouds_outline_X%d/fig_%s%s"%(extentname,transect,dstamp,ext)
+            #print("INFO: Saving figure:",pname)
+            #plt.savefig(pname,dpi=dpi)
+            #plt.close()
+            fio.save_fig(model_version,_sn_,cubetimes[tstep],plt,
+                         subdir='transect_%d'%i_transect)
             
 if __name__ == '__main__':
     
     print("INFO: testing cloud_outline.py")
     #waroona_cloud_loop(datetime(2016,1,5,15))
-    for dtime in [ datetime(2016,1,6,7) + timedelta(hours=x) for x in range(3) ]:
-        
-        waroona_cloud_loop(dtime)
+    for dtime in [ datetime(2016,1,6,6) + timedelta(hours=x) for x in range(2) ]:
+        for mv in ['waroona_old','waroona_run1']:
+            waroona_cloud_loop(dtime,model_version=mv)
 
