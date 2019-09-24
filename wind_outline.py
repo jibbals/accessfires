@@ -29,7 +29,7 @@ from utilities import plotting, utils, fio, constants
 _sn_ = 'wind_outline'
 
 
-def winds_2panel(s,u,v,w,
+def wind_outline(s,u,v,w,
                  qc, topog,
                  z,lat,lon,
                  dtime,
@@ -139,19 +139,18 @@ def winds_outline_hour(dtime, model_version='waroona_run1', dpi=300):
     extent=plotting._extents_[extentname]
     
     # Read the cubes
-    cubes = fio.read_model_run(model_version, fdtime=dtime, 
+    cubes = fio.read_model_run(model_version, fdtime=dtime, extent=extent,
                                add_topog=True,
                                add_z=True, 
                                add_winds=True)
     
-    zth, topog = cubes.extract('z_th','topog')
+    zth, topog = cubes.extract(['z_th','surface_altitude'])
     u,v,s, qc, w = cubes.extract(['u','v','s','qc','upward_air_velocity'])
 
     cubetimes = utils.dates_from_iris(u)
     
     ## fire front
     ff1, = fio.read_fire(dtimes=cubetimes, extent=extent, firefront=True)
-    
     lat,lon = w.coord('latitude').points, w.coord('longitude').points
     
     # also loop over different transects
@@ -160,8 +159,7 @@ def winds_outline_hour(dtime, model_version='waroona_run1', dpi=300):
             ff = None
             if model_version == 'waroona_run1':
                 ff = ff1[tstep].data.data
-            
-            plt = winds_2panel(s[tstep].data.data, u[tstep].data.data, v[tstep].data.data, w[tstep].data.data,
+            plt = wind_outline(s[tstep].data.data, u[tstep].data.data, v[tstep].data.data, w[tstep].data.data,
                                qc[tstep].data.data, topog.data.data,
                                zth.data.data, lat,lon,
                                dtime=cubetimes[tstep],
@@ -180,6 +178,6 @@ def winds_outline_hour(dtime, model_version='waroona_run1', dpi=300):
 if __name__ == '__main__':
     
     for dtime in [ datetime(2016,1,6,7) + timedelta(hours=x) for x in range(2) ]:
-        for mv in ['waroona_run1','waroona_old']:
+        for mv in ['waroona_old','waroona_run1']:
             winds_outline_hour(dtime, mv)
     

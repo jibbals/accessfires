@@ -62,28 +62,6 @@ print(dtimes)
 print(subdtimes)
 #subdtimes=None
 
-oldold = fio.read_model_run('waroona_oldold', subdtimes = oldoldsubdtimes,
-                            extent=extent, add_winds=True)
-print(oldold)
-grabbed_times = utils.dates_from_iris(oldold[0])
-print(grabbed_times)
-
-run1 = fio.read_model_run('waroona_run1',fdtime=dtimes, subdtimes=subdtimes,
-                          extent=extent, add_topog=True,
-                          add_z=True,add_winds=True,add_theta=True,
-                          add_dewpoint=True)
-print(run1)
-grabbed_times = utils.dates_from_iris(run1[0])
-print(grabbed_times)
-
-old = fio.read_model_run('waroona_old',fdtime=dtimes, subdtimes=subdtimes,
-                         extent=extent, add_topog=True,
-                         add_z=True,add_winds=True,add_theta=True,
-                         add_dewpoint=True)
-    
-print(old)
-
-grabbed_times = utils.dates_from_iris(old[0])
-print(grabbed_times)
+oldcubes=fio.read_model_run('waroona_run1',fdtime=dtimes[0],extent=extent,add_z=True)
 
 

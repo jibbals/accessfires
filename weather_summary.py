@@ -10,7 +10,6 @@ matplotlib.use("Agg",warn=False)
 
 from matplotlib import colors, ticker
 
-import iris
 import numpy as np
 import matplotlib.pyplot as plt
 from datetime import datetime
@@ -23,7 +22,7 @@ _sn_ = 'weather_summary'
 
 def plot_weather_summary(U,V,W, height, Q=None, 
                          model_version='waroona_oldold',
-                         ext='.png', timedim_name='time',
+                         ext='.png',
                          datelimit=None,
                          dvi=150):
     '''
@@ -37,8 +36,7 @@ def plot_weather_summary(U,V,W, height, Q=None,
         height: level heights for titles (array [ levs ])
     '''
     
-    cubetimes = U.coord(timedim_name)
-    dtimes = utils.dates_from_iris(cubetimes)
+    dtimes = utils.dates_from_iris(U)
     
     extentname=['sirivan','waroona'][dtimes[0].year==2016]
     row1 = (100<=height) * (height<500)
@@ -130,44 +128,21 @@ def read_and_plot_model_run(model_version='waroona_oldold',
     # font sizes etc
     plotting.init_plots()
     
-    if model_version=='waroona_oldold':
-        cubes = fio.read_waroona_oldold(extent=extent, add_winds=True)
-        u,v,s = cubes.extract(['u','v','s'])
-        w, = cubes.extract('upward_air_velocity')
-        height = u.coord('Hybrid height').points
-        
-        plot_weather_summary(u, v, w, height, 
-                             timedim_name='t',
-                             model_version=model_version)
+    cubes = fio.read_model_run(model_version, fdtime=dtimes, extent=extent, 
+                               add_winds=True)
     
-    elif model_version=='waroona_run1':
-        for dtime in dtimes:
-            cubelists = fio.read_waroona(dtime,extent=extent, add_winds=True)
-            u,v,s = cubelists[1].extract(['u','v','s'])
-            w, = cubelists[2].extract('upward_air_velocity')
-            height = w.coord('level_height').points
-            
-            plot_weather_summary(u, v, w, height, 
-                                 timedim_name='time',
-                                 model_version=model_version)
+    u,v,s = cubes.extract(['u','v','s'])
+    w, = cubes.extract('upward_air_velocity')
+    height = w.coord('level_height').points
     
-    elif model_version == 'waroona_old':
-        for dtime in dtimes:
-            cubelist = fio.read_waroona_pcfile(dtime,extent=extent, add_winds=True)
-            u,v,s = cubelist.extract(['u','v','s'])
-            w, = cubelist.extract('upward_air_velocity')
-            height = w.coord('level_height').points
-            
-            plot_weather_summary(u, v, w, height, 
-                                 timedim_name='time',
-                                 model_version=model_version)
-    
+    plot_weather_summary(u, v, w, height,
+                         model_version=model_version)
 
-dtimes = None
-if True: # for testing
-    dtimes=[datetime(2016,1,6,8)]
-
-read_and_plot_model_run('waroona_run1', dtimes=dtimes)
-read_and_plot_model_run('waroona_old', dtimes=dtimes)
-read_and_plot_model_run('waroona_oldold', dtimes=dtimes)
+if __name__=='__main__':
+    dtimes = None
+    if True: # for testing
+        dtimes=[datetime(2016,1,6,8)]
+    
+    for mv in ['waroona_oldold','waroona_oldold','waroona_run1']:
+        read_and_plot_model_run(mv, dtimes=dtimes)
 

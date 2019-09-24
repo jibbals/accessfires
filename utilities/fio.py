@@ -105,7 +105,7 @@ def read_nc_iris(fpath, constraints=None, keepvars=None):
     
     return cubes
     
-def read_fire(dtimes, constraints=None, extent=None, 
+def read_fire(dtimes=None, constraints=None, extent=None, 
               firefront=True, 
               sensibleheat=False,
               firespeed=False):
@@ -130,15 +130,18 @@ def read_fire(dtimes, constraints=None, extent=None,
     cubelist = iris.cube.CubeList()
     if firefront:
         ff, = read_nc_iris(ffpath, constraints=constraints)
-        ff = subset_time_iris(ff, dtimes, seconds=True)
+        if dtimes is not None:
+            ff = subset_time_iris(ff, dtimes)
         cubelist.append(ff)
     if sensibleheat:
         shf, = read_nc_iris(fluxpath, constraints=constraints)
-        shf = subset_time_iris(shf, dtimes, seconds=True)
+        if dtimes is not None:
+            shf = subset_time_iris(shf, dtimes)
         cubelist.append(shf)
     if firespeed:
         fs, = read_nc_iris(fspath, constraints=constraints)
-        fs  = subset_time_iris(fs, dtimes, seconds=True)
+        if dtimes is not None:
+            fs  = subset_time_iris(fs, dtimes)
         cubelist.append(fs)
     
     return cubelist
@@ -250,8 +253,9 @@ def read_model_run(model_version, fdtime=None, subdtimes=None, extent=None,
         
         # rename height dim to match other runs
         for i in range(len(oldoldcubes)):
-            oldoldcubes[i].coord('Hybrid height').rename('level_height')
-        
+            if len(oldoldcubes[i].shape) > 2:
+                oldoldcubes[i].coord('Hybrid height').rename('level_height')
+
         # rename winds
         oldoldcubes.extract('eastward_wind')[0].rename('x_wind')
         oldoldcubes.extract('northward_wind')[0].rename('y_wind')
@@ -644,19 +648,22 @@ def read_topog(model_version, extent=None):
     #
     #return topog
 
-def subset_time_iris(cube,dtimes,seconds=True,seccheck=121):
+def subset_time_iris(cube,dtimes,seccheck=121):
     '''
     take a cube with the time dimension and subset it to just have dtimes
-    can handle iris seconds or hours time dim formats
+    can handle iris seconds, minutes, or hours time dim formats
     assert times are available within seccheck seconds of dtimes
     '''
     tdim  = cube.coord('time')
     secmult = 1
-    if seconds:
-        unitformat = 'seconds since %Y-%m-%d %H:%M:00'
-    else:
-        unitformat = 'hours since %Y-%m-%d %H:%M:00'
+    grain = str(tdim.units).split(' ')[0]
+    unitformat = '%s since %%Y-%%m-%%d %%H:%%M:00'%grain
+    if grain == 'minutes':
+        secmult=60
+    elif grain == 'hours':
         secmult=3600
+    # todo ...
+    
     d0 = datetime.strptime(str(tdim.units),unitformat)
     # datetimes from ff
     dt = np.array([d0 + timedelta(seconds=secs*secmult) for secs in tdim.points])
@@ -669,7 +676,7 @@ def subset_time_iris(cube,dtimes,seconds=True,seccheck=121):
     # Check that fire times are within 2 minutes of desired dtimes
     #print("DEBUG: diffs")
     #print([(ffdt[tinds][i] - dtimes[i]).seconds < 121 for i in range(len(dtimes))])
-    assert np.all([(dt[tinds][i] - dtimes[i]).seconds < seccheck for i in range(len(dtimes))]), "fire times are > 2 minutes from requested dtimes"
+    assert np.all([(dt[tinds][i] - dtimes[i]).total_seconds() < seccheck for i in range(len(dtimes))]), "fire times are > 2 minutes from requested dtimes"
     
     # subset cube to desired times
     return cube[tinds]
