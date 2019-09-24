@@ -638,15 +638,20 @@ def read_topog(model_version, extent=None):
     '''
     Read topography cube
     '''
-    assert False, 'To Be Implemented'
-    #fpath = 
-    #if extentname=='sirivan':
-    #    fpath='data/sirivan/umnsaa_pa2017021121.nc'
-    ## First read topography
-    #topog, = read_nc_iris(fpath,
-    #                      constraints = 'surface_altitude')
-    #
-    #return topog
+    
+    ddir = model_outputs[model_version]['path']
+    
+    if extent is not None:
+        West,East,South,North = extent
+        constr_lons = iris.Constraint(longitude = lambda cell: West <= cell <= East )
+        constr_lats = iris.Constraint(latitude = lambda cell: South <= cell <= North )
+        topog, = read_nc_iris(ddir + model_outputs[model_version]['topog'],
+                              constraints = 'surface_altitude' & constr_lons & constr_lats)
+    else:
+        topog, = read_nc_iris(ddir + model_outputs[model_version]['topog'],
+                              constraints = 'surface_altitude')
+    
+    return topog
 
 def subset_time_iris(cube,dtimes,seccheck=121):
     '''
