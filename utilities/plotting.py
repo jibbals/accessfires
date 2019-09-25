@@ -352,7 +352,6 @@ def map_add_locations(namelist, text=None, proj=None,
                      transform=proj)
         
 
-    
 
 def map_google(extent,zoom=10,fig=None,subplotxyn=None,draw_gridlines=True,gridlines=None):
     '''
