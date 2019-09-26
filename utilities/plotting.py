@@ -24,6 +24,7 @@ import cartopy.crs as ccrs
 from cartopy.io import shapereader
 from cartopy.mpl.gridliner import LONGITUDE_FORMATTER, LATITUDE_FORMATTER
 import cartopy.io.img_tiles as cimgt
+from owslib.wmts import WebMapTileService
 
 # local stuff
 from utilities import utils, constants
@@ -353,10 +354,10 @@ def map_add_locations(namelist, text=None, proj=None,
         
 
 
-def map_google(extent,zoom=10,fig=None,subplotxyn=None,draw_gridlines=True,gridlines=None):
+def map_google(extent,zoom=10,fig=None,subplot_row_col_n=None,draw_gridlines=True,gridlines=None):
     '''
     Draw a map with google image tiles over given EWSN extent
-    if this will be part of a larger figure, subplotxyn=[3,3,4] will put it there
+    if this will be part of a larger figure, subplot_row_col_n=[3,3,4] will put it there
     to define where gridlines go, put gridlines = [lats,lons] 
     return figure, axis, projection
     '''
@@ -367,10 +368,10 @@ def map_google(extent,zoom=10,fig=None,subplotxyn=None,draw_gridlines=True,gridl
     if fig is None:
         fig = plt.figure()
     
-    if subplotxyn is None:
+    if subplot_row_col_n is None:
         ax = fig.add_subplot(1, 1, 1, projection=gproj)#stamen_terrain.crs)
     else:
-        nrows,ncols,n= subplotxyn
+        nrows,ncols,n= subplot_row_col_n
         ax = fig.add_subplot(nrows,ncols,n, projection=gproj)
 
     if draw_gridlines:
@@ -415,6 +416,63 @@ def map_contourf(extent, data, lat,lon, title="",
     ## Turn off the tick values
     plt.xticks([]); plt.yticks([])
     return cb
+
+def map_satellite():
+    '''
+    use NASA GIBS: Global Imagery Browse Services, to get high res satellite image: 
+        https://wiki.earthdata.nasa.gov/display/GIBS/GIBS+Available+Imagery+Products#expand-SurfaceReflectance16Products
+    
+    TODO make extent, and points/text arguments
+    '''
+    URL = 'http://gibs.earthdata.nasa.gov/wmts/epsg4326/best/wmts.cgi'
+    wmts = WebMapTileService(URL)
+    
+    layer = 'Landsat_WELD_CorrectedReflectance_TrueColor_Global_Annual'
+    
+    date_str = '2010-01-06' # landsat not available after 2010
+    
+    ## Plot setup
+    # plot projections (for coord ref transforms)
+    plot_CRS = ccrs.Mercator()
+    geodetic_CRS = ccrs.Geodetic()
+    # where are we looking?
+    extent = _extents_['waroona'] # synoptic waroona
+    lon0, lon1, lat0, lat1 = extent
+    # transform to map corners
+    x0, y0 = plot_CRS.transform_point(lon0, lat0, geodetic_CRS)
+    x1, y1 = plot_CRS.transform_point(lon1, lat1, geodetic_CRS)
+    # keep aspect ratio based on lat lon corners
+    ysize = 8
+    xsize = ysize * (x1 - x0) / (y1 - y0)
+    fig = plt.figure(figsize=(xsize, ysize), dpi=100)
+    # create plot axes
+    ax = fig.add_axes([0, 0, 1, 1], projection=plot_CRS)
+    ax.set_xlim((x0, x1))
+    ax.set_ylim((y0, y1))
+    # add map tile from web service
+    ax.add_wmts(wmts, layer, wmts_kwargs={'time': date_str})
+    # add label for waroona
+    lat_w,lon_w = _latlons_['waroona']
+    path_effects=[patheffects.Stroke(linewidth=5, foreground='k'), patheffects.Normal()]
+    ax.plot(lon_w, lat_w, color='grey', linewidth=0, marker='o', markersize=None,
+            transform=geodetic_CRS,
+            path_effects=path_effects)
+    txt = ax.text(lon_w, lat_w, 'Waroona', fontsize=8, color='wheat',
+                  transform=geodetic_CRS)
+    txt.set_path_effects([patheffects.withStroke(linewidth=3,
+                                                 foreground='black')])
+    # add fire ignition
+    lat_f,lon_f = _latlons_['fire_waroona']
+    cs=ax.plot(lon_f, lat_f, color='red', linewidth=0, marker='*', markersize=None,
+               transform=geodetic_CRS,
+               path_effects=path_effects)
+    # add layer name
+    lat_bl = lat0 + 0.02*(lat1-lat0)
+    lon_bl = lon0 + 0.05*(lon1-lon0)
+    txt = ax.text(lon_bl, lat_bl, wmts[layer].title, fontsize=14, color='wheat',
+                  transform=geodetic_CRS)
+    txt.set_path_effects([patheffects.withStroke(linewidth=5,
+                                                 foreground='black')])
 
 def map_topography(extent, topog,lat,lon,title="Topography"):
     '''

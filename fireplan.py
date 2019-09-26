@@ -36,10 +36,57 @@ PFT = {'waroona_run1':{'data':np.array([42.1,34.6]), # manually calculated PFT
                        },
       }
 
+def pft_altitude_vs_pressure(model_run='waroona_run1', latlon=plotting._latlons_['fire_waroona_upwind'],
+                             mbar_to_watch=700, datetimes=[datetime(2016,1,5,15)]):
+    """
+    Retrieve altitudes around 800-600 mbar over a specific lat lon over time.
+    This is to calculate z_fc for the PFT calculation
+    """
+    ## First read the hourly z and 
+    extent = plotting._extents_[model_run.split('_')[0]]
+    cubes = fio.read_model_run(model_run, fdtime=datetimes, extent=extent, add_topog=False,add_z=True)
+    z,p = cubes.extract(['z_th','air_pressure'])
+    p.convert_units('mbar')
+    z.convert_units('km')
+    cubetimes=utils.dates_from_iris(p)
+    dstamp = cubetimes[0].strftime("%b %d %H:%M(UTC)")
+    
+    # pull out latlon that we are watching:
+    lat,lon = latlon
+    z0 = z.interpolate([('longitude',lon),('latitude',lat)],
+                           iris.analysis.Linear())
+    p0 = p.interpolate([('longitude',lon),('latitude',lat)],
+                           iris.analysis.Linear())
+    nt,nz = p0.shape
+    
+    z0,p0 = z0.data.data, p0.data.data
+    
+    pind = np.zeros(nt,dtype=np.int)
+    # where is p0 closest to our watched pressure?
+    for i in range(nt):
+        pind[i] = np.argmin(np.abs(p0[i] - mbar_to_watch))
+    # plot example scatter and z_fc grab
+    
+    plt.subplot(2,1,1)
+    plt.scatter(p0[0], z0)
+    plt.xlim([1000,500])
+    plt.ylim([0,7])
+    plt.xlabel('pressure [mbar]')
+    plt.ylabel('altitude [km]')
+    plt.plot([mbar_to_watch,mbar_to_watch],[0, z0[pind[0]]], color='red')
+    plt.plot([1000, mbar_to_watch],[z0[pind[0]], z0[pind[0]]], color='red', label='closest to %d mbar'%mbar_to_watch)
+    plt.legend(loc='best')
+    plt.title('EG finding z$_{fc}$ at %s'%dstamp )
+    
+    
+    plt.subplot(2,1,2)
+    plt.plot_date(cubetimes,z0[pind])
+    plt.title("z$_{fc}$",y=0.73)
+    plt.ylabel('altitude [km]')
 
-def fireplan(ff, extentname='waroonaz', fire_contour_map = 'autumn',
+def fireplan(ff, fire_contour_map = 'autumn',
              show_cbar=True, cbar_XYWH= [0.2,0.6,.3,.02],
-             fig=None,subplotxyn=None,draw_gridlines=False,gridlines=None):
+             fig=None,subplot_row_col_n=None,draw_gridlines=False,gridlines=None):
     '''
     show google map of extent, with fire front over time overplotted
     
@@ -54,7 +101,7 @@ def fireplan(ff, extentname='waroonaz', fire_contour_map = 'autumn',
     '''
     lon,lat = ff.coord('longitude').points, ff.coord('latitude').points
     nt,nx,ny = ff.shape
-    extent = plotting._extents_[extentname] 
+    extent = [np.min(lon),np.max(lon), np.min(lat),np.max(lat)] 
     crs_data = ccrs.PlateCarree()
     
     # Get datetimes from firefront cube
@@ -74,7 +121,7 @@ def fireplan(ff, extentname='waroonaz', fire_contour_map = 'autumn',
     
     # First plot google map 
     gfig, gax, gproj = plotting.map_google(extent, zoom=12, 
-                                           fig=fig, subplotxyn=subplotxyn, 
+                                           fig=fig, subplot_row_col_n=subplot_row_col_n, 
                                            draw_gridlines=draw_gridlines, 
                                            gridlines=gridlines)
     
@@ -105,18 +152,19 @@ def fireplan(ff, extentname='waroonaz', fire_contour_map = 'autumn',
     
     return gfig, gax, gproj
 
-def fireplan_waroona():
+def fireplan_summary(model_run='waroona_run1'):
     '''
     Show fire outline over time at waroona
     '''
     # Read fire output
-    extentname = 'waroonaz' # fire zoomed
-    #front_start=datetime(2016,1,6,1)
+    extentname1 = model_run.split('_')[0]
+    extentname = extentname1+'z' # fire zoomed
+    
     extent = plotting._extents_[extentname] 
     
     # just read hourly
-    first_day = [datetime(2016,1,5,15) + timedelta(hours=x) for x in range(24)]
-    FFront, SHeat, FSpeed = fio.read_fire(dtimes=first_day, extent=extent,
+    hourly = [datetime(2016,1,5,15) + timedelta(hours=x) for x in range(24)]
+    FFront, SHeat, FSpeed = fio.read_fire(model_run=model_run ,dtimes=hourly, extent=extent,
                                           firefront=True, sensibleheat=True, firespeed=True)
     lon,lat = FFront.coord('longitude').points, FFront.coord('latitude').points
         
@@ -126,22 +174,22 @@ def fireplan_waroona():
     fig = plt.figure(figsize=[8,9])
     
     fireplan(FFront, extentname=extentname,
-             fig=fig, subplotxyn=[2,1,1],
+             fig=fig, subplot_row_col_n=[2,1,1],
              show_cbar=True, cbar_XYWH=[.2,.6,.3,.02])
     
-    plotting.map_add_locations(['fire_waroona_upwind'],text=['F160'],dx=-.001,dy=-.006, proj=ccrs.PlateCarree())
+    # plotting.map_add_locations(['fire_waroona_upwind'],text=['F160'],dx=-.001,dy=-.006, proj=ccrs.PlateCarree())
     
     ## subplot 2
     ax2 = plt.subplot(4,1,3)
-    maxflux=np.sum(SHeat.data.data,axis=0) + 0.01 # get rid of zeros
+    maxflux = np.sum(SHeat.data.data,axis=0) + 0.01 # get rid of zeros
     levels = np.sort(np.union1d(np.power(10,np.arange(2,6)),5*np.power(10,np.arange(2,6))))
-    cs=plt.contourf(lon, lat, maxflux.T,
-                    levels, # color levels I think...
-                    norm=colors.LogNorm(),
-                    vmin=100,
-                    cmap='gnuplot2_r',
-                    #locator=ticker.LogLocator(),
-                    )
+    cs = plt.contourf(lon, lat, maxflux.T,
+                      levels, # color levels I think...
+                      norm=colors.LogNorm(),
+                      vmin=100,
+                      cmap='gnuplot2_r',
+                      #locator=ticker.LogLocator(),
+                      )
     plt.colorbar(cs, orientation='horizontal', pad=0, extend='max')
     plt.title('Total sensible heat flux (W/m2 ?)',y=.74)
     plt.xticks([],[])
@@ -156,7 +204,7 @@ def fireplan_waroona():
     plt.xticks([],[])
     plt.yticks([],[])
     
-    fio.save_fig('waroona_run1',_sn_, 'fire_spread', plt)
+    fio.save_fig(model_run, _sn_, 'fire_spread', plt)
     
 def fire_power_waroona():
     
@@ -165,63 +213,70 @@ def fire_power_waroona():
     #front_start=datetime(2016,1,6,1)
     extent = plotting._extents_[extentname] 
     
-    # read all the fire data
-    ff, sh = fio.read_fire(dtimes=None, extent=extent, firefront=True, sensibleheat=True)
-    lon,lat = ff.coord('longitude'), ff.coord('latitude')
-    # just read hourly for fireplan
-    ftimes = utils.dates_from_iris(ff)
-    hourinds = [ft.minute==0 for ft in ftimes]
-    hours = ftimes[hourinds]
-    
-    ## First plot fire front contours over google map in a 211 subplot
-    fig = plt.figure(figsize=[8,8])
-    
-    _, ax, gproj = fireplan(ff[hourinds], extentname=extentname,
-                            fig=fig, subplotxyn=[2,1,1],
-                            show_cbar=True, cbar_XYWH=[.2,.6,.3,.02])
-    
-    plotting.map_add_locations(['fire_waroona_upwind'],text=['F160'],dx=-.001,dy=-.006, proj=ccrs.PlateCarree())
-    plt.title('Hourly fire front contour')
-    ## ADD SUBSET RECTANGLE
-    #    ax.add_patch(patches.Rectangle(xy=botleft,
-    #                                   width=width, 
-    #                                   height=width,
-    #                                   #facecolor=None,
-    #                                   fill=False,
-    #                                   edgecolor='red',
-    #                                   linewidth=2,
-    #                                   #linestyle='-',
-    #                                   alpha=0.9,
-    #                                   transform=cartopy.crs.PlateCarree()
-    #                                   ))
-    
-    ### get areas in m2
-    # Add boundaries to grid
-    lat.guess_bounds()
-    lon.guess_bounds()
-    grid_areas = iris.analysis.cartography.area_weights(ff)
-    
-    firepower = sh.data.data * grid_areas # W/m2 * m2
-    firepower = firepower/1e9 # Watts to Gigawatts
-    # also PFT values:
-    run1_xy = PFT['waroona_run1']['time'],PFT['waroona_run1']['data']
-    old_xy = PFT['waroona_old']['time'],PFT['waroona_old']['data']
-    
-    ax2 = plt.subplot(2,1,2)
-    plt.plot_date(ftimes,np.sum(firepower,axis=(1,2)), '-k', label='Fire power waroona_run1')
-    plt.plot_date(run1_xy[0], run1_xy[1], '--k', label='PFT waroona_run1')
-    plt.plot_date(old_xy[0], old_xy[1], '--g', label='PFT waroona_old')
-    
-    plt.legend(loc='best')
-    # ylabel and units
-    plt.ylabel('Gigawatts')
-    # format ticks
-    #plt.xticks(hours[::4]) # just show one tick per 4 hours
-    ax2.xaxis.set_major_locator(mdates.HourLocator(interval=4)) # every 4 hours
-    ax2.xaxis.set_minor_locator(mdates.HourLocator())
-    ax2.xaxis.set_major_formatter(mdates.DateFormatter("%H:%M"))
-    fio.save_fig('mixed',_sn_,'firepower.png',plt)
-### Run the stuff
+    for model_run in ['waroona_run1','waroona_old']:
+        # read all the fire data
+        ff, sh = fio.read_fire(model_run=model_run, dtimes=None, 
+                               extent=extent, firefront=True, sensibleheat=True)
+        lon,lat = ff.coord('longitude'), ff.coord('latitude')
+        # just read hourly for fireplan
+        ftimes = utils.dates_from_iris(ff)
+        hourinds = [ft.minute==0 for ft in ftimes]
+        hours = ftimes[hourinds]
+        
+        ## First plot fire front contours over google map in a 211 subplot
+        fig = plt.figure(figsize=[8,8])
+        
+        _, ax, gproj = fireplan(ff[hourinds],
+                                fig=fig, subplot_row_col_n=[2,1,1],
+                                show_cbar=True, cbar_XYWH=[.2,.6,.3,.02])
+        
+        plotting.map_add_locations(['fire_waroona_upwind'],text=['PFT'],dx=-.001,dy=-.006, proj=ccrs.PlateCarree())
+        plt.title('Hourly fire front contour')
+        ## ADD SUBSET RECTANGLE
+        #    ax.add_patch(patches.Rectangle(xy=botleft,
+        #                                   width=width, 
+        #                                   height=width,
+        #                                   #facecolor=None,
+        #                                   fill=False,
+        #                                   edgecolor='red',
+        #                                   linewidth=2,
+        #                                   #linestyle='-',
+        #                                   alpha=0.9,
+        #                                   transform=cartopy.crs.PlateCarree()
+        #                                   ))
+        
+        ax2 = plt.subplot(2,1,2)
+        
+        
+        ### get areas in m2
+        # Add boundaries to grid
+        lat.guess_bounds()
+        lon.guess_bounds()
+        grid_areas = iris.analysis.cartography.area_weights(ff)
+        
+        firepower = sh.data.data * grid_areas # W/m2 * m2
+        firepower = firepower/1e9 # Watts to Gigawatts
+        
+        # Plot firepower
+        plt.plot_date(ftimes,np.sum(firepower,axis=(1,2)), '-k', label='Fire power waroona_run1')
+        
+        # also PFT values:
+        for mr, linestyle in zip(['waroona_run1','waroona_old'],['--k','--g']):
+            run_x,run_y = PFT[mr]['time'],PFT[mr]['data']
+            plt.plot_date(run_x, run_y, linestyle, label='PFT '+mr)
+        
+        plt.legend(loc='best')
+        # ylabel and units
+        plt.ylabel('Gigawatts')
+        # format ticks
+        #plt.xticks(hours[::4]) # just show one tick per 4 hours
+        ax2.xaxis.set_major_locator(mdates.HourLocator(interval=4)) # every 4 hours
+        ax2.xaxis.set_minor_locator(mdates.HourLocator())
+        ax2.xaxis.set_major_formatter(mdates.DateFormatter("%H:%M"))
+        fio.save_fig(model_run, _sn_, 'firepower.png',plt)
 
-#fireplan_waroona()
-fire_power_waroona()
+if __name__=='__main__':
+    ### Run the stuff
+    
+    fireplan_summary()
+    fire_power_waroona()

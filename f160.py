@@ -78,8 +78,8 @@ def f160(press,Temp,Tempd, latlon,
     Td = np.squeeze(tempd0.data.data) * units(str(Tempd.units))
     Td = Td.to(units.degC)
     
-    print("DEBUG: f160 interp1", p.shape, T.shape, Td.shape)
-    print("DEBUG: f160 interp1", p, T, Td)
+    #print("DEBUG: f160 interp1", p.shape, T.shape, Td.shape)
+    #print("DEBUG: f160 interp1", p, T, Td)
     fig = plt.figure(figsize=(9,9))
     skew = SkewT(fig,rotation=45)
     skew.plot(p,T,tcolor, linewidth=2)
@@ -104,7 +104,7 @@ def f160(press,Temp,Tempd, latlon,
         v = v.to(units.knots)
         pro = (np.squeeze(p_rho0.data.data) * units(str(press_rho.units))).to(units.mbar)
         print("DEBUG: f160 interp2", u.shape, v.shape, pro.shape)
-        print("DEBUG: f160 interp2", u,v,pro)
+        #print("DEBUG: f160 interp2", u,v,pro)
         nicer_z=np.union1d(np.union1d(np.arange(0,41,5), np.arange(43,81,3)), np.arange(81,140,1))
         #skip=(slice(None,None,None),nicer_z)
         skew.plot_barbs(pro[nicer_z],u[nicer_z],v[nicer_z])
@@ -181,8 +181,9 @@ if __name__ == '__main__':
     pyrocb1 = plotting._latlons_['pyrocb_waroona1']
     upwind  = plotting._latlons_['fire_waroona_upwind'] # ~1 km upwind of fire
     loc_and_stamp = ([pyrocb1,topleft,upwind],['pyrocb1','topleft','upwind'])
-    #loc_and_stamp = ([upwind],['upwind'])
-    for dtime in [ datetime(2016,1,6,5) + timedelta(hours=x) for x in range(2) ]:
+    checktimes = [ datetime(2016,1,6,5) + timedelta(hours=x) for x in range(2) ]
+    checktimes = [ datetime(2016,1,5,15) ]
+    for dtime in checktimes:
         # dtime, latlon, latlon_stamp, model_version
         for mv in ['waroona_run1','waroona_old']:
             for latlon,latlon_stamp in zip(loc_and_stamp[0],loc_and_stamp[1]):

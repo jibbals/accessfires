@@ -58,7 +58,8 @@ model_outputs = {
                 'topog':'umnsaa_pa2016010515.nc',
                 'filedates':np.array([datetime(2016,1,5,15) + timedelta(hours=x) for x in range(18)]),
                 'run':'Run in August 2018',
-                'origdir':'/g/data1a/en0/mxp548/access-fire/waroona/run3/accessdata'},
+                'origdir':'/g/data1a/en0/mxp548/access-fire/waroona/run3/accessdata/',
+                'origfiredir':'/short/en0/mxp548/cylc-run/au-aa714/work/20160105T1500Z/waroona_0p4_ukv_os38_um_fcst_000/'},
         # Old Old run has bad lat/lons...
         'waroona_oldold':{
                 'path':'data/waroona_oldold/',
@@ -104,19 +105,26 @@ def read_nc_iris(fpath, constraints=None, keepvars=None):
         cubes = cubes.extract(keepvars)
     
     return cubes
-    
-def read_fire(dtimes=None, constraints=None, extent=None, 
+
+def read_fire(model_run='waroona_run1',
+              dtimes=None, constraints=None, extent=None, 
               firefront=True, 
               sensibleheat=False,
               firespeed=False):
     '''
     Read fire output cubes matching dtimes time dim
     '''
-    ddir        = model_outputs['waroona_run1']['path']+'fire/'
-    ffpath      = ddir+'firefront.CSIRO_24h.20160105T1500Z.nc'
-    fluxpath    = ddir+'sensible_heat.CSIRO_24h.20160105T1500Z.nc'
-    fspath      = ddir+'fire_speed.CSIRO_24h.20160105T1500Z.nc'
+    ddir        = model_outputs[model_run]['path']+'fire/'
     
+    if model_run == 'waroona_run1':
+        ffpath      = ddir+'firefront.CSIRO_24h.20160105T1500Z.nc'
+        fluxpath    = ddir+'sensible_heat.CSIRO_24h.20160105T1500Z.nc'
+        fspath      = ddir+'fire_speed.CSIRO_24h.20160105T1500Z.nc'
+    elif model_run == 'waroona_old':
+        ffpath      = ddir+'firefront.01.nc'
+        fluxpath    = ddir+'sensible_heat.01.nc'
+        fspath      = ddir+'fire_speed.01.nc'
+        
     if extent is not None:
         West,East,South,North = extent
         constr_lons = iris.Constraint(longitude = lambda cell: West <= cell <= East )
@@ -128,21 +136,28 @@ def read_fire(dtimes=None, constraints=None, extent=None,
     
     # Build up cubelist based on which files you want to read
     cubelist = iris.cube.CubeList()
-    if firefront:
-        ff, = read_nc_iris(ffpath, constraints=constraints)
-        if dtimes is not None:
-            ff = subset_time_iris(ff, dtimes)
-        cubelist.append(ff)
-    if sensibleheat:
-        shf, = read_nc_iris(fluxpath, constraints=constraints)
-        if dtimes is not None:
-            shf = subset_time_iris(shf, dtimes)
-        cubelist.append(shf)
-    if firespeed:
-        fs, = read_nc_iris(fspath, constraints=constraints)
-        if dtimes is not None:
-            fs  = subset_time_iris(fs, dtimes)
-        cubelist.append(fs)
+    flags = [firefront, sensibleheat, firespeed]
+    paths = [ffpath, fluxpath, fspath]
+    units = [None, 'Watts/m2', 'm/s']
+    for flag, path, unit in zip(flags, paths, units):
+        if flag:
+            cube, = read_nc_iris(path, constraints=constraints)
+            if unit is not None:
+                cube.units=unit
+            cubelist.append(cube)
+    
+    # Fix old run time units
+    if model_run == 'waroona_old':
+        for cube in cubelist:
+            cube.coord('time').units = 'seconds since 2016-01-05 15:00:00'
+            cube.coord('latitude').units = 'degrees'
+            cube.coord('longitude').units = 'degrees'
+
+    # Subset by time if argument exists
+    if dtimes is not None:
+        for i in range(len(cubelist)):
+            cubelist[i] = subset_time_iris(cubelist[i], dtimes)
+            
     
     return cubelist
 
