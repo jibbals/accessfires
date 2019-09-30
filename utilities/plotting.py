@@ -417,7 +417,8 @@ def map_contourf(extent, data, lat,lon, title="",
     plt.xticks([]); plt.yticks([])
     return cb
 
-def map_satellite():
+def map_satellite(extent = _extents_['waroona'], fig=None, subplot_row_col_n=None,
+                  show_name=True, name_size=10):
     '''
     use NASA GIBS: Global Imagery Browse Services, to get high res satellite image: 
         https://wiki.earthdata.nasa.gov/display/GIBS/GIBS+Available+Imagery+Products#expand-SurfaceReflectance16Products
@@ -435,22 +436,32 @@ def map_satellite():
     # plot projections (for coord ref transforms)
     plot_CRS = ccrs.Mercator()
     geodetic_CRS = ccrs.Geodetic()
+    
     # where are we looking?
-    extent = _extents_['waroona'] # synoptic waroona
     lon0, lon1, lat0, lat1 = extent
     # transform to map corners
     x0, y0 = plot_CRS.transform_point(lon0, lat0, geodetic_CRS)
     x1, y1 = plot_CRS.transform_point(lon1, lat1, geodetic_CRS)
-    # keep aspect ratio based on lat lon corners
-    ysize = 8
-    xsize = ysize * (x1 - x0) / (y1 - y0)
-    fig = plt.figure(figsize=(xsize, ysize), dpi=100)
+    
+    if fig is None:
+        # keep aspect ratio based on lat lon corners
+        ysize = 8
+        xsize = ysize * (x1 - x0) / (y1 - y0)
+        fig = plt.figure(figsize=(xsize, ysize), dpi=100)
+
     # create plot axes
-    ax = fig.add_axes([0, 0, 1, 1], projection=plot_CRS)
+    if subplot_row_col_n is None:
+        ax = fig.add_subplot(1,1,1, projection=plot_CRS)
+    else:
+        nrows,ncols,n= subplot_row_col_n
+        ax = fig.add_subplot(nrows,ncols,n, projection=plot_CRS)
+    #ax = fig.add_axes(axextent, projection=plot_CRS)
     ax.set_xlim((x0, x1))
     ax.set_ylim((y0, y1))
     # add map tile from web service
     ax.add_wmts(wmts, layer, wmts_kwargs={'time': date_str})
+    
+    # add points from arguments:
     # add label for waroona
     lat_w,lon_w = _latlons_['waroona']
     path_effects=[patheffects.Stroke(linewidth=5, foreground='k'), patheffects.Normal()]
@@ -466,13 +477,18 @@ def map_satellite():
     cs=ax.plot(lon_f, lat_f, color='red', linewidth=0, marker='*', markersize=None,
                transform=geodetic_CRS,
                path_effects=path_effects)
-    # add layer name
-    lat_bl = lat0 + 0.02*(lat1-lat0)
-    lon_bl = lon0 + 0.05*(lon1-lon0)
-    txt = ax.text(lon_bl, lat_bl, wmts[layer].title, fontsize=14, color='wheat',
-                  transform=geodetic_CRS)
-    txt.set_path_effects([patheffects.withStroke(linewidth=5,
-                                                 foreground='black')])
+    
+    if show_name:
+        # add layer name
+        lat_bl = lat0 + 0.02*(lat1-lat0)
+        lon_bl = lon0 + 0.05*(lon1-lon0)
+        txt = ax.text(lon_bl, lat_bl, wmts[layer].title, 
+                      fontsize=name_size, color='wheat',
+                      transform=geodetic_CRS)
+        txt.set_path_effects([patheffects.withStroke(linewidth=5,
+                                                     foreground='black')])
+    
+    return fig, ax, plot_CRS, geodetic_CRS
 
 def map_topography(extent, topog,lat,lon,title="Topography"):
     '''

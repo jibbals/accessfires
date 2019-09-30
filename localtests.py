@@ -44,6 +44,7 @@ dtimeE = um_dtimes[-1]
 
 ##### TEST CODE HERE
 
+
 extent = plotting._extents_['waroona']
 model_version='waroona_old'
 
@@ -64,5 +65,5 @@ print(subdtimes)
 
 
 from fireplan import pft_altitude_vs_pressure
-pft_altitude_vs_pressure()
+pft_altitude_vs_pressure(model_run='waroona_old',mbar_to_watch=680,datetimes=[datetime(2016,1,6,6)])
 plt.show()
