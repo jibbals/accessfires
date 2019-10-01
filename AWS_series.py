@@ -12,14 +12,7 @@ from utilities import fio
 
 _sn_='AWS'
 
-__AWS_PLOTS__ = {'Wind direction':['Dta10','Dta30'],
-                 'Wind speed':['S10','S30'],
-                 'Gusts':['SX10','SX30'],
-                 'Pressure':['QFE'],
-                 'Relative humidity':['RH'],
-                 'Solar radiation':['SR'],
-                 'Temperature':['T','T10','T30'],
-                }
+
 
 
 # read wagerup

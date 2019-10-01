@@ -110,6 +110,9 @@ _transects_['sirivan4'] = [-32.25, __si0__], [-31.95, __si1__] # low lat to high
 _transects_['sirivan5'] = [-32.35, __si0__], [-32.05, __si1__] 
 _transects_['sirivan6'] = [-32.3 , __si0__], [-32   , __si1__] 
 
+
+
+
 def init_plots():
   matplotlib.rcParams['font.size'] = 15.0
   matplotlib.rcParams["text.usetex"]      = False     # I forget what this is for, maybe allows latex labels?
