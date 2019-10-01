@@ -9,6 +9,7 @@ Created on Thu Sep 19 16:28:18 2019
 import matplotlib
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
+from matplotlib import patheffects
 from matplotlib import ticker, colors, patches
 import numpy as np
 from datetime import datetime, timedelta
@@ -141,18 +142,21 @@ def fireplan(ff, fire_contour_map = 'autumn',
 
     # First plot google map
     
-    gfig, gax, gproj, tproj = plotting.map_satellite(extent=extent, fig=fig,
+    fig, gax, gproj, tproj = plotting.map_satellite(extent=extent, fig=fig,
                                                      subplot_row_col_n=subplot_row_col_n,
                                                      show_name=True,
                                                      name_size=10)
-    #gfig, gax, gproj = plotting.map_google(extent, zoom=12,
-    #                                       fig=fig, subplot_row_col_n=subplot_row_col_n,
-    #                                       draw_gridlines=draw_gridlines,
-    #                                       gridlines=gridlines)
-
-    #plotting.map_add_locations(['waroona'],text=['Waroona'],dx=.03,dy=-.006)
-    #plotting.map_add_locations(['fire_waroona'],text=['F160'],dx=-.001,dy=-.006)
-
+    
+    # add waroona and waroona fire if we're over there
+    latlons = plotting._latlons_
+    if extent[0]<latlons['waroona'][1]: 
+        plotting.map_add_nice_text(gax, 
+                                   latlons=[latlons['waroona'],latlons['fire_waroona']], 
+                                   texts=['Waroona',''],
+                                   fontcolors='wheat',
+                                   markers=['o','*'], 
+                                   markercolors=['grey','red'])
+    
     # plot contours at each hour
     utcstamp=[]
     for ii,dt in enumerate(ftimes[hourinds]):
@@ -170,19 +174,26 @@ def fireplan(ff, fire_contour_map = 'autumn',
     final_line=plt.contour(lon,lat,ff_f[-1].data.data.T, np.array([0]), 
                            linestyles='dotted',
                            colors='cyan', linewidths=1, transform=crs_data)
-    plt.clabel(final_line,[0],fmt=ftimes[-1].strftime('%H:%M'), inline=True)
+    clbls = plt.clabel(final_line,[0],fmt=ftimes[-1].strftime('%H:%M'), inline=True, color='wheat')
+    plt.setp(clbls, path_effects=[patheffects.withStroke(linewidth=3, foreground="k")])
 
     ## Add tiny colour bar showing overall time of fire
     if show_cbar:
+        # create an axis somewhere to add a colorbar
         cax = fig.add_axes(cbar_XYWH)
         #cax.axes.get_xaxis().set_visible(False)
-        cax.axes.get_yaxis().set_visible(False)
+        cax.axes.get_yaxis().set_visible(False) # horizontal alignment, no yax
         cbar = matplotlib.colorbar.ColorbarBase(cax,cmap=plt.get_cmap(fire_contour_map), orientation='horizontal')
         cbar.set_ticks([0,1])
         cbar.set_ticklabels([utcstamp[0],utcstamp[-1]])
-        plt.sca(gax) # return focus to newly created plot
+        # make xtick labels have black outline on wheat text color
+        cbxtick_obj = plt.getp(cax, 'xticklabels') # get xtick labels
+        plt.setp(cbxtick_obj, color='wheat',
+                 path_effects=[patheffects.withStroke(linewidth=3, foreground="k")])
+        # return focus to newly created plot
+        plt.sca(gax)
 
-    return gfig, gax, gproj
+    return fig, gax, gproj
 
 def fireplan_summary(model_run='waroona_run1'):
     '''
@@ -266,9 +277,12 @@ def fire_power_waroona():
         _, ax, gproj = fireplan(ff,
                                 fig=fig, subplot_row_col_n=[2,1,1],
                                 show_cbar=True, cbar_XYWH=[.2,.64,.2,.02])
-
-        plotting.map_add_locations(['fire_waroona_upwind'], text=['PFT'],
-                                   dx=-.001, dy=-.006, proj=ccrs.PlateCarree())
+        
+        plotting.map_add_nice_text(ax,
+                                   latlons=[plotting._latlons_['fire_waroona_upwind']],
+                                   texts='PFT',)
+        #plotting.map_add_locations(['fire_waroona_upwind'], text=['PFT'],
+        #                           dx=-.001, dy=-.006, proj=ccrs.PlateCarree())
         
         plt.title('Hourly fire front contour')
         ## ADD SUBSET RECTANGLE
@@ -317,6 +331,17 @@ def fire_power_waroona():
 if __name__=='__main__':
     ### Run the stuff
 
-    fireplan_summary(model_run='waroona_run1')
-    fireplan_summary(model_run='waroona_old')
+    # Add nice figure all on it's own:
+    # read all the fire data
+    for mr in ['waroona_run1','waroona_old']:
+        extent = plotting._extents_['waroonaz'] # waroona extent
+        ff, = fio.read_fire(model_run=mr, dtimes=None,
+                           extent=extent, firefront=True)
+        fireplan(ff, show_cbar=True, cbar_XYWH=[.2,.24,.2,.02])
+        fio.save_fig(mr,_sn_,'fire_outline',plt,dpi=300)
+    
+        # Now run summary
+        fireplan_summary(model_run=mr)
     fire_power_waroona()
+    
+    

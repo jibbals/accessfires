@@ -13,6 +13,7 @@ import matplotlib.pyplot as plt
 from matplotlib import ticker, colors, patches
 import numpy as np
 from netCDF4 import Dataset
+import pandas
 
 from datetime import datetime, timedelta
 import timeit
@@ -31,39 +32,76 @@ import iris
 import iris.quickplot as qplt
 from iris.experimental.equalise_cubes import equalise_attributes
 
-#### SETUP PLOTTING:
-plotting.init_plots()
+### CODE
+"""
+AWS='wagerup', model_run='waroona_run1',dtoffset=timedelta(hours=8)):
 
-### DATETIMES FOR UM AND FIRE OUTPUT
-um_dtimes = np.array([datetime(2016,1,5,15,10) + timedelta(hours=x) for x in range(24)])
-ff_dtimes = np.array([datetime(2016,1,5,15,1) +  timedelta(hours=x/60.) for x in range(1440)])
-LT_offset = timedelta(hours=8) # AWST = UTC+8
+compare site to model run
+"""
+AWS='wagerup'
+model_run='waroona_run1'
+dtoffset=timedelta(hours=8) # AWST offset
+lat,lon = plotting._latlons_['wagerup']
+extent = [lon-.02, lon+.02, lat-.02, lat+.02] # just grab real close to latlon
+compare_list = ['Wind direction','Wind speed', 'Pressure', 'Relative humidity','Temperature']
 
-dtime0 = um_dtimes[0]
-dtimeE = um_dtimes[-1]
+## Read AWS: 
+if AWS == 'wagerup':
+    df_aws, aws_attrs = fio.read_AWS_wagerup() 
 
-##### TEST CODE HERE
+## Read Model output: need wind direction, relative humidity to be added
+data_model0 = fio.read_model_run(model_run, fdtime=datetime(2016,1,5,15), extent=extent, add_topog=True, add_winds=True, add_RH=True, add_z=True)
+print(data_model0)
+wanted_cube_names=['wind_direction','s','air_pressure','relative_humidity','air_temperature', 'z_th', 'surface_altitude']
+#Just want time and level at our location
+data_model = data_model0.extract(wanted_cube_names)
+for i in range(len(data_model)):
+    data_model[i] = data_model[i].interpolate([('longitude',lon), ('latitude',lat)],
+                                              iris.analysis.Linear())
 
+# which model levels represent 10 and 30m?
+z, topog = data_model.extract(['z_th','surface_altitude'])
+data_model.remove(z)
+data_model.remove(topog)
+# height above ground level
+agl = z.data - topog.data
+agl_coord = iris.coords.AuxCoord(agl, var_name='height_agl', units='m')
+agl_coord.guess_bounds()
 
-extent = plotting._extents_['waroona']
-model_version='waroona_old'
+# interpolate onto 1m, 10m, and 30m levels
+dict_model = {}
+heights = [1,10,30]
+for i in range(len(data_model)):
+    data_model[i].add_aux_coord(agl_coord,1)
+    # interpolate to 1, 10, 30
+    model_cube = data_model[i].interpolate([('height_agl',heights)], iris.analysis.Linear())
+    
+    # make time series for each vertical level in a dictionary
+    for zi in range(len(heights)):
+        cubedata = model_cube[:,zi].data
+        if isinstance(cubedata, np.ma.MaskedArray):
+            cubedata = cubedata.data
+        dict_model[model_cube.name()+str(heights[zi])]=cubedata
+    
 
-dpath = fio.model_outputs[model_version]['path']
-topogpath = fio.model_outputs[model_version]['topog']
+dtstr = [(dt+dtoffset).strftime("%Y-%m-%d %H:%M:%S") for dt in utils.dates_from_iris(data_model[0])]
+dict_model['WAST']=dtstr
 
-allcubes=None
+print(dict_model)
 
-dtimes = [datetime(2016,1,6,7), datetime(2016,1,6,8)]
-subdtimes = [datetime(2016,1,6,7,30) + timedelta(minutes=30*d) for d in range(3)]
-oldoldsubdtimes = [datetime(2016, 1, 6, 15, 15), datetime(2016, 1, 7, 6, 15), datetime(2016, 1, 7, 13, 45)]
-#run1 = fio.read_waroona_run1(dtimes[0],extent=extent)
-#print(run1)
+df_model = pandas.DataFrame(dict_model)
+df_model['WAST'] = pandas.to_datetime(df_model['WAST'])
+# set the datetime column to be the index
+df_model = df_model.set_index('WAST')
 
-print(dtimes)
-print(subdtimes)
-#subdtimes=None
+# Merge the cubes?
+# outer join gets the union, inner join gets intersection
+df_both = pandas.merge(df_aws,df_model, how='outer', left_index=True, right_index=True)
+print(df_both.loc['2016-01-05 23'])
+#for cube,cubename in zip([wdc,wsc,pc,rhc,tc],['])
+#wd = wdc.
 
+# Create dataframe with date indices
 
-from fireplan import pft_altitude_vs_pressure
-pft_altitude_vs_pressure(model_run='waroona_old',mbar_to_watch=680,datetimes=[datetime(2016,1,6,6)])
-plt.show()
+# merge with AWS dataframe
+# Send to the plotting hole

@@ -39,58 +39,56 @@ _files_sirivan_ = sorted(glob('data/sirivan/umnsaa_pc*.nc'))
 model_outputs = {
         # Attemp to recreate 'old' run weather and pyrocb
         'waroona_run2':{
-                'path':'data/waroona_run2/',
-                'topog':'',
-                'filedates':None,
-                'run':'Run in September 2019',
-                'origdir':'/short/en0/hxy548/tmp/waroona/0p3/',
-                'origfiredir':''},
+            'path':'data/waroona_run2/',
+            'topog':'',
+            'filedates':None,
+            'run':'Run in September 2019',
+            'origdir':'/short/en0/hxy548/tmp/waroona/0p3/',
+            'origfiredir':''},
         # Run 1 was the first one I looked at, with east west rolls and no pyrocb
         'waroona_run1':{
-                'path':'data/waroona_run1/',
-                'topog':'umnsaa_2016010515_slv.nc',
-                'filedates':np.array([datetime(2016,1,5,15) + timedelta(hours=x) for x in range(24)]),
-                'run':'Run in august 2019',
-                'origdir':'/short/en0/hxy548/cylc-run/au-aa799/share/cycle/20160105T1500Z/waroona/0p3/ukv_os38/um/',
-                'origfiredir':'/short/en0/hxy548/tmp/waroona/0p3/'},
+            'path':'data/waroona_run1/',
+            'topog':'umnsaa_2016010515_slv.nc',
+            'filedates':np.array([datetime(2016,1,5,15) + timedelta(hours=x) for x in range(24)]),
+            'run':'Run in august 2019',
+            'origdir':'/short/en0/hxy548/cylc-run/au-aa799/share/cycle/20160105T1500Z/waroona/0p3/ukv_os38/um/',
+            'origfiredir':'/short/en0/hxy548/tmp/waroona/0p3/'},
         # Old run had pyrocb but also lots of high clouds and hooked F160 bases
         'waroona_old':{
-                'path':'data/waroona_old/',
-                'topog':'umnsaa_pa2016010515.nc',
-                'filedates':np.array([datetime(2016,1,5,15) + timedelta(hours=x) for x in range(18)]),
-                'run':'Run in August 2018',
-                'origdir':'/g/data1a/en0/mxp548/access-fire/waroona/run3/accessdata/',
-                'origfiredir':'/short/en0/mxp548/cylc-run/au-aa714/work/20160105T1500Z/waroona_0p4_ukv_os38_um_fcst_000/'},
+            'path':'data/waroona_old/',
+            'topog':'umnsaa_pa2016010515.nc',
+            'filedates':np.array([datetime(2016,1,5,15) + timedelta(hours=x) for x in range(18)]),
+            'run':'Run in August 2018',
+            'origdir':'/g/data1a/en0/mxp548/access-fire/waroona/run3/accessdata/',
+            'origfiredir':'/short/en0/mxp548/cylc-run/au-aa714/work/20160105T1500Z/waroona_0p4_ukv_os38_um_fcst_000/'},
         # Old Old run has bad lat/lons...
         'waroona_oldold':{
-                'path':'data/waroona_oldold/',
-                'topog':'stage5_sfc_orog.nc',
-                'filedates':None,
-                'run':'Run in october 2016',
-                'origdir':'/g/data1/en0/rjf548/fires/waroona.2016010615.vanj'},
-                 }
+            'path':'data/waroona_oldold/',
+            'topog':'stage5_sfc_orog.nc',
+            'filedates':None,
+            'run':'Run in october 2016',
+            'origdir':'/g/data1/en0/rjf548/fires/waroona.2016010615.vanj'
+            },
+        }
 
 ###
 ## METHODS
 ###
-# Couldn't import utils, just copying this function for now
-def potential_temperature(p,T):
-    '''
-    calculate theta from pressure and air temperature
-    # Potential temperature based on https://en.wikipedia.org/wiki/Potential_temperature
-    # with gas constant R = 287.05 and specific heat capacity c_p = 1004.64
-    '''
-    nt,nz,ny,nx = p.shape
-    Ta  = T[:,0:1,:,:] # [t,1,lat,lon] at surface
-    repTa = np.repeat(Ta[:,:,:,:], nz, axis=1) # repeat Ta along z axis
-    assert np.all(repTa[:,0,:,:] - repTa[:,1,:,:] == 0), "Repeated z dim is not the same"
-    return repTa*(1e5/p)**(287.05/1004.64)
+
 
 def read_AWS_wagerup():
     '''
     Read AWS csv file into pandas dataframe and return the frame
     30m wind direction is modulated to [0,360] range (was [-360,360]??)
     units and descriptions are read too
+    
+    Data details:
+    McCaw, L., Burrows, N., Beecham, B., and Rampant, P. (2016). Reconstruction of
+    the spread and behaviour of the Waroona bushfire (Perth Hills 68) 6-7
+    January 2016. Government of Western Australia Department of Parks and
+    Wildlife.
+    https://library.dbca.wa.gov.au/static/FullTextFiles/072096.pdf
+    
     RETURNS: dataframe, dictionary
 
     '''
@@ -224,7 +222,7 @@ def read_fire(model_run='waroona_run1',
 
 def read_model_run(model_version, fdtime=None, subdtimes=None, extent=None,
                    add_topog=True, add_z=False, add_winds=False, add_theta=False,
-                   add_dewpoint=False):
+                   add_dewpoint=False, add_RH=False):
     '''
     Read output from particular model run into cubelist, generally concatenates
     along the time dimension.
@@ -245,20 +243,35 @@ def read_model_run(model_version, fdtime=None, subdtimes=None, extent=None,
 
     RETURNS:
         iris.cube.CubeList with standardised dimensions [time, level, latitude, longitude]
-
+    
+    0: air_pressure / (Pa)                 (time: 6; model_level_number: 140; latitude: 14; longitude: 14)
+    1: air_pressure_at_sea_level / (Pa)    (time: 6; latitude: 14; longitude: 14)
+    2: air_pressure_rho / (Pa)             (time: 6; model_level_number: 140; latitude: 14; longitude: 14)
+    3: air_temperature / (K)               (time: 6; model_level_number: 140; latitude: 14; longitude: 14)
+    4: mass_fraction_of_cloud_ice_in_air / (kg kg-1) (time: 6; model_level_number: 140; latitude: 14; longitude: 14)
+    5: mass_fraction_of_cloud_liquid_water_in_air / (kg kg-1) (time: 6; model_level_number: 140; latitude: 14; longitude: 14)
+    6: specific_humidity / (kg kg-1)       (time: 6; model_level_number: 140; latitude: 14; longitude: 14)
+    7: surface_air_pressure / (Pa)         (time: 6; latitude: 14; longitude: 14)
+    8: surface_temperature / (K)           (time: 6; latitude: 14; longitude: 14)
+    9: upward_air_velocity / (m s-1)       (time: 6; model_level_number: 140; latitude: 14; longitude: 14)
+    10: x_wind / (m s-1)                    (time: 6; model_level_number: 140; latitude: 14; longitude: 14)
+    11: y_wind / (m s-1)                    (time: 6; model_level_number: 140; latitude: 14; longitude: 14)
     # if cloud stuff is there
-    9: qc / (g kg-1)                       (time: 2; model_level_number: 140; latitude: 88; longitude: 106)
-    ## if add_topog is True
-    10: surface_altitude / (m)                        (latitude: 88; longitude: 106)
-    ## if add_z is True
-    11: z_th / (m)                         (time: 2; model_level_number: 140; latitude: 88; longitude: 106)
-    ## Added if add_winds is True
-    12: u / (m s-1)                    (time: 2; model_level_number: 140; latitude: 88; longitude: 106)
-    13: v / (m s-1)                    (time: 2; model_level_number: 140; latitude: 88; longitude: 106)
-    14: s / (m s-1)                    (time: 2; model_level_number: 140; latitude: 88; longitude: 106)
-    ## Added if add_dewpoint is True
-    15: vapour_pressure / (100 Pa)     (time: 2; model_level_number: 140; latitude: 88; longitude: 106)
-    16: dewpoint_temperature / (K)     (time: 2; model_level_number: 140; latitude: 88; longitude: 106)
+      : qc / (g kg-1)                       (time: 2; model_level_number: 140; latitude: 88; longitude: 106)
+    ## add_topog
+      : surface_altitude / (m)              (latitude: 14; longitude: 14)
+    ## add_z
+      : z_th / (m)                         (time: 2; model_level_number: 140; latitude: 88; longitude: 106)
+    ## add_winds
+      : u / (m s-1)                    (time: 2; model_level_number: 140; latitude: 88; longitude: 106)
+      : v / (m s-1)                    (time: 2; model_level_number: 140; latitude: 88; longitude: 106)
+      : s / (m s-1)                    (time: 2; model_level_number: 140; latitude: 88; longitude: 106)
+      : wind_direction / (degrees)          (time: 6; model_level_number: 140; latitude: 14; longitude: 14)
+    ## add_dewpoint
+      : vapour_pressure / (100 Pa)     (time: 2; model_level_number: 140; latitude: 88; longitude: 106)
+      : dewpoint_temperature / (K)     (time: 2; model_level_number: 140; latitude: 88; longitude: 106)
+    ## add_RH
+      : relative_humidity / (1)             (time: 6; model_level_number: 140; latitude: 14; longitude: 14)
     '''
 
     ## make sure we have model run data
@@ -422,18 +435,34 @@ def read_model_run(model_version, fdtime=None, subdtimes=None, extent=None,
                            iris.analysis.Linear())
         v = v1.interpolate([('latitude',u1.coord('latitude').points)],
                            iris.analysis.Linear())
-        # Get wind speed cube using hypotenuse of u,v
-        s = iris.analysis.maths.apply_ufunc(np.hypot,u,v)
-        s.units = 'm s-1'
         # add standard names for these altered variables:
         iris.std_names.STD_NAMES['u'] = {'canonical_units': 'm s-1'}
         iris.std_names.STD_NAMES['v'] = {'canonical_units': 'm s-1'}
         u.standard_name='u'
         v.standard_name='v'
+        # Get wind speed cube using hypotenuse of u,v
+        s = iris.analysis.maths.apply_ufunc(np.hypot,u,v)
+        s.units = 'm s-1'
         s.var_name='s' # s doesn't come from a var with a std name so can just use var_name
+        
+        # Get wind direction using arctan of y/x
+        wind_dir_rads = iris.analysis.maths.apply_ufunc(np.arctan2,v,u)
+        wind_dir = (wind_dir_rads.data * 180/np.pi)%360
+        wdcube = iris.cube.Cube(wind_dir,
+                                var_name='wind_direction',
+                                units='degrees',
+                                dim_coords_and_dims=[(s.coord('time'),0),
+                                                     (s.coord('model_level_number'),1),
+                                                     (s.coord('latitude'),2),
+                                                     (s.coord('longitude'),3)])
+        wdcube.units = 'degrees'
+        wdcube.var_name='wind_direction'
+        
+        # add cubes to list
         allcubes.append(u)
         allcubes.append(v)
         allcubes.append(s)
+        allcubes.append(wdcube)
 
     if add_dewpoint:
         # Take pressure and relative humidity
@@ -473,7 +502,7 @@ def read_model_run(model_version, fdtime=None, subdtimes=None, extent=None,
     if add_theta:
         # Estimate potential temp
         p, Ta = allcubes.extract(['air_pressure','air_temperature'])
-        theta = potential_temperature(p.data,Ta.data)
+        theta = utils.potential_temperature(p.data,Ta.data)
         # create cube
         iris.std_names.STD_NAMES['potential_temperature'] = {'canonical_units': 'K'}
         cubetheta = iris.cube.Cube(theta, standard_name="potential_temperature",
@@ -483,6 +512,26 @@ def read_model_run(model_version, fdtime=None, subdtimes=None, extent=None,
                                                         (p.coord('latitude'),2),
                                                         (p.coord('longitude'),3)])
         allcubes.append(cubetheta)
+    
+    if add_RH:
+        # estimate relative humidity
+        q,T = allcubes.extract(['specific_humidity','air_temperature'])
+        # compute RH from specific and T in kelvin
+        orig_Tunits=T.units
+        T.convert_units('K')
+        RH = utils.relative_humidity_from_specific(q.data.data, T.data.data)
+        # restore T units (just in case)
+        T.convert_units(orig_Tunits)
+        # turn RH into a cube and add to return list
+        iris.std_names.STD_NAMES['relative_humidity'] = {'canonical_units': '1'}
+        cubeRH = iris.cube.Cube(RH, standard_name="relative_humidity",
+                                   var_name="RH", units="1",
+                                   dim_coords_and_dims=[(q.coord('time'),0),
+                                                        (q.coord('model_level_number'),1),
+                                                        (q.coord('latitude'),2),
+                                                        (q.coord('longitude'),3)])
+        allcubes.append(cubeRH)
+    
     return allcubes
 
 
@@ -943,7 +992,7 @@ def read_sirivan(fpaths, toplev=80, keepvars=None):
 
     # Finally chop the top
     for varname in fulldata:
-		# Just read up to toplev
+        # Just read up to toplev
         data[varname] = data[varname][:,:toplev,:,:]
 
     return data

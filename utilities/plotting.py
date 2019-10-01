@@ -53,6 +53,7 @@ _extents_['waroonaz']    = [115.92, 116.19, -32.92,-32.83] # zoom in on fire
 
 _latlons_['waroona']    = -32.84, 115.93  # suburb centre: -32.8430, 115.8526
 _latlons_['yarloop']    = -32.96, 115.90  # suburb centre: -32.9534, 115.9124
+_latlons_['wagerup']    = -32.92, 115.91  # AWS at wagerup, 40 m asl
 _latlons_['perth']      = -31.9505, 115.8605
 _latlons_['fire_waroona'] = -32.89, 116.17
 _latlons_['fire_waroona_upwind'] = -32.89 -0.004, 116.17+0.009 # ~ 1km from fire
@@ -417,13 +418,13 @@ def map_contourf(extent, data, lat,lon, title="",
     plt.xticks([]); plt.yticks([])
     return cb
 
-def map_satellite(extent = _extents_['waroona'], fig=None, subplot_row_col_n=None,
+def map_satellite(extent = _extents_['waroona'], 
+                  fig=None, subplot_row_col_n=None,
                   show_name=True, name_size=10):
     '''
     use NASA GIBS: Global Imagery Browse Services, to get high res satellite image: 
         https://wiki.earthdata.nasa.gov/display/GIBS/GIBS+Available+Imagery+Products#expand-SurfaceReflectance16Products
     
-    TODO make extent, and points/text arguments
     '''
     URL = 'http://gibs.earthdata.nasa.gov/wmts/epsg4326/best/wmts.cgi'
     wmts = WebMapTileService(URL)
@@ -455,28 +456,13 @@ def map_satellite(extent = _extents_['waroona'], fig=None, subplot_row_col_n=Non
     else:
         nrows,ncols,n= subplot_row_col_n
         ax = fig.add_subplot(nrows,ncols,n, projection=plot_CRS)
-    #ax = fig.add_axes(axextent, projection=plot_CRS)
+    
+    #ax = fig.add_axes([0,0,1,1], projection=plot_CRS)
     ax.set_xlim((x0, x1))
     ax.set_ylim((y0, y1))
-    # add map tile from web service
-    ax.add_wmts(wmts, layer, wmts_kwargs={'time': date_str})
     
-    # add points from arguments:
-    # add label for waroona
-    lat_w,lon_w = _latlons_['waroona']
-    path_effects=[patheffects.Stroke(linewidth=5, foreground='k'), patheffects.Normal()]
-    ax.plot(lon_w, lat_w, color='grey', linewidth=0, marker='o', markersize=None,
-            transform=geodetic_CRS,
-            path_effects=path_effects)
-    txt = ax.text(lon_w, lat_w, 'Waroona', fontsize=8, color='wheat',
-                  transform=geodetic_CRS)
-    txt.set_path_effects([patheffects.withStroke(linewidth=3,
-                                                 foreground='black')])
-    # add fire ignition
-    lat_f,lon_f = _latlons_['fire_waroona']
-    cs=ax.plot(lon_f, lat_f, color='red', linewidth=0, marker='*', markersize=None,
-               transform=geodetic_CRS,
-               path_effects=path_effects)
+    ## add map tile from web service
+    ax.add_wmts(wmts, layer, wmts_kwargs={'time': date_str})
     
     if show_name:
         # add layer name
@@ -490,6 +476,54 @@ def map_satellite(extent = _extents_['waroona'], fig=None, subplot_row_col_n=Non
     
     return fig, ax, plot_CRS, geodetic_CRS
 
+def map_add_nice_text(ax, latlons, texts=None, markers=None, 
+                      fontsizes=12, fontcolors='wheat', markercolors='grey',
+                      outlinecolors='k'):
+    '''
+    ARGUMENTS:
+        ax: plot axis
+        latlons: iterable of (lat, lon) pairs
+        texts: iterable of strings, optional
+        markers: iterable of characters, optional
+    '''
+    ## Adding to a map using latlons can use the geodetic transform
+    geodetic_CRS = ccrs.Geodetic()
+    
+    # Make everything iterable
+    if texts is None:
+        texts = ''*len(latlons)
+    if markers is None:
+        markers = 'o'*len(latlons)
+    if isinstance(fontsizes, (int,float)):
+        fontsizes = [fontsizes]*len(latlons)
+    if isinstance(fontcolors, str):
+        fontcolors = [fontcolors]*len(latlons)
+    if isinstance(markercolors, str):
+        markercolors = [markercolors]*len(latlons)
+    if isinstance(outlinecolors, str):
+        outlinecolors = [outlinecolors]*len(latlons)
+
+    
+    
+    # add points from arguments:
+    for (lat, lon), text, marker, mcolor, fcolor, fsize, outlinecolor in zip(latlons, texts, markers, markercolors, fontcolors, fontsizes, outlinecolors):
+        
+        # outline for text/markers
+        marker_effects=[patheffects.Stroke(linewidth=5, foreground=outlinecolor), patheffects.Normal()]
+        text_effects = [patheffects.withStroke(linewidth=3, foreground=outlinecolor)]
+        
+        # Add the point to the map with patheffect
+        ax.plot(lon, lat, color=mcolor, linewidth=0, marker=marker, markersize=None,
+                transform=geodetic_CRS,
+                path_effects=marker_effects)
+        
+        if len(text)>0:
+            # Add text to map
+            txt = ax.text(lon, lat, text, fontsize=fsize, color=fcolor,
+                          transform=geodetic_CRS)
+            # Add background (outline)
+            txt.set_path_effects(text_effects)
+    
 def map_topography(extent, topog,lat,lon,title="Topography"):
     '''
     Show topography map matching extents
