@@ -91,7 +91,8 @@ if AWS == 'wagerup':
     df_aws, aws_attrs = fio.read_AWS_wagerup() 
 
 ## Read Model output: need wind direction, relative humidity to be added
-data_model0 = fio.read_model_run(model_run, fdtime=datetime(2016,1,5,15), extent=extent, add_topog=True, add_winds=True, add_RH=True, add_z=True)
+umhours = [ datetime(2016,1,5,15) + timedelta(hours=x) for x in range(10) ]
+data_model0 = fio.read_model_run(model_run, fdtime=umhours, extent=extent, add_topog=True, add_winds=True, add_RH=True, add_z=True)
 print(data_model0)
 
 wanted_cube_names=['wind_direction','s','air_pressure','relative_humidity','air_temperature', 'z_th', 'surface_altitude']
@@ -145,7 +146,10 @@ df_model = df_model.set_index('WAST')
 # outer join gets the union, inner join gets intersection
 df_both = pandas.merge(df_aws,df_model, how='outer', left_index=True, right_index=True)
 print(df_both.loc['2016-01-05 23'])
-df_both_subset = df_both.loc['2016-01-05 18':'2016-01-06 05']
+showrange = [ (umhours[0]+dtoffset - timedelta(hours=5)).strftime("%Y-%m-%d %H"),
+              (umhours[-1]+dtoffset + timedelta(hours=5)).strftime("%Y-%m-%d %H")
+              ]
+df_both_subset = df_both.loc[showrange[0]:showrange[1]]
 
 #for cube,cubename in zip([wdc,wsc,pc,rhc,tc],['])
 #wd = wdc.
@@ -156,13 +160,14 @@ df_both_subset = df_both.loc['2016-01-05 18':'2016-01-06 05']
 #'Solar radiation':['SR'],
 #'Temperature':['T','T10','T30'],
 
-__AWS_PLOTS__['Wind direction'].extend(['wind_direction%d'%d for d in [1,10,30]])
-__AWS_PLOTS__['Wind speed'].extend(['s%d'%d for d in [1,10,30]])
-__AWS_PLOTS__['Pressure'].extend(['air_pressure%d'%d for d in [1,10,30]])
-__AWS_PLOTS__['Relative humidity'].extend(['relative_humidity%d'%d for d in [1,10,30]])
-__AWS_PLOTS__['Temperature'].extend(['air_temperature%d'%d for d in [1,10,30]])
+subplots = __AWS_PLOTS__
+subplots['Wind direction'].extend(['wind_direction%d'%d for d in [1,10,30]])
+subplots['Wind speed'].extend(['s%d'%d for d in [1,10,30]])
+subplots['Pressure'].extend(['air_pressure%d'%d for d in [1,10,30]])
+subplots['Relative humidity'].extend(['relative_humidity%d'%d for d in [1,10,30]])
+subplots['Temperature'].extend(['air_temperature%d'%d for d in [1,10,30]])
 
-df_time_series(df_both_subset, subplots=__AWS_PLOTS__)
+df_time_series(df_both_subset, subplots=subplots)
 # Create dataframe with date indices
 
 # merge with AWS dataframe
