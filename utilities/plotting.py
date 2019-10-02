@@ -73,6 +73,7 @@ _latlons_['pyrocb_waroona2'] = 0,0 # 1100-1400 second day
 # Sir Ivan locations
 _extents_['sirivan']    = [149.2, 150.4, -32.4, -31.6]
 _extents_['sirivans']   = [145,154, -34, -30]
+_extents_['sirivan_linescans'] = [168,221, ]
 _latlons_['dunedoo']    = -31.99, 149.53
 _latlons_['uarbry']      = -32.047280, 149.71
 _latlons_['cassillis']      = -32.01, 150.0
@@ -358,7 +359,8 @@ def map_add_locations(namelist, text=None, proj=None,
         
 
 
-def map_google(extent,zoom=10,fig=None,subplot_row_col_n=None,draw_gridlines=True,gridlines=None):
+def map_google(extent,zoom=10,fig=None,subplot_row_col_n=None, 
+               subplot_extent=None, draw_gridlines=True,gridlines=None):
     '''
     Draw a map with google image tiles over given EWSN extent
     if this will be part of a larger figure, subplot_row_col_n=[3,3,4] will put it there
@@ -372,11 +374,13 @@ def map_google(extent,zoom=10,fig=None,subplot_row_col_n=None,draw_gridlines=Tru
     if fig is None:
         fig = plt.figure()
     
-    if subplot_row_col_n is None:
-        ax = fig.add_subplot(1, 1, 1, projection=gproj)#stamen_terrain.crs)
-    else:
+    if subplot_extent is not None:
+        ax = fig.add_axes(subplot_extent, projection=gproj)
+    elif subplot_row_col_n is not None:
         nrows,ncols,n= subplot_row_col_n
         ax = fig.add_subplot(nrows,ncols,n, projection=gproj)
+    else:
+        ax = fig.add_subplot(1,1,1, projection=gproj)
 
     if draw_gridlines:
         map_draw_gridlines(ax, gridlines=gridlines)
@@ -423,6 +427,7 @@ def map_contourf(extent, data, lat,lon, title="",
 
 def map_satellite(extent = _extents_['waroona'], 
                   fig=None, subplot_row_col_n=None,
+                  subplot_extent=None,
                   show_name=True, name_size=10):
     '''
     use NASA GIBS: Global Imagery Browse Services, to get high res satellite image: 
@@ -454,13 +459,14 @@ def map_satellite(extent = _extents_['waroona'],
         fig = plt.figure(figsize=(xsize, ysize), dpi=100)
 
     # create plot axes
-    if subplot_row_col_n is None:
-        ax = fig.add_subplot(1,1,1, projection=plot_CRS)
-    else:
+    if subplot_extent is not None:
+        ax = fig.add_axes(subplot_extent, projection=plot_CRS)
+    elif subplot_row_col_n is not None:
         nrows,ncols,n= subplot_row_col_n
         ax = fig.add_subplot(nrows,ncols,n, projection=plot_CRS)
-    
-    #ax = fig.add_axes([0,0,1,1], projection=plot_CRS)
+    else:
+        ax = fig.add_subplot(1,1,1, projection=plot_CRS)
+        
     ax.set_xlim((x0, x1))
     ax.set_ylim((y0, y1))
     
