@@ -116,8 +116,8 @@ def read_AWS_wagerup():
     dates0 = [datetime.strptime(dstr, "%d/%m/%Y %H:%M") for dstr in wagerup.loc[:,'WAST']]
     dates1 = [datetime.strptime(dstr, "%d/%m/%Y %H:%M")-awst_offset for dstr in wagerup.loc[:,'WAST']]
     # DATA APPEARS TO BE IN UTC, WAST IS MISLEADING
-    wagerup_attrs['utc'] = dates0
-    wagerup_attrs['local_time'] = dates1
+    wagerup_attrs['utc0'] = {'units':'%Y%m%d %H%M%S','desc':'first date in utc: %s'%dates0[0].strftime("%Y%m%d %H%M%S")}
+    wagerup_attrs['local_time0'] = {'units':'%Y%m%d %H%M%S','desc':'first date in local time: %s'%dates1[0].strftime("%Y%m%d %H%M%S")}
 
     # convert column to datetime64 in the dataframe
     wagerup['WAST'] = pandas.to_datetime(wagerup['WAST'], dayfirst=True)
