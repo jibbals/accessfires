@@ -101,6 +101,7 @@ _transects_['waroona6'] = [-32.87   , __x0__], [-32.89   , __x1__]
 _transects_['pyrocb_waroona'] = [-32.89 , 115.9 ], [-32.88   , __x1__]
 _transects_['pyrocbx1_waroona'] = [-32.95, 116.09], [-32.78   , 116.16]
 _transects_['pyrocbx2_waroona'] = [-32.95, 116.15], [-32.78   , 116.09]
+_transects_['emberstorm1'] = [-32.82, __x0__], [-32.81, __x0__+.2] # emberstorm 
 
 # looking at sir ivan
 __si0__, __si1__ = 149.4, 149.9
@@ -412,8 +413,9 @@ def map_contourf(extent, data, lat,lon, title="",
     Show topography map matching extents
     '''
     
-    cb = plt.contourf(lon,lat,data, levels=clevs, cmap=cmap,norm=norm)
-        
+    cs = plt.contourf(lon,lat,data, levels=clevs, cmap=cmap,norm=norm)
+    cb = None
+    
     # set x and y limits to match extent
     xlims = extent[0:2] # East to West
     ylims = extent[2:] # South to North
@@ -423,7 +425,7 @@ def map_contourf(extent, data, lat,lon, title="",
     plt.title(title)
     ## Turn off the tick values
     plt.xticks([]); plt.yticks([])
-    return cb
+    return cs, cb
 
 def map_satellite(extent = _extents_['waroona'], 
                   fig=None, subplot_row_col_n=None,

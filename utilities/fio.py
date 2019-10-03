@@ -37,6 +37,15 @@ _files_sirivan_ = sorted(glob('data/sirivan/umnsaa_pc*.nc'))
 # TODO: Add sirivan run1 to model_outputs list
 
 model_outputs = {
+        # Sirivan high resolution run around June (this year)
+        'sirivan_run1':{
+            'path':'data/sirivan_run1/',
+            'topog':'umnsaa_pa2017021121.nc',
+            'filedates':np.array([datetime(2017,2,11,21) + timedelta(hours=x) for x in range(24)]),
+            'run':'Run in June 2019?',
+            'origdir':'/short/en0/hxy548/cylc-run/au-aa860/share/cycle/20170211T2100Z/sirivan/0p3/ukv_os38/um',
+            'origfiredir':'/short/en0/hxy548/cylc-run/au-aa860/work/20170211T2100Z/sirivan_0p3_ukv_os38_um_fcst_000/' # permission denied right now
+            },
         # Attemp to recreate 'old' run weather and pyrocb
         'waroona_run2':{
             'path':'data/waroona_run2/',
@@ -75,6 +84,17 @@ model_outputs = {
 ## METHODS
 ###
 
+def _constraints_from_extent_(extent, constraints=None):
+    """
+    """
+    West,East,South,North = extent
+    constr_lons = iris.Constraint(longitude = lambda cell: West <= cell <= East )
+    constr_lats = iris.Constraint(latitude = lambda cell: South <= cell <= North )
+    if constraints is not None:
+        constraints = constraints & constr_lats & constr_lons
+    else:
+        constraints = constr_lats & constr_lons
+    return constraints
 
 def read_AWS_wagerup():
     '''
@@ -185,13 +205,7 @@ def read_fire(model_run='waroona_run1',
         fspath      = ddir+'fire_speed.01.nc'
 
     if extent is not None:
-        West,East,South,North = extent
-        constr_lons = iris.Constraint(longitude = lambda cell: West <= cell <= East )
-        constr_lats = iris.Constraint(latitude = lambda cell: South <= cell <= North )
-        if constraints is not None:
-            constraints = constraints & constr_lats & constr_lons
-        else:
-            constraints = constr_lats & constr_lons
+        constraints = _constraints_from_extent_(extent,constraints)
 
     # Build up cubelist based on which files you want to read
     cubelist = iris.cube.CubeList()
@@ -300,7 +314,13 @@ def read_model_run(model_version, fdtime=None, subdtimes=None, extent=None,
                 allcubes = cubelist
             else:
                 allcubes.extend(cubelist)
-
+    elif model_version=='sirivan_run1':
+        for dtime in fdtimes:
+            cubelist = read_sirivan_run1(dtime)
+            if allcubes is None:
+                allcubes = cubelist
+            else:
+                allcubes.extend(cubelist)
     elif model_version=='waroona_run1':
         for dtime in fdtimes:
             slv,ro1,th1,th2 = read_waroona_run1(dtime)
@@ -387,11 +407,9 @@ def read_model_run(model_version, fdtime=None, subdtimes=None, extent=None,
     ## Subset spatially
     # based on extent
     if extent is not None:
-        West,East,South,North = extent
-        constr_lons = iris.Constraint(longitude = lambda cell: West <= cell <= East )
-        constr_lats = iris.Constraint(latitude = lambda cell: South <= cell <= North )
+        constraints = _constraints_from_extent_(extent)
         for i in range(len(allcubes)):
-            allcubes[i] = allcubes[i].extract(constr_lats & constr_lons)
+            allcubes[i] = allcubes[i].extract(constraints)
 
     ## extras
     # Add cloud parameter at g/kg scale
@@ -563,13 +581,7 @@ def read_waroona_run1(dtime, constraints=None, extent=None):
 
     # If we just want a particular extent, subset to that extent using constraints
     if extent is not None:
-        West,East,South,North = extent
-        constr_lons = iris.Constraint(longitude = lambda cell: West <= cell <= East )
-        constr_lats = iris.Constraint(latitude = lambda cell: South <= cell <= North )
-        if constraints is not None:
-            constraints = constraints & constr_lats & constr_lons
-        else:
-            constraints = constr_lats & constr_lons
+        constraints = _constraints_from_extent_(extent,constraints)
 
     # 3 file types for new waroona output
     ## slx - single level output
@@ -627,13 +639,7 @@ def read_waroona_old(dtime, constraints=None, extent=None):
 
     # If we just want a particular extent, subset to that extent using constraints
     if extent is not None:
-        West,East,South,North = extent
-        constr_lons = iris.Constraint(longitude = lambda cell: West <= cell <= East )
-        constr_lats = iris.Constraint(latitude = lambda cell: South <= cell <= North )
-        if constraints is not None:
-            constraints = constraints & constr_lats & constr_lons
-        else:
-            constraints = constr_lats & constr_lons
+        constraints = _constraints_from_extent_(extent,constraints)
 
     path = ddir+'umnsaa_pc%s.nc'%dstamp
     varnames = ['mass_fraction_of_cloud_liquid_water_in_air',
@@ -701,15 +707,7 @@ def read_waroona_oldold(constraints=None, extent=None):
         zwind_path = ddir+'oldold_zwind_s5_subset.nc'
 
     if extent is not None:
-        West,East,South,North = extent
-        constr_lons = iris.Constraint(longitude = lambda cell: West <= cell <= East )
-        constr_lats = iris.Constraint(latitude = lambda cell: South <= cell <= North )
-
-        if constraints is None:
-            constraints = constr_lats & constr_lons
-        else:
-            constraints = constraints & constr_lats & constr_lons
-
+        constraints = _constraints_from_extent_(extent,constraints)
 
     ## Read data
     with warnings.catch_warnings():
@@ -759,6 +757,62 @@ def read_waroona_oldold(constraints=None, extent=None):
 
     return cubelist
 
+def read_sirivan_run1(dtime, constraints=None, extent=None):
+    '''
+    0: mass_fraction_of_cloud_liquid_water_in_air / (kg kg-1) (time: 2; model_level_number: 140; latitude: 88; longitude: 106)
+    1: mass_fraction_of_cloud_ice_in_air / (kg kg-1) (time: 2; model_level_number: 140; latitude: 88; longitude: 106)
+    2: upward_air_velocity / (m s-1)       (time: 2; model_level_number: 140; latitude: 88; longitude: 106)
+    3: air_pressure / (hPa)                (time: 2; model_level_number: 140; latitude: 88; longitude: 106)
+    4: air_temperature / (K)               (time: 2; model_level_number: 140; latitude: 88; longitude: 106)
+    5: x_wind / (m s-1)                    (time: 2; model_level_number: 140; latitude: 88; longitude: 106)
+    6: y_wind / (m s-1)                    (time: 2; model_level_number: 140; latitude: 88; longitude: 106)
+    7: air_pressure_at_sea_level / (Pa)    (time: 2; latitude: 88; longitude: 106)
+    8: specific_humidity / (kg kg-1)       (time: 2; model_level_number: 140; latitude: 88; longitude: 106)
+
+    '''
+    dstamp=dtime.strftime('%Y%m%d%H')
+    ddir = model_outputs['sirivan_run1']['path']
+    # First read topography
+
+    # If we just want a particular extent, subset to that extent using constraints
+    if extent is not None:
+        constraints = _constraints_from_extent_(extent,constraints)
+
+    path = ddir+'umnsaa_pc%s.nc'%dstamp
+    varnames = ['mass_fraction_of_cloud_liquid_water_in_air',
+                'mass_fraction_of_cloud_ice_in_air',
+                'upward_air_velocity', # m/s [t,z,lat,lon]
+                'air_pressure', # Pa [t,z,lat,lon]
+                'air_temperature', # K [lat,lon] ?
+                'air_temperature_0', # K [t, z, lat, lon]
+                'x_wind','y_wind', # m/s [t,z,lat,lon]
+                'air_pressure_at_sea_level', # Pa [time, lat, lon]
+                'specific_humidity', # kg/kg [lat,lon]
+                'specific_humidity_0', # kg/kg [t,z,lat,lon] #???
+                ]
+    cubes = read_nc_iris(path,constraints=constraints,keepvars=varnames)
+
+    # specific_humidity is the name of two variables, we just want the good one
+    shcubes = cubes.extract('specific_humidity')
+    if len(shcubes)==2:
+        sh,sh0 = shcubes
+        if len(sh.shape)==2:
+            cubes.remove(sh)
+        else:
+            cubes.remove(sh0)
+
+    # air_temperature is the name of two variables, we just want the good one
+    Tacubes = cubes.extract('air_temperature')
+    if len(Tacubes)==2:
+        Ta0,Ta = Tacubes
+        if len(Ta.shape)==2:
+            cubes.remove(Ta)
+        else:
+            cubes.remove(Ta0)
+
+    return cubes
+
+
 def read_topog(model_version, extent=None):
     '''
     Read topography cube
@@ -766,15 +820,11 @@ def read_topog(model_version, extent=None):
 
     ddir = model_outputs[model_version]['path']
 
+    constraints='surface_altitude'
     if extent is not None:
-        West,East,South,North = extent
-        constr_lons = iris.Constraint(longitude = lambda cell: West <= cell <= East )
-        constr_lats = iris.Constraint(latitude = lambda cell: South <= cell <= North )
-        topog, = read_nc_iris(ddir + model_outputs[model_version]['topog'],
-                              constraints = 'surface_altitude' & constr_lons & constr_lats)
-    else:
-        topog, = read_nc_iris(ddir + model_outputs[model_version]['topog'],
-                              constraints = 'surface_altitude')
+        constraints = _constraints_from_extent_(extent,constraints)
+    topog, = read_nc_iris(ddir + model_outputs[model_version]['topog'],
+                          constraints = constraints)
 
     return topog
 
@@ -809,194 +859,6 @@ def subset_time_iris(cube,dtimes,seccheck=121):
 
     # subset cube to desired times
     return cube[tinds]
-
-#======================================================
-#======================== SIR IVAN STUFF ==============
-#======================================================
-
-def read_pcfile(fpath, keepvars=None):
-    '''
-    Read a umnsaa_pc file, add some extra things such as potential temperature
-    TODO: Fix - currently won't work as it uses old Dataset method
-    '''
-    variables=read_nc(fpath,keepvars)
-
-    if 'air_pressure' in variables.keys():
-        p   = variables['air_pressure'][:,:,:,:] # [time,lev,lat,lon] in pascals
-        nt,nz,ny,nx = p.shape
-
-    # height data (z) based on P = P0 exp{ -z/H } with assumed scale height H
-    if np.all( [varname in variables.keys() for varname in ['air_pressure','air_pressure_at_sea_level']] ):
-        pmsl = variables['air_pressure_at_sea_level'][0,:,:] # [lev,lat,lon]
-        zth = np.zeros(np.shape(p))
-        for tstep in range(2):
-            zth[tstep] = -(287*300/9.8)*np.log(p[tstep]/pmsl[np.newaxis,:,:])
-
-        variables['zth']= zth
-
-    # Potential temperature based on https://en.wikipedia.org/wiki/Potential_temperature
-    # with gas constant R = 287.05 and specific heat capacity c_p = 1004.64
-    if np.all( [varname in variables.keys() for varname in ['air_pressure','air_temperature']] ):
-        theta = np.zeros(np.shape(p))
-        Ta  = variables['air_temperature'][:,:] # [lat,lon] at surface
-        repTa = np.repeat(Ta[np.newaxis,:,:], nz, axis=0) # repeat Ta along z axis
-        for tstep in range(2):
-            theta[tstep] = repTa*(1e5/p[tstep])**(287.05/1004.64)
-        variables['theta'] = theta
-
-    ## Destagger winds
-    #u = np.tile(np.nan,(nz,ny,nx))
-    if  np.all( [varname in variables.keys() for varname in ['x_wind','y_wind']] ):
-        u1  = variables['x_wind'][:,:,:,:] #[time,levs,lat,lon1] wind speeds are on their directional grid edges
-        v1  = variables['y_wind'][:,:,:,:] #[time,levs,lat1,lons]
-        u = np.tile(np.nan,u1.shape) # tile repeats the nan accross nz,ny,nx dimensions
-        u[:,:,:,1:] = 0.5*(u1[:,:,:,1:] + u1[:,:,:,:-1]) # interpolation of edges
-        v = 0.5*(v1[:,:,1:,:] + v1[:,:,:-1,:]) # interpolation of edges
-        s = np.hypot(u,v) # Speed is hypotenuse of u and v
-        ## HYPOT on this
-        # S[0,:,:,0] ARE ALL -5000
-        # S[1,:,:,0] ARE ALL NaN
-        s[:,:,:,0] = np.NaN # set that edge to NaN
-
-        variables['x_wind_destaggered'] = u
-        variables['y_wind_destaggered'] = v
-        variables['wind_speed'] = s
-
-
-    return variables
-
-def read_sirivan(fpaths, toplev=80, keepvars=None):
-    '''
-    Read a subset of the Sir Ivan model outputs
-    This will loop over the desired files, so RAM doesn't need to be more than 8GB hopefully
-
-    INPUTS:
-        fpaths is a list of files to read
-        toplev = highest model level to read (save some ram)
-        keepvars
-            set this if you just one one or two outputs over time
-    '''
-    if isinstance(fpaths, str):
-        fpaths = [fpaths]
-    # dictionary of data to keep
-    data = {}
-
-    ## first grab topography from pa vile
-    topog,latt,lont = read_topog(_topog_sirivan_)
-    data['topog']=topog
-
-    ## read first file
-    data0 = read_pcfile(fpaths[0],keepvars=keepvars)
-
-    # Keep dimensions:
-    dims = ['latitude','longitude',
-            'time_1', # how many time steps in file
-            'time_0', # time step of file
-            'model_level_number', # 140 levels
-            'pseudo_level', # 5 levels for soil?
-            'longitude_0','latitude_0', # staggered lat,lon
-            'time_bnds', # file time bounds
-            ]
-    # copy dims
-    for dim in dims:
-        if dim in data0.keys():
-            data[dim] = data0[dim]
-
-    #assert np.all(data['latitude'] == latt), "topog latitude doesn't match pc file latitude"
-    #assert np.all(data['longitude'] == lont), "topog longitude doesn't match pc file longitude"
-    if (not np.all(data['latitude'] == latt)) or (not np.all(data['longitude'] == lont)):
-        data['latt'] = latt
-        data['lont'] = lont
-
-    ## data without time dim
-    flatdata = ['air_temperature',      # [lat, lon] K at surface
-                'specific_humidity',    # [lat,lon] kg/kg
-                'surface_air_pressure', # [lat,lon] Pa
-                'surface_temperature',  # [lat,lon] K
-                #'level_height',         # [z] metres from ground level]
-                ]
-    if keepvars is not None:
-        flatdata = list(set(flatdata) & set(keepvars))
-
-    ## 4 dim data [t1, z, lat, lon]
-    fulldata = ['air_pressure',                                 # Pascals
-                'air_temperature_0',                            # K
-                'mass_fraction_of_cloud_ice_in_air',            # kg/kg
-                'mass_fraction_of_cloud_liquid_water_in_air',   # kg/kg
-                'theta',                                        # K (potential temp)
-                'wind_speed',                                   # m/s (wind speed)
-                'specific_humidity_0',                          # kg/kg
-                'upward_air_velocity',                          # m/s
-                'x_wind_destaggered',                           # m/s
-                'y_wind_destaggered',                           # m/s
-                'zth',                                          # m (height approximated)
-                ]
-    if keepvars is not None:
-        fulldata = list(set(fulldata) & set(keepvars))
-
-    ## Start tracking the time dimensions
-    hour = []
-    time = []
-
-    # Gregorian hours since 19700101 00:00:00
-    if 'time_0' in data0.keys():
-        hour.append(data0['time_0'])
-    else:
-        hour.append(np.nanmean(data0['time_1']))
-    time.append(data0['time_1'][0])
-    time.append(data0['time_1'][1])
-
-    ## Copy all the data we want
-    for varname in flatdata:
-        # add time dim to the flat data
-        data[varname] = data0[varname][np.newaxis]
-    ## And read the stuff with time dim normally
-    for varname in fulldata:
-        data[varname] = data0[varname]
-
-    ## also copy height
-    if 'level_height' in data0.keys():
-        data['level_height'] = data0['level_height'][:toplev]
-
-    del data0
-
-    # read each file and append along time dimension
-    for i,fpath in enumerate(fpaths):
-        if i==0:
-            continue
-        datai = read_pcfile(fpath,keepvars=keepvars)
-
-        for varname in flatdata:
-            # add time dim to the flat data
-            datai[varname] = datai[varname][np.newaxis]
-
-        # Append each file along the time dimension, which has been added to the vars missing a time dim
-        for varname in flatdata+fulldata:
-            print("DEBUG:",varname,data[varname].shape, datai[varname].shape)
-            data[varname] = np.append(data[varname], datai[varname], axis=0)
-            print("DEBUG:",varname,data[varname].shape)
-
-        # Append time step
-        hour.append(datai['time_0'])
-        time.append(datai['time_1'][0])
-        time.append(datai['time_1'][1])
-
-        del datai
-
-    data['hour'] = np.array(hour)
-    data['time'] = np.array(time)
-    # also for convenience add cloud metric
-    if np.all( [varname in data.keys() for varname in ['mass_fraction_of_cloud_ice_in_air', 'mass_fraction_of_cloud_liquid_water_in_air']] ):
-        data['qc'] = data['mass_fraction_of_cloud_ice_in_air'] + data['mass_fraction_of_cloud_liquid_water_in_air']
-
-
-    # Finally chop the top
-    for varname in fulldata:
-        # Just read up to toplev
-        data[varname] = data[varname][:,:toplev,:,:]
-
-    return data
-
 
 def save_fig_to_path(pname,plt, dpi=150):
     '''
