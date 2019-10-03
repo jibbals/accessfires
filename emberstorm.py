@@ -82,7 +82,7 @@ def emberstorm(theta,u,v,w,z,topog,lat,lon,
     ## Subplot 2, transect of potential temp
     # only looking up to 1km
     plt.sca(axes[1])
-    
+    print("DEBUG: transect_theta",theta.shape, z.shape, lat.shape, lon.shape, topog.shape)
     plotting.transect_theta(theta,z,lat,lon,start,end,npoints=100,topog=topog,colorbar='gist_rainbow')
     
     plt.sca(axes[2])
@@ -97,7 +97,7 @@ def emberstorm(theta,u,v,w,z,topog,lat,lon,
     
     return fig, axes
     
-def make_plots_emberstorm(model_run='waroona_old'):
+def make_plots_emberstorm(model_run='waroona_run1'):
     """
 
     """
@@ -122,16 +122,16 @@ def make_plots_emberstorm(model_run='waroona_old'):
         ff_lats = ff.coord('latitude').points
         ff_lons = ff.coord('longitude').points
         
-        print("DEBUG: ff lats,lons",ff_lats[:5], ff_lats[-5:], ff_lons[:5], ff_lons[-5:])
-        print("DEBUG: lats,lons", lat[:5], lat[-5:], lon[:5], lon[-5:])
+        print("DEBUG: ff lats,lons",ff_lats[:3], ff_lats[-3:], ff_lons[:3], ff_lons[-3:])
+        print("DEBUG: lats,lons", lat[:3], lat[-3:], lon[:3], lon[-3:])
         
         # pull out bits we want
-        uvwz = cubelist.extract(['u','v','upward_air_velocity','z_th'])
-            
+        uvw = cubelist.extract(['u','v','upward_air_velocity'])
+        z, = cubelist.extract(['z_th']) # z has no time dim
         # for each time slice pull out potential temp, winds
         for i,dtime in enumerate(dtimes):
             utcstamp = dtime.strftime("%b %H:%M (UTC)")
-            u,v,w,z = uvwz[0][i], uvwz[1][i], uvwz[2][i], uvwz[3][i]
+            u,v,w = uvw[0][i], uvw[1][i], uvw[2][i]
             
             print("DEBUG:",[np.shape(arr) for arr in [theta, u, v, w, z, topog, ff, lat, lon]])
             emberstorm(theta[i].data,u.data,v.data,w.data,z.data,topog.data,
