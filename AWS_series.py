@@ -202,7 +202,7 @@ def compare_site_to_model(AWS='wagerup',
         # add model name to list of dataframe columns to be plotted within corresponding subplot
         subplots[title]['dfnames'].extend([mname+'%d'%d for d in [1,10,30]])
         # add marker,color,linestyle too
-        subplots[title]['colors'].extend(['red','magenta','darkpink'])
+        subplots[title]['colors'].extend(['crimson','fuchsia','blueviolet'])
         subplots[title]['linestyles'].extend(['None']*3)
         subplots[title]['markers'].extend(['v','.','^'])
     
