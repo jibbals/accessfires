@@ -16,17 +16,35 @@ from utilities import fio, plotting, utils
 _sn_='AWS'
 
 # Wagerup AWS entries to plot
-__AWS_PLOTS__ = {'Wind direction':['Dta10','Dta30'],
-                 'Wind speed':['S10','S30'],
+# there may be a better way to set all these plotting parameters...
+__AWS_PLOTS__ = {'Wind direction':{'dfnames':['Dta10','Dta30'],
+                                   'colors':['k','darkgrey'],
+                                   'linestyles':['None','None'],
+                                   'markers':['.','^']},
+                 'Wind speed':{'dfnames':['S10','S30'],
+                               'colors':['k','darkgrey'],
+                               'linestyles':['None','None'],
+                               'markers':['.','^']},
                  #'Gusts':['SX10','SX30'],
-                 'Pressure':['QFE'],
-                 'Relative humidity':['RH'],
-                 'Solar radiation':['SR'],
-                 'Temperature':['T','T10','T30'],
+                 'Pressure':{'dfnames':['QFE'],
+                             'colors':['k',],
+                             'linestyles':['None',],
+                             'markers':['.']},
+                 'Relative humidity':{'dfnames':['RH'],
+                                      'colors':['k'],
+                                      'linestyles':['None'],
+                                      'markers':['.']},
+                 'Solar radiation':{'dfnames':['SR'],
+                                    'colors':['k'],
+                                    'linestyles':['None'],
+                                    'markers':['.']},
+                 'Temperature':{'dfnames':['T','T10','T30'],
+                                'colors':['k','darkgrey','grey'],
+                                'linestyles':['None','None','None'],
+                                'markers':['v','.','^']},
                 }
 
-
-def df_time_series(df, subplots=None, marker='.', linestyle='None', units=None):
+def df_time_series(df, subplots=None, units=None, legend=True):
     """
     plot time series from df input
     subplots = dict: {'title1':['columna','columnb',...],...}
@@ -40,8 +58,22 @@ def df_time_series(df, subplots=None, marker='.', linestyle='None', units=None):
     for i, title in enumerate(subplots.keys()):
         ax=axes[i]
         plt.sca(ax)
-        print("DEBUG:",title, subplots[title])
-        df[subplots[title]].plot(marker=marker, alpha=0.5, linestyle=linestyle, ax=ax)
+        #print("DEBUG:", title, subplots[title])
+        dfd = subplots[title]
+        
+        for ii, name in enumerate(dfd['dfnames']):
+            #print("DEBUG:", name, ii, dfd['markers'], dfd['linestyles'], dfd['colors'])
+            df[name].plot(alpha=0.5, ax=ax, 
+                          marker=dfd['markers'][ii],
+                          linestyle=dfd['linestyles'][ii],
+                          color=dfd['colors'][ii])
+        
+        if legend:
+            plt.legend()
+        
+        #df[dfd['dfnames']].plot(marker=dfd['markers'], alpha=0.5, 
+        #                        linestyles=dfd['linestyles'], ax=ax,
+        #                        colors=dfd['colors'])
         plt.grid(which='major',axis='x', alpha=0.6)
         if ax != axes[-1]:
             plt.xlabel('')
@@ -76,7 +108,7 @@ def summary_wagerup(d0=None,dN=None):
     
     # plot some stuff
     subplots = __AWS_PLOTS__
-    units = {key:dfa[subplots[key][0]]['units'] for key in subplots.keys()}
+    units = {key:dfa[subplots[key]['dfnames'][0]]['units'] for key in subplots.keys()}
 
     df_time_series(dfsub,subplots=subplots,units=units)
     plt.suptitle('Wagerup AWS '+substr,fontsize=19)
@@ -153,7 +185,7 @@ def compare_site_to_model(AWS='wagerup',
     # set the datetime column to be the index
     df_model = df_model.set_index('WAST')
     
-    # Merge the cubes?
+    # Merge the cubes
     # outer join gets the union, inner join gets intersection
     df_both = pandas.merge(df_aws,df_model, how='outer', left_index=True, right_index=True)
     
@@ -165,14 +197,19 @@ def compare_site_to_model(AWS='wagerup',
     
     ## Update subplots dictionnary with model column names
     subplots = __AWS_PLOTS__
-    subplots['Wind direction'].extend(['wind_direction%d'%d for d in [1,10,30]])
-    subplots['Wind speed'].extend(['s%d'%d for d in [1,10,30]])
-    subplots['Pressure'].extend(['air_pressure%d'%d for d in [1,10,30]])
-    subplots['Relative humidity'].extend(['relative_humidity%d'%d for d in [1,10,30]])
-    subplots['Temperature'].extend(['air_temperature%d'%d for d in [1,10,30]])
+    for title, mname in zip(['Wind direction','Wind speed','Pressure','Relative humidity','Temperature'],
+                            ['wind_direction','s','air_pressure','relative_humidity','air_temperature']):
+        # add model name to list of dataframe columns to be plotted within corresponding subplot
+        subplots[title]['dfnames'].extend([mname+'%d'%d for d in [1,10,30]])
+        # add marker,color,linestyle too
+        subplots[title]['colors'].extend(['red','magenta','darkpink'])
+        subplots[title]['linestyles'].extend(['None']*3)
+        subplots[title]['markers'].extend(['v','.','^'])
     
+    ## now call method which plots the dataframe directed by my dictionary of subplot names
     df_time_series(df_both_subset, subplots=subplots)
-    fio.save_fig(model_run=model_run,script_name=_sn_,pname='%s_vs_%s'%(AWS,model_run),plt=plt)
+    fio.save_fig(model_run=model_run, script_name=_sn_, 
+                 pname='%s_vs_%s'%(AWS,model_run), plt=plt)
 
 if __name__=='__main__':
     summary_wagerup()
