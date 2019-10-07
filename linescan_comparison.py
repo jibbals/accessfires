@@ -87,6 +87,7 @@ def linescan_vs_firefront(model_run='sirivan_run1',google=False):
                 for ii,dt in enumerate(ffdates[hourinds]):
                     print("DEBUG:",ii,dt,ff.shape)
                     ffdata = ff[hourinds][ii].data.data
+                    print("DEBUG:",np.min(ffdata))
                     plt.contour(lon, lat, ffdata.T, np.array([0]),
                                 colors='orange', linewidths=1,
                                 transform=latlon_CRS)
@@ -99,4 +100,5 @@ def linescan_vs_firefront(model_run='sirivan_run1',google=False):
         fio.save_fig('sirivan_run1',_sn_,"linescan_%s"%dstr,plt,dpi=150)
 
 if __name__=='__main__':
+    print("STARTING")
     linescan_vs_firefront()

@@ -32,4 +32,8 @@ import iris
 import iris.quickplot as qplt
 from iris.experimental.equalise_cubes import equalise_attributes
 
-cubes = fio.read_nc_iris('data/sirivan_run1/fire/firefront.01.nc')
+ff, = fio.read_fire('sirivan_run1')
+ffdates = utils.dates_from_iris(ff)
+print(ff)
+print(ffdates[:3],'...',ffdates[-3:])
+

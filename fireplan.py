@@ -103,7 +103,8 @@ def pft_altitude_vs_pressure(model_run='waroona_run1', latlon=plotting._latlons_
 def fireplan(ff, fire_contour_map = 'autumn',
              show_cbar=True, cbar_XYWH= [0.2,0.6,.2,.02],
              fig=None,subplot_row_col_n=None,
-             draw_gridlines=False,gridlines=None):
+             draw_gridlines=False,gridlines=None,
+             google=False):
     '''
     show google map of extent, with fire front over time overplotted
 
@@ -142,11 +143,16 @@ def fireplan(ff, fire_contour_map = 'autumn',
 
     # First plot google map
     
-    fig, gax, gproj, tproj = plotting.map_satellite(extent=extent, fig=fig,
-                                                     subplot_row_col_n=subplot_row_col_n,
-                                                     show_name=True,
-                                                     name_size=10)
-    
+    if google:
+        fig, gax, gproj = plotting.map_google(extent=extent, zoom=12, fig=fig,
+                                              subplot_row_col_n=subplot_row_col_n,
+                                              draw_gridlines=True)
+    else:
+        fig, gax, gproj, _ = plotting.map_satellite(extent=extent, fig=fig,
+                                                         subplot_row_col_n=subplot_row_col_n,
+                                                         show_name=True,
+                                                         name_size=10)
+
     # add waroona and waroona fire if we're over there
     latlons = plotting._latlons_
     if extent[0]<latlons['waroona'][1]: 
@@ -156,6 +162,13 @@ def fireplan(ff, fire_contour_map = 'autumn',
                                    fontcolors='wheat',
                                    markers=['o','*'], 
                                    markercolors=['grey','red'])
+    else:
+        plotting.map_add_nice_text(gax,
+                                   latlons=[latlons['uarbry'],latlons['cassillis'],latlons['fire_sirivan']],
+                                   texts=['Uarbry','Cassillis',''],
+                                   fontcolors='wheat',
+                                   markers=['o','o','*'],
+                                   markercolors=['k','k','red'])
     
     # plot contours at each hour
     utcstamp=[]
@@ -195,7 +208,7 @@ def fireplan(ff, fire_contour_map = 'autumn',
 
     return fig, gax, gproj
 
-def fireplan_summary(model_run='waroona_run1'):
+def fireplan_summary(model_run='waroona_run1', google=False):
     '''
     Show fire outline over time at waroona
     ARGUMENTS:
@@ -218,7 +231,8 @@ def fireplan_summary(model_run='waroona_run1'):
 
     fireplan(FFront,
              fig=fig, subplot_row_col_n=[2,1,1],
-             show_cbar=True, cbar_XYWH=[.2,.64,.2,.02])
+             show_cbar=True, cbar_XYWH=[.2,.64,.2,.02],
+             google=google)
     
     # Hourly for the rest of the stuff
     ftimes = utils.dates_from_iris(FFront)
@@ -333,18 +347,19 @@ if __name__=='__main__':
 
     # Add nice figure all on it's own:
     # read all the fire data
-    for mr in ['sirivan_run1','waroona_run1','waroona_old']:
-        print("DEBUG: running ",mr)
+    for mr in ['sirivan_run1']:#,'waroona_run1','waroona_old']:
+        #print("DEBUG: running ",mr)
         extent = plotting._extents_[mr.split('_')[0]+'z'] # zoomed extent
         ff, = fio.read_fire(model_run=mr, dtimes=None,
                             extent=extent, firefront=True)
-        print("DEBUG:", ff)
-        fireplan(ff, show_cbar=True, cbar_XYWH=[.2,.24,.2,.02])
-        fio.save_fig(mr,_sn_,'fire_outline',plt,dpi=300)
+        #print("DEBUG:", ff)
+        for google in [True,False]:
+            fireplan(ff, show_cbar=True, cbar_XYWH=[.2,.24,.2,.02],google=google)
+            fio.save_fig(mr,_sn_,'fire_outline%s'%(['','_google'][google]),plt,dpi=300)
         
         # Now run summary
-        fireplan_summary(model_run=mr)
+        #fireplan_summary(model_run=mr, google=True)
     
-    fire_power_waroona()
+    #fire_power_waroona()
     
     
