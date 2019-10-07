@@ -72,6 +72,7 @@ _latlons_['pyrocb_waroona2'] = 0,0 # 1100-1400 second day
 
 # Sir Ivan locations
 _extents_['sirivan']    = [149.2, 150.4, -32.4, -31.6]
+_extents_['sirivanz']   = [149.48, 150.04, -32.18, -31.85]
 _extents_['sirivans']   = [145,154, -34, -30]
 _extents_['sirivan_linescans'] = [168,221, ]
 _latlons_['dunedoo']    = -31.99, 149.53
@@ -101,7 +102,7 @@ _transects_['waroona6'] = [-32.87   , __x0__], [-32.89   , __x1__]
 _transects_['pyrocb_waroona'] = [-32.89 , 115.9 ], [-32.88   , __x1__]
 _transects_['pyrocbx1_waroona'] = [-32.95, 116.09], [-32.78   , 116.16]
 _transects_['pyrocbx2_waroona'] = [-32.95, 116.15], [-32.78   , 116.09]
-_transects_['emberstorm1'] = [-32.82, __x0__], [-32.81, __x0__+.2] # emberstorm 
+_transects_['emberstorm1'] = [-32.86, __x0__+.09], [-32.88, __x0__+.2] # emberstorm 
 
 # looking at sir ivan
 __si0__, __si1__ = 149.4, 149.9
@@ -542,7 +543,8 @@ def map_topography(extent, topog,lat,lon,title="Topography"):
     # push blue water part of scale a bit lower
     clevs= np.linspace(-150,550,50,endpoint=True)
     cmaptr=plt.cm.get_cmap("terrain")
-    return map_contourf(extent, topog,lat,lon,title=title,clevs=clevs,cmap=cmaptr,clabel="m")
+    return map_contourf(extent, topog,lat,lon,title=title,clevs=clevs,
+                        cmap=cmaptr,clabel="m")
     
 
 def utm_from_lon(lon):

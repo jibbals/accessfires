@@ -32,13 +32,4 @@ import iris
 import iris.quickplot as qplt
 from iris.experimental.equalise_cubes import equalise_attributes
 
-mr = 'waroona_old'
-dt = datetime(2016,1,6,5)
-ff, = fio.read_fire(mr,dtimes=[dt])
-cubes = fio.read_model_run(mr,fdtime=dt)
-
-print(ff)
-print(cubes)
-lats = cubes[0].coord('latitude').points
-lons = cubes[0].coord('longitude').points
-print(lats[:2],lats[-2:],lons[:2],lons[-2:])
+cubes = fio.read_nc_iris('data/sirivan_run1/fire/firefront.01.nc')

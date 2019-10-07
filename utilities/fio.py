@@ -34,7 +34,6 @@ __VERBOSE__=True
 ## Sir ivan pc fire files
 _topog_sirivan_ = 'data/sirivan/umnsaa_pa2017021121.nc'
 _files_sirivan_ = sorted(glob('data/sirivan/umnsaa_pc*.nc'))
-# TODO: Add sirivan run1 to model_outputs list
 
 model_outputs = {
         # Sirivan high resolution run around June (this year)
@@ -44,7 +43,7 @@ model_outputs = {
             'filedates':np.array([datetime(2017,2,11,21) + timedelta(hours=x) for x in range(24)]),
             'run':'Run in June 2019?',
             'origdir':'/short/en0/hxy548/cylc-run/au-aa860/share/cycle/20170211T2100Z/sirivan/0p3/ukv_os38/um',
-            'origfiredir':'/short/en0/hxy548/cylc-run/au-aa860/work/20170211T2100Z/sirivan_0p3_ukv_os38_um_fcst_000/' # permission denied right now
+            'origfiredir':'/short/en0/hxy548/cylc-run/au-aa860/work/20170211T2100Z/sirivan_0p3_ukv_os38_um_fcst_000/',
             },
         # Attemp to recreate 'old' run weather and pyrocb
         'waroona_run2':{
@@ -84,12 +83,16 @@ model_outputs = {
 ## METHODS
 ###
 
-def _constraints_from_extent_(extent, constraints=None):
+def _constraints_from_extent_(extent, constraints=None, tol = 0.0001):
     """
+        Return iris constraints based on [WESN] lon,lat limits (with a tolerance)
+        this only looks at the cell centres, so data with or without cell bounds compares equally
+        additional constraints can be ampersanded to the lat lon constraints
     """
     West,East,South,North = extent
-    constr_lons = iris.Constraint(longitude = lambda cell: West <= cell <= East )
-    constr_lats = iris.Constraint(latitude = lambda cell: South <= cell <= North )
+    # NEED TO COMPARE TO CELL MIDPOINT SO THAT BEHAVIOUR IS CONSTANT WHETHER OR NOT THERE ARE BOUNDS
+    constr_lons = iris.Constraint(longitude = lambda cell: West-tol <= cell.point <= East+tol)
+    constr_lats = iris.Constraint(latitude = lambda cell: South-tol <= cell.point <= North+tol)
     if constraints is not None:
         constraints = constraints & constr_lats & constr_lons
     else:
@@ -203,7 +206,11 @@ def read_fire(model_run='waroona_run1',
         ffpath      = ddir+'firefront.01.nc'
         fluxpath    = ddir+'sensible_heat.01.nc'
         fspath      = ddir+'fire_speed.01.nc'
-
+    elif model_run == 'sirivan_run1':
+        ffpath      = ddir+'firefront.CSIRO_MinT.20170211T2100Z.nc'
+        fluxpath    = ddir+'sensible_heat.CSIRO_MinT.20170211T2100Z.nc'
+        fspath      = ddir+'fire_speed.CSIRO_MinT.20170211T2100Z.nc'
+    
     if extent is not None:
         constraints = _constraints_from_extent_(extent,constraints)
 
@@ -225,6 +232,10 @@ def read_fire(model_run='waroona_run1',
             cube.coord('time').units = 'seconds since 2016-01-05 15:00:00'
             cube.coord('latitude').units = 'degrees'
             cube.coord('longitude').units = 'degrees'
+    
+    if model_run == 'sirivan_run1':
+        for cube in cubelist:
+            cube.coord('time').units = 'seconds since 2017-02-11 21:00:00'
 
     # Subset by time if argument exists
     if dtimes is not None:

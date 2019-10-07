@@ -333,15 +333,18 @@ if __name__=='__main__':
 
     # Add nice figure all on it's own:
     # read all the fire data
-    for mr in ['waroona_run1','waroona_old']:
-        extent = plotting._extents_['waroonaz'] # waroona extent
+    for mr in ['sirivan_run1','waroona_run1','waroona_old']:
+        print("DEBUG: running ",mr)
+        extent = plotting._extents_[mr.split('_')[0]+'z'] # zoomed extent
         ff, = fio.read_fire(model_run=mr, dtimes=None,
-                           extent=extent, firefront=True)
+                            extent=extent, firefront=True)
+        print("DEBUG:", ff)
         fireplan(ff, show_cbar=True, cbar_XYWH=[.2,.24,.2,.02])
         fio.save_fig(mr,_sn_,'fire_outline',plt,dpi=300)
-    
+        
         # Now run summary
         fireplan_summary(model_run=mr)
+    
     fire_power_waroona()
     
     

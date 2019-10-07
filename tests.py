@@ -14,6 +14,51 @@ import timeit
 
 from utilities import fio, utils, plotting
 
+def latlon_comparison_from_extent_subsetting():
+    """
+        fire and waroona_old runs were returning differently spaced arrays after subsetting
+        fixed in fio._constraints_from_extent_()
+    """
+    dt = datetime(2016,1,6,5)
+    extent = 115.9,115.95, -32.9, -32.85
+    ff, = fio.read_fire('waroona_old',dtimes=[dt],extent=extent)
+    ff2, = fio.read_fire('waroona_run1',dtimes=[dt],extent=extent)
+    cubes = fio.read_model_run('waroona_old',fdtime=dt, extent=extent)
+    cubes2 = fio.read_model_run('waroona_run1',fdtime=dt,extent=extent)
+    
+    #print(ff) # old run dx,dy = .004
+    #print(cubes) # old run dx,dy = .004, 
+    lats = cubes[0].coord('latitude')
+    lons = cubes[0].coord('longitude')
+    flats = ff.coord('latitude')
+    flons = ff.coord('longitude')
+    #print("waroona_old lats")
+    #print(lats)
+    #print("waroona_old lons")
+    #print(lons)
+    #print("fire old lats")
+    #print(flats)
+    #print("fire old lons")
+    #print(flons)
+    ## flats start one gridspace to the south, end together with lats
+    ## flons start one gridspace to the east, end together with lons
+    
+    #print(ff2) # old run dx,dy = .004
+    #print(cubes2) # old run dx,dy = .004, 
+    lats2 = cubes2[0].coord('latitude')
+    lons2 = cubes2[0].coord('longitude')
+    flats2 = ff2.coord('latitude')
+    flons2 = ff2.coord('longitude')
+    #print("run1")
+    #print(lats2,lons2)
+    #print('fire run1')
+    #print(flats2,flons2)
+    
+    assert np.all(np.isclose(lats.points, flats.points)), "old lats and flats don't match"
+    assert np.all(np.isclose(lons.points, flons.points)), "old lons and flons don't match"
+    assert np.all(np.isclose(lats2.points, flats2.points)), "run1 lats and flats don't match"
+    assert np.all(np.isclose(lons2.points, flons2.points)), "run1 lons and flons don't match"
+
 def read_time_comparison():
     '''
         does subsetting prior to reading save time? 
