@@ -104,6 +104,8 @@ _transects_['pyrocb_waroona'] = [-32.89 , 115.9 ], [-32.88   , __x1__]
 _transects_['pyrocbx1_waroona'] = [-32.95, 116.09], [-32.78   , 116.16]
 _transects_['pyrocbx2_waroona'] = [-32.95, 116.15], [-32.78   , 116.09]
 _transects_['emberstorm1'] = [-32.86, __x0__+.09], [-32.88, __x0__+.2] # emberstorm 
+_transects_['emberstorm2'] = [-32.82, __x0__+.09], [-32.83, __x0__+.2] # north of emberstorm
+_transects_['emberstorm3'] = [-32.90, __x0__+.09], [-32.91, __x0__+.2] # south of emberstorm
 
 # looking at sir ivan
 #_extents_['sirivan']    = [149.2, 150.4, -32.4, -31.6]

@@ -93,8 +93,8 @@ def emberstorm(theta,u,v,w,z,topog,lat,lon,
     plotting.transect_theta(theta,z,lat,lon,start,end,npoints=npoints,topog=topog,
                             ztop=ztop,
                             cmap='gist_rainbow',
-                            contours=np.arange(290,320.1,0.5),
-                            lines=np.arange(290,321,2))
+                            contours=np.arange(290,330.1,0.5),
+                            lines=np.arange(290,331,2))
     
     plt.sca(axes[2])
     
@@ -142,20 +142,22 @@ def make_plots_emberstorm(model_run='waroona_run1'):
         z, = cubelist.extract(['z_th']) # z has no time dim
         # for each time slice pull out potential temp, winds
         for i,dtime in enumerate(dtimes):
-            utcstamp = dtime.strftime("%b %H:%M (UTC)")
-            u,v,w = uvw[0][i], uvw[1][i], uvw[2][i]
-            
-            #print("DEBUG:",[np.shape(arr) for arr in [theta, u, v, w, z, topog, ff, lat, lon]])
-            emberstorm(theta[i].data,u.data,v.data,w.data,z.data,topog.data,
-                       lat,lon,ff=ff[i].data)
-            
-            # Save figure into folder with numeric identifier
-            stitle="Emberstorm %s"%utcstamp
-            plt.suptitle(stitle)
-            fio.save_fig(model_run, _sn_, dtime, plt)
-        
+            for transecti, transect in enumerate([plotting._transects_['emberstorm%d'%d] for d in range(1,4)]):
+                utcstamp = dtime.strftime("%b %H:%M (UTC)")
+                u,v,w = uvw[0][i], uvw[1][i], uvw[2][i]
+                
+                #print("DEBUG:",[np.shape(arr) for arr in [theta, u, v, w, z, topog, ff, lat, lon]])
+                emberstorm(theta[i].data,u.data,v.data,w.data,z.data,topog.data,
+                           lat,lon,ff=ff[i].data, transect=transect)
+                
+                # Save figure into folder with numeric identifier
+                stitle="Emberstorm %s"%utcstamp
+                plt.suptitle(stitle)
+                fio.save_fig(model_run=model_run, script_name=_sn_, pname=dtime, 
+                             plt=plt, subdir='transect%d'%transecti)
+
 if __name__ == '__main__':
     
     print("INFO: testing cloud_outline.py")
     
-    [ make_plots_emberstorm(mr) for mr in ['waroona_old','waroona_run1'] ]
+    [ make_plots_emberstorm(mr) for mr in ['waroona_run1','waroona_old'] ]
