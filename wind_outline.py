@@ -45,13 +45,13 @@ def wind_outline(s,u,v,w,
     312 plot showing vertical motion along transect
     313 plot showing wind speed along transect
     INPUTS:
-        dictionary with topog, vert motion, wind speed, wind direction, zth,lat,lon, time
-        timestep: data will have a time dimension
+        wind speed, x-wind, y-wind, vert-wind, cloud content, topography, model level altitude, lat,lon, datetime (for titles)
+        ff: fire front array, negative where fire has burned, optional
         extentname = { 'waroona' | 'sirivan' } choice of two fire locations
         transect = int from 1 to 6 for transect choice
-        vectorskip reduces quiver density (may need to fiddle)
-        quiverscale changes how long the arrows are (also may need to fiddle)
-        ext is the plot extension { '.png' | '.eps' }
+        nquivers: int, roughly how many quivers are desired
+        quiverscale: int, changes how long the arrows are (also may need to fiddle)
+        cloud_threshold: float, g/kg where cloud outline is drawn
     '''
     stitle = dtime.strftime("%Y %b %d %H:%M (UTC)")
     
@@ -80,7 +80,7 @@ def wind_outline(s,u,v,w,
     # start to end x=[lon0,lon1], y=[lat0, lat1]
     plt.plot([start[1],end[1]],[start[0],end[0], ], '--k', 
              linewidth=2, 
-             marker='X', markersize=7,markerfacecolor='white')
+             marker='>', markersize=7,markerfacecolor='white')
     
     # add nearby towns
     plotting.map_add_locations_extent(extentname)
@@ -131,15 +131,52 @@ def wind_outline(s,u,v,w,
     return plt
 
 
-def winds_outline_hour(dtime, model_version='waroona_run1', dpi=300):
-    '''
-    Loop over transects over waroona and make the wind outline figures
-    '''
-    extentname=model_version.split('_')[0]
+#def winds_outline_waroona1(dtime, model_version='waroona_run1', dpi=300):
+#    '''
+#    Loop over transects over waroona and make the wind outline figures
+#    '''
+#    extentname=model_version.split('_')[0]
+#    extent=plotting._extents_[extentname]
+#    
+#    # Read the cubes
+#    cubes = fio.read_model_run(model_version, fdtime=dtime, extent=extent,
+#                               add_topog=True,
+#                               add_z=True, 
+#                               add_winds=True)
+#    
+#    zth, topog = cubes.extract(['z_th','surface_altitude'])
+#    u,v,s, qc, w = cubes.extract(['u','v','s','qc','upward_air_velocity'])
+#
+#    cubetimes = utils.dates_from_iris(u)
+#    
+#    ## fire front
+#    ff1, = fio.read_fire(dtimes=cubetimes, extent=extent, firefront=True)
+#    lat,lon = w.coord('latitude').points, w.coord('longitude').points
+#    
+#    # also loop over different transects
+#    for i in range(6):
+#        for tstep in range(len(cubetimes)):
+#            ff = None
+#            if model_version == 'waroona_run1':
+#                ff = ff1[tstep].data.data
+#            plt = wind_outline(s[tstep].data.data, u[tstep].data.data, v[tstep].data.data, w[tstep].data.data,
+#                               qc[tstep].data.data, topog.data.data,
+#                               zth.data.data, lat,lon,
+#                               dtime=cubetimes[tstep],
+#                               ff = ff,
+#                               extentname=extentname,
+#                               transect=i+1)
+#            fio.save_fig(model_version,_sn_,cubetimes[tstep],plt, 
+#                         subdir='transect_%d'%i,
+#                         dpi=dpi)
+
+def outline_model_winds(model_run='sirivan_run1', hours=None, dpi=200):
+    
+    extentname=model_run.split('_')[0]
     extent=plotting._extents_[extentname]
     
     # Read the cubes
-    cubes = fio.read_model_run(model_version, fdtime=dtime, extent=extent,
+    cubes = fio.read_model_run(model_run, fdtime=hours, extent=extent,
                                add_topog=True,
                                add_z=True, 
                                add_winds=True)
@@ -150,25 +187,26 @@ def winds_outline_hour(dtime, model_version='waroona_run1', dpi=300):
     cubetimes = utils.dates_from_iris(u)
     
     ## fire front
-    ff1, = fio.read_fire(dtimes=cubetimes, extent=extent, firefront=True)
-    lat,lon = w.coord('latitude').points, w.coord('longitude').points
+    ff, = fio.read_fire(model_run=model_run, dtimes=cubetimes, extent=extent, 
+                        firefront=True)
     
+    lat,lon = w.coord('latitude').points, w.coord('longitude').points
+    flat,flon = ff.coord('latitude').points, ff.coord('longitude').points
+    print("DEBUG:",lat[:2],flat[:2], lat[-2:], flat[-2:], lon[:2],flon[:2],lon[-2:],flon[-2:])
+    # lat0 != flat0, lat-1 != flat-1, lon0 != flon0, lon-1 != flon-1
     # also loop over different transects
-    for i in range(6):
-        for tstep in range(len(cubetimes)):
-            ff = None
-            if model_version == 'waroona_run1':
-                ff = ff1[tstep].data.data
-            plt = wind_outline(s[tstep].data.data, u[tstep].data.data, v[tstep].data.data, w[tstep].data.data,
-                               qc[tstep].data.data, topog.data.data,
-                               zth.data.data, lat,lon,
-                               dtime=cubetimes[tstep],
-                               ff = ff,
-                               extentname=extentname,
-                               transect=i+1)
-            fio.save_fig(model_version,_sn_,cubetimes[tstep],plt, 
-                         subdir='transect_%d'%i,
-                         dpi=dpi)
+    for i, dt in enumerate(cubetimes):
+        print("DEBUG:",s.shape, lat.shape,lon.shape,ff.shape)
+        plt = wind_outline(s[i].data.data, u[i].data.data, v[i].data.data, w[i].data.data,
+                           qc[i].data.data, topog.data.data,
+                           zth.data.data, lat,lon,
+                           dtime=cubetimes[i],
+                           ff = ff[i].data.data,
+                           extentname=extentname,
+                           transect=i+1)
+        fio.save_fig(model_run,_sn_,cubetimes[i],plt, 
+                     subdir='transect_%d'%i,
+                     dpi=dpi)
 
 #########################################################################
 #########################################################################
@@ -177,7 +215,9 @@ def winds_outline_hour(dtime, model_version='waroona_run1', dpi=300):
 
 if __name__ == '__main__':
     
-    for dtime in [ datetime(2016,1,6,7) + timedelta(hours=x) for x in range(2) ]:
-        for mv in ['waroona_old','waroona_run1']:
-            winds_outline_hour(dtime, mv)
+    for mr in ['sirivan_run1','waroona_old','waroona_run1']:
+        hours = fio.model_outputs[mr]['filedates']
+        for hour in hours:
+            print("running ",mr,hour)
+            outline_model_winds(mr, hours=[hour])
     

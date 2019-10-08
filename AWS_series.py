@@ -140,16 +140,22 @@ def compare_site_to_model(AWS='wagerup',
 
     ## Read Model output:
     data_model0 = fio.read_model_run(model_run, fdtime=umhours, extent=extent, add_topog=True, add_winds=True, add_RH=True, add_z=True)
-    
+    #print("DEBUG:",data_model0)
     wanted_cube_names=['wind_direction','s','air_pressure','relative_humidity','air_temperature', 'z_th', 'surface_altitude']
-    wanted_cube_units=[None,            'm s-1', 'hPa',        '%',             'deg_c' ,       None,     None]
+    wanted_cube_units={'s':'m s-1',
+                       'air_pressure':'hPa',
+                       'relative_humidity':'%',
+                       'air_temperature':'deg_c'
+                       }
     #Just want time and level at our location
-    data_model = data_model0.extract(wanted_cube_names)
+    data_model = data_model0.extract(wanted_cube_names,strict=True) # strict means one cube per constraint
     for i in range(len(data_model)):
         data_model[i] = data_model[i].interpolate([('longitude',lon), ('latitude',lat)],
                                                   iris.analysis.Linear())
-        if wanted_cube_units[i] is not None:
-            data_model[i].convert_units(wanted_cube_units[i])
+        dname = data_model[i].name()
+        if dname in wanted_cube_units.keys():
+            print("DEBUG: converting",dname, "from ",data_model[i].units," to ",wanted_cube_units[dname])
+            data_model[i].convert_units(wanted_cube_units[dname])
     
     # which model levels represent 10 and 30m?
     z, topog = data_model.extract(['z_th','surface_altitude'])
@@ -213,4 +219,7 @@ def compare_site_to_model(AWS='wagerup',
 
 if __name__=='__main__':
     summary_wagerup()
-    compare_site_to_model()
+    for mr in ['waroona_run1','waroona_old']:
+        compare_site_to_model(AWS='wagerup',
+                              model_run=mr,
+                              showrange=[datetime(2016,1,5,12),datetime(2016,1,7,12)])

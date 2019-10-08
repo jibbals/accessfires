@@ -8,7 +8,7 @@ Created on Wed Oct  2 12:16:43 2019
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.image as mpimg
-import warnings
+
 from glob import glob
 from datetime import datetime, timedelta
 from os.path import basename
@@ -31,7 +31,7 @@ def linescan_vs_firefront(model_run='sirivan_run1',google=False):
     latlon_CRS = ccrs.PlateCarree()
     
     # read fire front (all datetimes)
-    ff, = fio.read_fire('sirivan_run1',extent=linescan_extent)
+    ff, = fio.read_fire(model_run,extent=linescan_extent)
     ffdates = utils.dates_from_iris(ff)
     lat = ff.coord('latitude').points
     lon = ff.coord('longitude').points
@@ -80,25 +80,25 @@ def linescan_vs_firefront(model_run='sirivan_run1',google=False):
         nt = np.sum(hourinds)
         
         # plot contours at each hour
-        with warnings.catch_warnings():
-            # ignore no fire contour warning
-            warnings.simplefilter('ignore')
-            if nt>0:
-                for ii,dt in enumerate(ffdates[hourinds]):
-                    print("DEBUG:",ii,dt,ff.shape)
-                    ffdata = ff[hourinds][ii].data.data
-                    print("DEBUG:",np.min(ffdata))
-                    plt.contour(lon, lat, ffdata.T, np.array([0]),
-                                colors='orange', linewidths=1,
-                                transform=latlon_CRS)
-    
-            # final outline contour
-            plt.contour(lon,lat,ff[di].data.data.T, np.array([0]), 
+        if nt>0:
+            # contour the hours up to our linescan datetime
+            for ii,dt in enumerate(ffdates[hourinds]):
+                ffdata = ff[hourinds][ii].data.data
+                if np.min(ffdata>0):
+                    continue
+                plt.contour(lon, lat, ffdata.T, np.array([0]),
+                            colors='orange', linewidths=1,
+                            transform=latlon_CRS)
+
+        # final outline contour
+        ffdata = ff[di].data.data
+        if np.min(ffdata<0):
+            plt.contour(lon,lat,ffdata.T, np.array([0]), 
                         linestyles='dotted',
                         colors='red', linewidths=2, transform=latlon_CRS)
         plt.title(ffstamp)
         fio.save_fig('sirivan_run1',_sn_,"linescan_%s"%dstr,plt,dpi=150)
 
 if __name__=='__main__':
-    print("STARTING")
+    
     linescan_vs_firefront()

@@ -146,7 +146,7 @@ def fireplan(ff, fire_contour_map = 'autumn',
     if google:
         fig, gax, gproj = plotting.map_google(extent=extent, zoom=12, fig=fig,
                                               subplot_row_col_n=subplot_row_col_n,
-                                              draw_gridlines=True)
+                                              draw_gridlines=False)
     else:
         fig, gax, gproj, _ = plotting.map_satellite(extent=extent, fig=fig,
                                                          subplot_row_col_n=subplot_row_col_n,
@@ -168,7 +168,8 @@ def fireplan(ff, fire_contour_map = 'autumn',
                                    texts=['Uarbry','Cassillis',''],
                                    fontcolors='wheat',
                                    markers=['o','o','*'],
-                                   markercolors=['k','k','red'])
+                                   markercolors=['k','k','red'],
+                                   markersizes=4)
     
     # plot contours at each hour
     utcstamp=[]
@@ -347,18 +348,18 @@ if __name__=='__main__':
 
     # Add nice figure all on it's own:
     # read all the fire data
-    for mr in ['sirivan_run1']:#,'waroona_run1','waroona_old']:
+    for mr in ['sirivan_run1','waroona_run1','waroona_old']:
         #print("DEBUG: running ",mr)
         extent = plotting._extents_[mr.split('_')[0]+'z'] # zoomed extent
         ff, = fio.read_fire(model_run=mr, dtimes=None,
                             extent=extent, firefront=True)
         #print("DEBUG:", ff)
-        for google in [True,False]:
+        for google in [False,]:
             fireplan(ff, show_cbar=True, cbar_XYWH=[.2,.24,.2,.02],google=google)
             fio.save_fig(mr,_sn_,'fire_outline%s'%(['','_google'][google]),plt,dpi=300)
         
         # Now run summary
-        #fireplan_summary(model_run=mr, google=True)
+        fireplan_summary(model_run=mr)
     
     #fire_power_waroona()
     

@@ -332,6 +332,7 @@ def read_model_run(model_version, fdtime=None, subdtimes=None, extent=None,
                 allcubes = cubelist
             else:
                 allcubes.extend(cubelist)
+        
     elif model_version=='waroona_run1':
         for dtime in fdtimes:
             slv,ro1,th1,th2 = read_waroona_run1(dtime)
@@ -435,7 +436,7 @@ def read_model_run(model_version, fdtime=None, subdtimes=None, extent=None,
 
     if add_z:
         # This is down here so that it only happens AFTER subsetting
-        if model_version == 'waroona_old':
+        if (model_version == 'waroona_old') or (model_version == 'sirivan_run1'):
             # add zth cube
             p, pmsl = allcubes.extract(['air_pressure','air_pressure_at_sea_level'])
             # take out time dimension
@@ -476,10 +477,17 @@ def read_model_run(model_version, fdtime=None, subdtimes=None, extent=None,
         
         # Get wind direction using arctan of y/x
         wind_dir_rads = iris.analysis.maths.apply_ufunc(np.arctan2,v,u)
-        wind_dir = (wind_dir_rads.data * 180/np.pi)%360
+        # this is anticlockwise from directly east
+        #wind_dir_math = (wind_dir_rads.data * 180/np.pi)%360
+        # meteorologicaly wind dir: 0 is due north, + is clockwise
+        # this points to the direction which the wind is GOING
+        #wind_dir = (-1*wind_dir_rads.data*180/np.pi+90)%360
+        # met standard points to where the wind is coming from
+        wind_dir = (-1*wind_dir_rads.data*180/np.pi - 90) % 360
         wdcube = iris.cube.Cube(wind_dir,
                                 var_name='wind_direction',
                                 units='degrees',
+                                #long_name='degrees clockwise from due North',
                                 dim_coords_and_dims=[(s.coord('time'),0),
                                                      (s.coord('model_level_number'),1),
                                                      (s.coord('latitude'),2),

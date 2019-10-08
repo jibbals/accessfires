@@ -106,6 +106,7 @@ _transects_['pyrocbx2_waroona'] = [-32.95, 116.15], [-32.78   , 116.09]
 _transects_['emberstorm1'] = [-32.86, __x0__+.09], [-32.88, __x0__+.2] # emberstorm 
 
 # looking at sir ivan
+#_extents_['sirivan']    = [149.2, 150.4, -32.4, -31.6]
 __si0__, __si1__ = 149.4, 149.9
 _transects_['sirivan1'] = [-32.  , __si0__], [-32.3 , __si1__]
 _transects_['sirivan2'] = [-32.05, __si0__], [-32.35, __si1__] # like sirivan1 but lower
@@ -158,9 +159,9 @@ def map_add_locations_extent(extentname, hide_text=False):
                           color='r', marker='*', 
                           textcolor='k')
     else:
-        map_add_locations(['sirivan','uarbry'], 
-                          text=[['Sir Ivan','Uarbry'],['','']][hide_text],
-                          dx=[-.02,.05], dy =[-.015,-.03],
+        map_add_locations(['dunedoo','cassillis','uarbry'],
+                          text=[['Dunedoo','Cassillis','Uarbry'],['','']][hide_text],
+                          dx=[-.02,-.02,.05], dy =[-.015,-.015,-.03],
                           textcolor='k')
         # add fire ignition
         map_add_locations(['fire_sirivan'],
@@ -490,7 +491,8 @@ def map_satellite(extent = _extents_['waroona'],
     return fig, ax, plot_CRS, geodetic_CRS
 
 def map_add_nice_text(ax, latlons, texts=None, markers=None, 
-                      fontsizes=12, fontcolors='wheat', markercolors='grey',
+                      fontsizes=12, fontcolors='wheat', 
+                      markercolors='grey', markersizes=None,
                       outlinecolors='k'):
     '''
     ARGUMENTS:
@@ -509,6 +511,8 @@ def map_add_nice_text(ax, latlons, texts=None, markers=None,
         markers = 'o'*len(latlons)
     if isinstance(fontsizes, (int,float)):
         fontsizes = [fontsizes]*len(latlons)
+    if (markersizes is None) or (isinstance(markersizes, (int,float))):
+        markersizes = [markersizes]*len(latlons)
     if isinstance(fontcolors, str):
         fontcolors = [fontcolors]*len(latlons)
     if isinstance(markercolors, str):
@@ -519,7 +523,7 @@ def map_add_nice_text(ax, latlons, texts=None, markers=None,
     
     
     # add points from arguments:
-    for (lat, lon), text, marker, mcolor, fcolor, fsize, outlinecolor in zip(latlons, texts, markers, markercolors, fontcolors, fontsizes, outlinecolors):
+    for (lat, lon), text, marker, mcolor, msize, fcolor, fsize, outlinecolor in zip(latlons, texts, markers, markercolors, markersizes, fontcolors, fontsizes, outlinecolors):
         
         # outline for text/markers
         marker_effects=[patheffects.Stroke(linewidth=5, foreground=outlinecolor), patheffects.Normal()]

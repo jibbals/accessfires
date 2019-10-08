@@ -14,6 +14,25 @@ import timeit
 
 from utilities import fio, utils, plotting
 
+def wind_direction_calculation():
+    """
+    
+    """
+    # left, top, right, bot
+    x= [1, 0, -1, 0]
+    y= [0, 1, 0, -1]
+    # calculate radians (-pi to pi range)
+    rads = np.arctan2(y,x)
+    assert np.all(np.isclose(rads, [0,np.pi/2.0, np.pi, -1*np.pi/2.0])), "rads doesn't make sense"
+    # convert to anticlockwise from directly east
+    wind_dir_math = (rads * 180/np.pi)%360
+    assert np.all(np.isclose(wind_dir_math, [0, 90, 180, 270])), "math dir doesn't make sense"
+    # meteorologicaly wind dir: 0 is due north, + is clockwise
+    wind_dir = (-1 * wind_dir_math + 90 )%360
+    assert np.all(np.isclose(wind_dir, [90, 0, 270, 180])), "met dir doesn't make sense"
+    wind_dir2 = (-1*rads*180/np.pi+90)%360
+    assert np.all(np.isclose(wind_dir2, [90, 0, 270, 180])), "met dir doesn't make sense"
+
 def latlon_comparison_from_extent_subsetting():
     """
         fire and waroona_old runs were returning differently spaced arrays after subsetting
