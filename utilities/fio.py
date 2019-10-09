@@ -207,9 +207,9 @@ def read_fire(model_run='waroona_run1',
         fluxpath    = ddir+'sensible_heat.01.nc'
         fspath      = ddir+'fire_speed.01.nc'
     elif model_run == 'sirivan_run1':
-        ffpath      = ddir+'firefront.CSIRO_MinT.20170211T2100Z.nc'
-        fluxpath    = ddir+'sensible_heat.CSIRO_MinT.20170211T2100Z.nc'
-        fspath      = ddir+'fire_speed.CSIRO_MinT.20170211T2100Z.nc'
+        ffpath      = ddir+'firefront.CSIRO_new.20170211T2100Z.nc'
+        fluxpath    = ddir+'sensible_heat.CSIRO_new.20170211T2100Z.nc'
+        fspath      = ddir+'fire_speed.CSIRO_new.20170211T2100Z.nc'
     
     if extent is not None:
         constraints = _constraints_from_extent_(extent,constraints)
@@ -236,6 +236,9 @@ def read_fire(model_run='waroona_run1',
     if model_run == 'sirivan_run1':
         for cube in cubelist:
             cube.coord('time').units = 'seconds since 2017-02-11 21:00:00'
+            # match coord system to um output
+            cube.coord('latitude').coord_system=iris.coord_systems.GeogCS(6371229.0)
+            cube.coord('longitude').coord_system=iris.coord_systems.GeogCS(6371229.0)
 
     # Subset by time if argument exists
     if dtimes is not None:

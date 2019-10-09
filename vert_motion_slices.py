@@ -58,10 +58,10 @@ def vert_motion_slices(qc,w,lh,lat,lon,dtime,
         plt.subplot(4,4,i+1)
         
         # top panel is wind speed surface values
-        cs=plotting.map_contourf(extent,w[m_lvls[i]],lat,lon,
-                                 clevs = contours,
-                                 cmap=cmap, norm=norm,
-                                 cbar=False,)#clabel='m/s', cbarform=cbarform)
+        cs,cb=plotting.map_contourf(extent,w[m_lvls[i]],lat,lon,
+                                    clevs = contours,
+                                    cmap=cmap, norm=norm,
+                                    cbar=False,)#clabel='m/s', cbarform=cbarform)
         
         plt.title("~ %5.0f m"%lh[m_lvls[i]])
         
@@ -123,17 +123,19 @@ def vert_motion_hour(dtime=datetime(2016,1,6,7), model_run='waroona_run1'):
     
     ## fire front
     ff_dtimes = utils.dates_from_iris(w)
-    ff1, = fio.read_fire(dtimes=ff_dtimes, extent=extent, firefront=True)
-    ff=ff1
-    if model_run=='waroona_old':
-        ff=ff1.interpolate([('longitude',w.coord('longitude').points), 
-                            ('latitude',w.coord('latitude').points)],
-                           iris.analysis.Linear())
+    ff, = fio.read_fire(model_run=model_run, dtimes=ff_dtimes, extent=extent, firefront=True)
     
+    print("DEBUG:",ff)
+    print("DEBUG:",ff.coord('latitude'))
+    print("DEBUG:",ff.coord('longitude'))
+    
+    print("DEBUG:",qc)
+    print("DEBUG:",qc.coord('latitude'))
     lh  = w.coord('level_height').points
     lat = w.coord('latitude').points
     lon = w.coord('longitude').points
     
+    #print("DEBUG:", lat, lon)
     for i in range(len(ff_dtimes)):
         subtime = ff_dtimes[i]
         
@@ -146,11 +148,11 @@ def vert_motion_hour(dtime=datetime(2016,1,6,7), model_run='waroona_run1'):
 ### RUN THE CODE:
 if __name__ == '__main__':
     ### pyrocb utc time window:
-    run1_hours = [datetime(2016,1,6,7) + timedelta(hours=x) for x in range(2)]
-    old_hours = [datetime(2016,1,6,4) + timedelta(hours=x) for x in range(5)]
+    #run1_hours = [datetime(2016,1,6,7) + timedelta(hours=x) for x in range(2)]
+    #old_hours = [datetime(2016,1,6,4) + timedelta(hours=x) for x in range(5)]
     
-    for dtime in old_hours:
-        vert_motion_hour(dtime, model_run='waroona_old')
-    for dtime in run1_hours:
-        vert_motion_hour(dtime, model_run='waroona_run1')
+    for mr in ['sirivan_run1']:#,'waroona_old', 'waroona_run1']:
+        hours = fio.model_outputs[mr]['filedates']
+        for dtime in hours:
+            vert_motion_hour(dtime, model_run=mr)
     

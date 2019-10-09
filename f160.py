@@ -181,11 +181,14 @@ if __name__ == '__main__':
     pyrocb1 = plotting._latlons_['pyrocb_waroona1']
     upwind  = plotting._latlons_['fire_waroona_upwind'] # ~1 km upwind of fire
     loc_and_stamp = ([pyrocb1,topleft,upwind],['pyrocb1','topleft','upwind'])
-    checktimes = [ datetime(2016,1,6,5) + timedelta(hours=x) for x in range(2) ]
-    checktimes = [ datetime(2016,1,5,15) ]
-    for dtime in checktimes:
-        # dtime, latlon, latlon_stamp, model_version
-        for mv in ['waroona_run1','waroona_old']:
+    loc_and_stamp = ([upwind],['upwind'])
+    #checktimes = [ datetime(2016,1,6,5) + timedelta(hours=x) for x in range(2) ]
+    #checktimes = [ datetime(2016,1,5,15) ]
+    old_times = fio.model_outputs['waroona_old']['filedates']
+    run1_times = fio.model_outputs['waroona_run1']['filedates']
+    
+    for mv, dtimes in zip(['waroona_run1','waroona_old'],[run1_times,old_times]):
+        for dtime in dtimes:
             for latlon,latlon_stamp in zip(loc_and_stamp[0],loc_and_stamp[1]):
                 f160_hour(dtime, latlon=latlon,
                           latlon_stamp=latlon_stamp,
