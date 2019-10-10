@@ -73,7 +73,7 @@ model_outputs = {
         'waroona_oldold':{
             'path':'data/waroona_oldold/',
             'topog':'stage5_sfc_orog.nc',
-            'filedates':None,
+            'filedates':np.array([datetime(2016,1,5,15)]),
             'run':'Run in october 2016',
             'origdir':'/g/data1/en0/rjf548/fires/waroona.2016010615.vanj'
             },
@@ -99,7 +99,7 @@ def _constraints_from_extent_(extent, constraints=None, tol = 0.0001):
         constraints = constr_lats & constr_lons
     return constraints
 
-def read_AWS_wagerup():
+def read_AWS_wagerup(UTC=True):
     '''
     Read AWS csv file into pandas dataframe and return the frame
     30m wind direction is modulated to [0,360] range (was [-360,360]??)
@@ -144,10 +144,16 @@ def read_AWS_wagerup():
 
     # convert column to datetime64 in the dataframe
     wagerup['WAST'] = pandas.to_datetime(wagerup['WAST'], dayfirst=True)
-    # set the datetime column to be the index
-    wagerup = wagerup.set_index('WAST')
-    # set index to localtime
-    wagerup.index = wagerup.index + pandas.DateOffset(hours=-8)
+    
+    # maybe rename WAST to UTC... and make it index
+    if UTC:
+        wagerup = wagerup.rename(columns={'WAST':'UTC'})
+        print("DEBUG:",wagerup)
+        wagerup = wagerup.set_index('UTC')
+    else:
+        # set index to localtime
+        wagerup = wagerup.set_index('WAST')
+        wagerup.index = wagerup.index + pandas.DateOffset(hours=-8)
 
     # add hour as column (maybe for collating later)
     #wagerup['Hour'] = wagerup.index.hour
@@ -378,7 +384,14 @@ def read_model_run(model_version, fdtime=None, subdtimes=None, extent=None,
         # rename height dim to match other runs
         for i in range(len(oldoldcubes)):
             if len(oldoldcubes[i].shape) > 2:
+                nz = len(oldoldcubes[i].coord('Hybrid height').points)
                 oldoldcubes[i].coord('Hybrid height').rename('level_height')
+                # add model_level_number as aux_coord
+                zdim = [0,1][len(oldoldcubes[i].shape)>3]
+                mlncoord = iris.coords.Coord(np.arange(nz),
+                                             standard_name='model_level_number')
+                oldoldcubes[i].add_aux_coord(mlncoord, data_dims=zdim)
+            
 
         # rename winds
         oldoldcubes.extract('eastward_wind')[0].rename('x_wind')
@@ -388,6 +401,7 @@ def read_model_run(model_version, fdtime=None, subdtimes=None, extent=None,
         # rename time dim to 'time'
         for i in range(len(allcubes)):
             allcubes[i].coord('t').rename('time')
+
         # topog and z levels added automatically for oldold run (easier)
         timelesscubes.extend(oldoldcubes.extract(['surface_altitude','z_th','z_rho']))
 

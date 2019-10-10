@@ -9,6 +9,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import pandas
 import iris
+from copy import deepcopy
 from datetime import datetime, timedelta
 
 from utilities import fio, plotting, utils
@@ -62,7 +63,6 @@ def df_time_series(df, subplots=None, units=None, legend=True):
         dfd = subplots[title]
         
         for ii, name in enumerate(dfd['dfnames']):
-            #print("DEBUG:", name, ii, dfd['markers'], dfd['linestyles'], dfd['colors'])
             df[name].plot(alpha=0.5, ax=ax, 
                           marker=dfd['markers'][ii],
                           linestyle=dfd['linestyles'][ii],
@@ -107,41 +107,43 @@ def summary_wagerup(d0=None,dN=None):
         dfsub = df.loc[d0.strftime("%Y-%m-%d %H:%M")]
     
     # plot some stuff
-    subplots = __AWS_PLOTS__
+    subplots = deepcopy(__AWS_PLOTS__)
     units = {key:dfa[subplots[key]['dfnames'][0]]['units'] for key in subplots.keys()}
 
     df_time_series(dfsub,subplots=subplots,units=units)
     plt.suptitle('Wagerup AWS '+substr,fontsize=19)
     fio.save_fig('measurements',_sn_,'summary_wagerup',plt)
 
-def compare_site_to_model(AWS='wagerup',
-                          model_run='waroona_run1',
-                          dtoffset=timedelta(hours=8), # AWST offset
-                          heights=[1,10,30], # what heights to look at in model output
-                          umhours=None, # load model data for these hours
-                          showrange=None, # subset the time series to this range
-                          ):
+def combine_site_and_model(AWS='wagerup', model_run='waroona_run1',
+                           heights=[1,10,30],
+                           groupbystr=None):
     """
-    AWS='wagerup', model_run='waroona_run1',dtoffset=timedelta(hours=8)):
+    read AWS dataframe, add model columns to dataframe
+        optionally resample intervals (mean) using groupbystr
     
-    compare site to model run
+    arguments
+    ---------
+    heights: list, interpolate model parameters at site to these heights (m)
+    groupbystr: string, make all columns binned (by '30Min' for example)
     """
-    
-    lat,lon = plotting._latlons_['wagerup']
+    lat,lon = plotting._latlons_[AWS]
     extent = [lon-.02, lon+.02, lat-.02, lat+.02] # just grab real close to latlon
 
-    ## Read AWS: 
-    if AWS == 'wagerup':
-        df_aws, aws_attrs = fio.read_AWS_wagerup() 
+    ## Read AWS: eventually handle multiple weather stations
+    #if AWS == 'wagerup':
+    subplots = deepcopy(__AWS_PLOTS__)
+    df_aws, aws_attrs = fio.read_AWS_wagerup(UTC=True)
 
-    # Default model hours is ALL
-    if umhours is None:
-        umhours = fio.model_outputs[model_run]['filedates']
-
+    umhours = fio.model_outputs[model_run]['filedates']
+    
     ## Read Model output:
-    data_model0 = fio.read_model_run(model_run, fdtime=umhours, extent=extent, add_topog=True, add_winds=True, add_RH=True, add_z=True)
+    data_model0 = fio.read_model_run(model_run, fdtime=umhours, extent=extent, 
+                                     add_topog=True, add_winds=True, 
+                                     add_RH=True, add_z=True)
     #print("DEBUG:",data_model0)
-    wanted_cube_names=['wind_direction','s','air_pressure','relative_humidity','air_temperature', 'z_th', 'surface_altitude']
+    wanted_cube_names=['wind_direction', 's', 'air_pressure', 
+                       'relative_humidity', 'air_temperature', 'z_th', 
+                       'surface_altitude']
     wanted_cube_units={'s':'m s-1',
                        'air_pressure':'hPa',
                        'relative_humidity':'%',
@@ -154,7 +156,7 @@ def compare_site_to_model(AWS='wagerup',
                                                   iris.analysis.Linear())
         dname = data_model[i].name()
         if dname in wanted_cube_units.keys():
-            print("DEBUG: converting",dname, "from ",data_model[i].units," to ",wanted_cube_units[dname])
+            #print("DEBUG: converting",dname, "from ",data_model[i].units," to ",wanted_cube_units[dname])
             data_model[i].convert_units(wanted_cube_units[dname])
     
     # which model levels represent 10 and 30m?
@@ -175,7 +177,7 @@ def compare_site_to_model(AWS='wagerup',
         # interpolate to 1, 10, 30
         model_cube = data_model[i].interpolate([('height_agl',heights)], iris.analysis.Linear())
         
-        # make time series for each vertical level in a dictionary
+        # put time series for each vertical level in a dictionary
         for zi in range(len(heights)):
             cubedata = model_cube[:,zi].data
             if isinstance(cubedata, np.ma.MaskedArray):
@@ -183,26 +185,20 @@ def compare_site_to_model(AWS='wagerup',
             dict_model[model_cube.name()+str(heights[zi])]=cubedata
         
     
-    dtstr = [(dt+dtoffset).strftime("%Y-%m-%d %H:%M:%S") for dt in utils.dates_from_iris(data_model[0])]
-    dict_model['WAST']=dtstr
+    dtstr = [(dt).strftime("%Y-%m-%d %H:%M:%S") for dt in utils.dates_from_iris(data_model[0])]
+    dict_model['UTC']=dtstr
         
     df_model = pandas.DataFrame(dict_model)
-    df_model['WAST'] = pandas.to_datetime(df_model['WAST'])
+    df_model['UTC'] = pandas.to_datetime(df_model['UTC'])
     # set the datetime column to be the index
-    df_model = df_model.set_index('WAST')
+    df_model = df_model.set_index('UTC')
     
     # Merge the cubes
     # outer join gets the union, inner join gets intersection
     df_both = pandas.merge(df_aws,df_model, how='outer', left_index=True, right_index=True)
     
-    df_both_subset = df_both
-    if showrange is not None:
-        rangestr = [showrange[0].strftime("%Y-%m-%d %H"),
-                     showrange[1].strftime("%Y-%m-%d %H")]
-        df_both_subset = df_both.loc[rangestr[0]:rangestr[1]]
-    
     ## Update subplots dictionnary with model column names
-    subplots = __AWS_PLOTS__
+    
     for title, mname in zip(['Wind direction','Wind speed','Pressure','Relative humidity','Temperature'],
                             ['wind_direction','s','air_pressure','relative_humidity','air_temperature']):
         # add model name to list of dataframe columns to be plotted within corresponding subplot
@@ -212,14 +208,56 @@ def compare_site_to_model(AWS='wagerup',
         subplots[title]['linestyles'].extend(['None']*3)
         subplots[title]['markers'].extend(['v','.','^'])
     
+    df = df_both
+    if groupbystr is not None:
+        df = df_both.resample('30Min')
+    
+    return df, subplots
+    
+def compare_site_to_model(AWS='wagerup',
+                          model_run='waroona_run1',
+                          heights=[1,10,30], # what heights to look at in model output
+                          showrange=None, # subset the time series to this range
+                          ):
+    """
+    AWS='wagerup', model_run='waroona_run1',dtoffset=timedelta(hours=8)):
+    
+    compare site to model run
+    """
+    df, subplots = combine_site_and_model(AWS=AWS, model_run=model_run,
+                                          heights=heights)
+    
+    df_subset = df
+    if showrange is not None:
+        rangestr = [showrange[0].strftime("%Y-%m-%d %H"),
+                     showrange[1].strftime("%Y-%m-%d %H")]
+        df_subset = df.loc[rangestr[0]:rangestr[1]]
+    
+    print("DEBUG:",df_subset)
     ## now call method which plots the dataframe directed by my dictionary of subplot names
-    df_time_series(df_both_subset, subplots=subplots)
+    df_time_series(df_subset, subplots=subplots)
     fio.save_fig(model_run=model_run, script_name=_sn_, 
-                 pname='%s_vs_%s'%(AWS,model_run), plt=plt)
-
+                 pname='%s_%s_all'%(AWS,model_run), plt=plt)
+    
+    ## aggregate and compare model to aws
+    df_agg = df.resample('30Min').mean().dropna()
+    print("DEBUG:",df_agg)
+    
+    df_time_series(df_agg, subplots=subplots)
+    fio.save_fig(model_run=model_run, script_name=_sn_, 
+                 pname='%s_%s_aggregate'%(AWS,model_run), plt=plt)
+    
+    
+    
+    return df_agg, subplots
+    
 if __name__=='__main__':
     summary_wagerup()
+    df=[]
     for mr in ['waroona_run1','waroona_old']:
-        compare_site_to_model(AWS='wagerup',
-                              model_run=mr,
-                              showrange=[datetime(2016,1,5,12),datetime(2016,1,7,12)])
+        df.append(compare_site_to_model(AWS='wagerup',
+                                        model_run=mr,
+                                        showrange=[datetime(2016,1,5,12),datetime(2016,1,7,12)]))
+
+(df1,sp1), (dfold,spold) = df
+

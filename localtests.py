@@ -15,5 +15,7 @@ import numpy as np
 
 from datetime import datetime, timedelta
 
+from utilities import fio, plotting
 
+df, dfa = fio.read_AWS_wagerup()
 

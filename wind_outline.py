@@ -28,7 +28,51 @@ from utilities import plotting, utils, fio, constants
 ###
 _sn_ = 'wind_outline'
 
-
+def show_transects():
+    """
+    For sirivan and waroona show the transects on a contour map with final fire outline as well
+    """
+    
+    # Show transects
+    
+    transects = plotting._transects_
+    waroona_xticks = np.arange(115.8,116.21,.1)
+    waroona_yticks = np.arange(-33,-32.7,.02)
+    sirivan_xticks = np.arange(149.2,150.4,.2) #149.2, 150.4
+    sirivan_yticks = np.arange(-32.4,-31.6,.1) #-32.4, -31.6
+    for extentname, xticks,yticks in zip(['waroona','sirivan'],
+                                         [waroona_xticks,sirivan_xticks],
+                                         [waroona_yticks,sirivan_yticks]):
+        extent = plotting._extents_[extentname]
+        mr = '%s_run1'%extentname
+        
+        # read topog, fire
+        topog = fio.read_topog(mr,extent=extent)
+        #print("debug:",topog)
+        lat,lon = topog.coord('latitude').points, topog.coord('longitude').points
+        
+        ff, = fio.read_fire(mr,extent=extent,
+                            dtimes=[fio.model_outputs[mr]['filedates'][-1]])
+        #print("DEBUG:",ff)
+        plotting.map_topography(extent,topog.data,lat,lon)
+        plt.title("Transects")
+        plt.contour(lon,lat, np.transpose(ff[0].data),np.array([0]),colors='red')
+        for transect in range(6):
+            start,end = transects["%s%d"%(extentname,transect+1)]
+            plt.plot([start[1],end[1]],[start[0],end[0], ], '--',
+                     linewidth=2, label='X%d'%(transect+1),
+                     marker='X', markersize=7,markerfacecolor='white')
+        
+        # add nearby towns
+        plotting.map_add_locations_extent(extentname)
+        
+        plt.legend()
+        plt.yticks(yticks)
+        plt.xticks(xticks)
+        pname="figures/transects_%s.png"%extentname
+        fio.save_fig_to_path(pname,dpi=600,plt=plt)
+    
+    
 def wind_outline(s,u,v,w,
                  qc, topog,
                  z,lat,lon,
@@ -191,22 +235,23 @@ def outline_model_winds(model_run='sirivan_run1', hours=None, dpi=200):
                         firefront=True)
     
     lat,lon = w.coord('latitude').points, w.coord('longitude').points
-    flat,flon = ff.coord('latitude').points, ff.coord('longitude').points
-    print("DEBUG:",lat[:2],flat[:2], lat[-2:], flat[-2:], lon[:2],flon[:2],lon[-2:],flon[-2:])
+    #flat,flon = ff.coord('latitude').points, ff.coord('longitude').points
+    #print("DEBUG:",lat[:2],flat[:2], lat[-2:], flat[-2:], lon[:2],flon[:2],lon[-2:],flon[-2:])
     # lat0 != flat0, lat-1 != flat-1, lon0 != flon0, lon-1 != flon-1
     # also loop over different transects
     for i, dt in enumerate(cubetimes):
-        print("DEBUG:",s.shape, lat.shape,lon.shape,ff.shape)
-        plt = wind_outline(s[i].data.data, u[i].data.data, v[i].data.data, w[i].data.data,
-                           qc[i].data.data, topog.data.data,
-                           zth.data.data, lat,lon,
-                           dtime=cubetimes[i],
-                           ff = ff[i].data.data,
-                           extentname=extentname,
-                           transect=i+1)
-        fio.save_fig(model_run,_sn_,cubetimes[i],plt, 
-                     subdir='transect_%d'%i,
-                     dpi=dpi)
+        for ii in range(6):
+            #print("DEBUG:",s.shape, lat.shape,lon.shape,ff.shape)
+            plt = wind_outline(s[i].data.data, u[i].data.data, v[i].data.data, w[i].data.data,
+                               qc[i].data.data, topog.data.data,
+                               zth.data.data, lat,lon,
+                               dtime=cubetimes[i],
+                               ff = ff[i].data.data,
+                               extentname=extentname,
+                               transect=ii+1)
+            fio.save_fig(model_run,_sn_,cubetimes[i],plt, 
+                         subdir='transect_%d'%(ii+1),
+                         dpi=dpi)
 
 #########################################################################
 #########################################################################
@@ -218,6 +263,6 @@ if __name__ == '__main__':
     for mr in ['sirivan_run1','waroona_old','waroona_run1']:
         hours = fio.model_outputs[mr]['filedates']
         for hour in hours:
-            print("running ",mr,hour)
+            print("info: wind_outline", mr, hour)
             outline_model_winds(mr, hours=[hour])
     

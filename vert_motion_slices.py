@@ -125,17 +125,16 @@ def vert_motion_hour(dtime=datetime(2016,1,6,7), model_run='waroona_run1'):
     ff_dtimes = utils.dates_from_iris(w)
     ff, = fio.read_fire(model_run=model_run, dtimes=ff_dtimes, extent=extent, firefront=True)
     
-    print("DEBUG:",ff)
-    print("DEBUG:",ff.coord('latitude'))
-    print("DEBUG:",ff.coord('longitude'))
-    
-    print("DEBUG:",qc)
-    print("DEBUG:",qc.coord('latitude'))
+    #print("DEBUG:",ff)
+    #print("DEBUG:",ff.coord('latitude'))
+    #print("DEBUG:",ff.coord('longitude'))
+    #
+    #print("DEBUG:",qc)
+    #print("DEBUG:",qc.coord('latitude'))
     lh  = w.coord('level_height').points
     lat = w.coord('latitude').points
     lon = w.coord('longitude').points
     
-    #print("DEBUG:", lat, lon)
     for i in range(len(ff_dtimes)):
         subtime = ff_dtimes[i]
         

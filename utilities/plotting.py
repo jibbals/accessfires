@@ -75,11 +75,10 @@ _extents_['sirivan']    = [149.2, 150.4, -32.4, -31.6]
 _extents_['sirivan_linescan']   = [149.48, 150.04, -32.18, -31.85]
 _extents_['sirivanz']   = [149.4, 150.15, -32.2, -31.8]
 _extents_['sirivans']   = [145,154, -34, -30]
-_extents_['sirivan_linescans'] = [168,221, ]
 _latlons_['dunedoo']    = -31.99, 149.53
 _latlons_['uarbry']      = -32.047280, 149.71
 _latlons_['cassillis']      = -32.01, 150.0
-_latlons_['fire_sirivan'] = -32.45, 149.51
+_latlons_['fire_sirivan'] = -32.05, 149.59
 # one pyrocb
 _latlons_['pyrocb_sirivan'] = 0,0 # 0530UTC=XXXX local time
 # The pycb over Sir Ivan was around 0530 UTC on Sunday 12 Feb (or a bit after).
@@ -109,15 +108,12 @@ _transects_['emberstorm3'] = [-32.90, __x0__+.09], [-32.91, __x0__+.2] # south o
 
 # looking at sir ivan
 #_extents_['sirivan']    = [149.2, 150.4, -32.4, -31.6]
-__si0__, __si1__ = 149.4, 149.9
-_transects_['sirivan1'] = [-32.  , __si0__], [-32.3 , __si1__]
-_transects_['sirivan2'] = [-32.05, __si0__], [-32.35, __si1__] # like sirivan1 but lower
-_transects_['sirivan3'] = [-31.95, __si0__], [-32.25, __si1__]   # '' but higher
-_transects_['sirivan4'] = [-32.25, __si0__], [-31.95, __si1__] # low lat to high lat crosssec
-_transects_['sirivan5'] = [-32.35, __si0__], [-32.05, __si1__] 
-_transects_['sirivan6'] = [-32.3 , __si0__], [-32   , __si1__] 
-
-
+_transects_['sirivan1'] = [-32.05, 149.4  ], [-32.0  , 150.3 ]
+_transects_['sirivan2'] = [-32.0 , 149.4  ], [-31.95 , 150.3 ]
+_transects_['sirivan3'] = [-32.1 , 149.4  ], [-32.15 , 150.3 ]
+_transects_['sirivan4'] = [-31.8 , 149.45 ], [-32.15 , 150.2 ]
+_transects_['sirivan5'] = [-31.95, 149.4  ], [-31.80 , 150.2 ]
+_transects_['sirivan6'] = [-31.7 , 149.5  ], [-32.1  , 150.3 ]
 
 
 def init_plots():
@@ -141,35 +137,26 @@ def map_add_locations_extent(extentname, hide_text=False):
     '''
     wrapper for map_add_locations that adds all the points for that extent
     '''
-    if extentname == 'waroona':
-        map_add_locations(['waroona','yarloop'], 
-                          text=[['Waroona', 'Yarloop'],['','']][hide_text], 
-                          textcolor='k')
-        # add fire ignition
-        map_add_locations(['fire_waroona'],
-                          text = [['Fire ignition'],['']][hide_text], 
-                          color='r', marker='*', 
-                          textcolor='k')
-        # add pyroCB
-    elif extentname == 'waroonaz':
-        map_add_locations(['waroona'], 
-                          text=[['Waroona'],['']][hide_text], 
-                          textcolor='k')
-        # add fire ignition
-        map_add_locations(['fire_waroona'],
-                          text = [['Fire ignition'],['']][hide_text], 
-                          color='r', marker='*', 
-                          textcolor='k')
-    else:
-        map_add_locations(['dunedoo','cassillis','uarbry'],
-                          text=[['Dunedoo','Cassillis','Uarbry'],['','']][hide_text],
-                          dx=[-.02,-.02,.05], dy =[-.015,-.015,-.03],
-                          textcolor='k')
-        # add fire ignition
-        map_add_locations(['fire_sirivan'],
-                          text = [['Fire ignition']['']][hide_text], dx=.05,
-                          color='r', marker='*', 
-                          textcolor='k')
+    
+    locstrings = {'waroona':['waroona','yarloop'],
+                  'waroonaz':['waroona'],
+                  'sirivan':['dunedoo','cassillis','uarbry']}
+    dx=.025
+    dxfire = .025
+    dy=.015
+    if extentname =='sirivan':
+        dx=[.065,.02,.125]
+        dy =[.02,.015,-.05]
+        dxfire=.05
+    locs = locstrings[extentname]
+    text = [name.capitalize() for name in locs]
+    if hide_text:
+        text = ['']*len(locs)
+    
+    map_add_locations(locs, text=text, textcolor='k', dx=dx,dy=dy)
+    # add fire ignition
+    map_add_locations(['fire_%s'%extentname], text=[['Ignition'],['']][hide_text], 
+                      color='r', marker='*', dx=dxfire, textcolor='k')
 
 def transect(data, z, lat, lon, start, end, npoints=100, 
              topog=None, latt=None, lont=None, ztop=4000,
@@ -548,7 +535,10 @@ def map_topography(extent, topog,lat,lon,title="Topography"):
     Show topography map matching extents
     '''
     # push blue water part of scale a bit lower
-    clevs= np.linspace(-150,550,50,endpoint=True)
+    clevs = np.linspace(-150,550,50,endpoint=True)
+    # sir ivan fire is at higher altitudes
+    if extent[0] > 140:
+        clevs = np.linspace(100,800,50,endpoint=True)
     cmaptr=plt.cm.get_cmap("terrain")
     return map_contourf(extent, topog,lat,lon,title=title,clevs=clevs,
                         cmap=cmaptr,clabel="m")

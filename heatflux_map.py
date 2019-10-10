@@ -9,10 +9,12 @@ Created on Wed Oct  9 21:04:13 2019
 
 import numpy as np
 from datetime import datetime
+import iris
 
 from utilities import fio, utils, plotting
 
-# from command line I ran python -m numpy.f2py -c HFDiag_calc.f90 -m HFcalc
+## from command line I ran python -m numpy.f2py -c HFDiag_calc.f90 -m HFcalc
+##     doesn't work on windows (no fortran compilers installed)
 # this created a .so file callable here
 import utilities.fortran.HFcalc as fortranbit
 

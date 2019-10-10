@@ -139,10 +139,11 @@ def read_and_plot_model_run(model_version='waroona_oldold',
                          model_version=model_version)
 
 if __name__=='__main__':
-    dtimes = None
-    if True: # for testing
-        dtimes=[datetime(2016,1,6,8)]
     
-    for mv in ['waroona_oldold','waroona_oldold','waroona_run1']:
-        read_and_plot_model_run(mv, dtimes=dtimes)
+    for mv in ['waroona_oldold','waroona_oldold','waroona_run1']:#,'sirivan_run1']:
+        
+        dtimes = fio.model_outputs[mv]['filedates']
+        
+        for dtime in dtimes:
+            read_and_plot_model_run(mv, dtimes=[dtime])
 
