@@ -145,15 +145,37 @@ def read_AWS_wagerup(UTC=True):
     # convert column to datetime64 in the dataframe
     wagerup['WAST'] = pandas.to_datetime(wagerup['WAST'], dayfirst=True)
     
-    # maybe rename WAST to UTC... and make it index
-    if UTC:
+    # THIS DATASET APPEARS TO NOT BE IN WAST
+    # DATETIME - 8 or +16 hours matches a midnight minima in solar radiation..
+    # rename WAST to UTC and make it index
+    # unless we want local time (then convert utc to local time)
+    # Aus West Std Time = UTC+08
+    # perhaps they did utc - 8 instead of +8??
+    #   in this case, local time is inbuilt + 16, UTC is inbuild + 8, 
+    # or else they did local time +8
+    #   so local time is inbuilt - 8, UTC is inbuilt inbuilt-16
+    # or maybe they just did UTC and called it WAST
+    #   so local time is inbuilt + 8
+    mistake1=True # this one appears reasonably against waroona_old
+    mistake2=False # this one does not really match wind direction, but temperature is great
+    mistake3=False # this one does not appear reasonable against waroona_old, model temperature is backwards
+    if UTC:    
         wagerup = wagerup.rename(columns={'WAST':'UTC'})
-        print("DEBUG:",wagerup)
         wagerup = wagerup.set_index('UTC')
+        if mistake1:
+            wagerup.index = wagerup.index + pandas.DateOffset(hours=8)
+        elif mistake2:
+            wagerup.index = wagerup.index + pandas.DateOffset(hours=-16)
     else:
         # set index to localtime
         wagerup = wagerup.set_index('WAST')
-        wagerup.index = wagerup.index + pandas.DateOffset(hours=-8)
+        # AWST = UTC + 8 hours # Aust west std time
+        if mistake1:
+            wagerup.index = wagerup.index + pandas.DateOffset(hours=16)
+        elif mistake2:
+            wagerup.index = wagerup.index + pandas.DateOffset(hours=-8)
+        elif mistake3:
+            wagerup.index = wagerup.index + pandas.DateOffset(hours=8)
 
     # add hour as column (maybe for collating later)
     #wagerup['Hour'] = wagerup.index.hour

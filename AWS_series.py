@@ -89,12 +89,12 @@ def df_time_series(df, subplots=None, units=None, legend=True):
 
 
 # read wagerup
-def summary_wagerup(d0=None,dN=None):
+def summary_wagerup(d0=None,dN=None, UTC=True):
     """
     show wagerup AWS time series
     optionally subset time to day: d0, or from d0 to dN inclusive
     """
-    df, dfa = fio.read_AWS_wagerup()
+    df, dfa = fio.read_AWS_wagerup(UTC)
     
     dfsub=df
     substr=''
@@ -112,11 +112,12 @@ def summary_wagerup(d0=None,dN=None):
 
     df_time_series(dfsub,subplots=subplots,units=units)
     plt.suptitle('Wagerup AWS '+substr,fontsize=19)
-    fio.save_fig('measurements',_sn_,'summary_wagerup',plt)
+    fio.save_fig('measurements',_sn_,'summary_wagerup'+['','_UTC'][UTC],plt)
 
 def combine_site_and_model(AWS='wagerup', model_run='waroona_run1',
                            heights=[1,10,30],
-                           groupbystr=None):
+                           groupbystr=None,
+                           UTC=True):
     """
     read AWS dataframe, add model columns to dataframe
         optionally resample intervals (mean) using groupbystr
@@ -132,7 +133,7 @@ def combine_site_and_model(AWS='wagerup', model_run='waroona_run1',
     ## Read AWS: eventually handle multiple weather stations
     #if AWS == 'wagerup':
     subplots = deepcopy(__AWS_PLOTS__)
-    df_aws, aws_attrs = fio.read_AWS_wagerup(UTC=True)
+    df_aws, aws_attrs = fio.read_AWS_wagerup(UTC=UTC)
 
     umhours = fio.model_outputs[model_run]['filedates']
     
@@ -184,14 +185,19 @@ def combine_site_and_model(AWS='wagerup', model_run='waroona_run1',
                 cubedata = cubedata.data
             dict_model[model_cube.name()+str(heights[zi])]=cubedata
         
-    
-    dtstr = [(dt).strftime("%Y-%m-%d %H:%M:%S") for dt in utils.dates_from_iris(data_model[0])]
-    dict_model['UTC']=dtstr
+    dt_model0 = utils.dates_from_iris(data_model[0]) # UTC
+    dt_model=dt_model0
+    if not UTC:
+        dt_model = [ dt + timedelta(hours=8) for dt in dt_model0]
+        
+    dtstr = [(dt).strftime("%Y-%m-%d %H:%M:%S") for dt in dt_model]
+    dtname = ['WAST','UTC'][UTC]
+    dict_model[dtname]=dtstr
         
     df_model = pandas.DataFrame(dict_model)
-    df_model['UTC'] = pandas.to_datetime(df_model['UTC'])
+    df_model[dtname] = pandas.to_datetime(df_model[dtname])
     # set the datetime column to be the index
-    df_model = df_model.set_index('UTC')
+    df_model = df_model.set_index(dtname)
     
     # Merge the cubes
     # outer join gets the union, inner join gets intersection
@@ -218,6 +224,7 @@ def compare_site_to_model(AWS='wagerup',
                           model_run='waroona_run1',
                           heights=[1,10,30], # what heights to look at in model output
                           showrange=None, # subset the time series to this range
+                          UTC=True,
                           ):
     """
     AWS='wagerup', model_run='waroona_run1',dtoffset=timedelta(hours=8)):
@@ -225,7 +232,7 @@ def compare_site_to_model(AWS='wagerup',
     compare site to model run
     """
     df, subplots = combine_site_and_model(AWS=AWS, model_run=model_run,
-                                          heights=heights)
+                                          heights=heights, UTC=UTC)
     
     df_subset = df
     if showrange is not None:
@@ -237,7 +244,7 @@ def compare_site_to_model(AWS='wagerup',
     ## now call method which plots the dataframe directed by my dictionary of subplot names
     df_time_series(df_subset, subplots=subplots)
     fio.save_fig(model_run=model_run, script_name=_sn_, 
-                 pname='%s_%s_all'%(AWS,model_run), plt=plt)
+                 pname='%s_%s_all%s'%(AWS,model_run,['','_UTC'][UTC]), plt=plt)
     
     ## aggregate and compare model to aws
     df_agg = df.resample('30Min').mean().dropna()
@@ -245,19 +252,23 @@ def compare_site_to_model(AWS='wagerup',
     
     df_time_series(df_agg, subplots=subplots)
     fio.save_fig(model_run=model_run, script_name=_sn_, 
-                 pname='%s_%s_aggregate'%(AWS,model_run), plt=plt)
+                 pname='%s_%s_aggregate%s'%(AWS,model_run,['','_UTC'][UTC]), plt=plt)
     
     
     
     return df_agg, subplots
     
 if __name__=='__main__':
-    summary_wagerup()
-    df=[]
+    d0,dN = datetime(2016,1,4,10), datetime(2016,1,7,10)
+    summary_wagerup(d0,dN,UTC=True)
+    summary_wagerup(d0,dN,UTC=False)
+    
     for mr in ['waroona_run1','waroona_old']:
-        df.append(compare_site_to_model(AWS='wagerup',
-                                        model_run=mr,
-                                        showrange=[datetime(2016,1,5,12),datetime(2016,1,7,12)]))
+        for UTC in [True, False]:
+            compare_site_to_model(AWS='wagerup',
+                                  model_run=mr,
+                                  showrange=[datetime(2016,1,5,6),datetime(2016,1,7,1)],
+                                  UTC=UTC)
 
-(df1,sp1), (dfold,spold) = df
+#(df1,sp1), (dfold,spold) = df
 
