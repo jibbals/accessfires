@@ -86,8 +86,6 @@ def df_time_series(df, subplots=None, units=None, legend=True):
             plt.ylabel(units[title],fontsize=12)
     return f, axes
 
-
-
 # read wagerup
 def summary_wagerup(d0=None,dN=None, UTC=True):
     """
@@ -240,21 +238,39 @@ def compare_site_to_model(AWS='wagerup',
                      showrange[1].strftime("%Y-%m-%d %H")]
         df_subset = df.loc[rangestr[0]:rangestr[1]]
     
-    print("DEBUG:",df_subset)
     ## now call method which plots the dataframe directed by my dictionary of subplot names
     df_time_series(df_subset, subplots=subplots)
     fio.save_fig(model_run=model_run, script_name=_sn_, 
                  pname='%s_%s_all%s'%(AWS,model_run,['','_UTC'][UTC]), plt=plt)
     
     ## aggregate and compare model to aws
-    df_agg = df.resample('30Min').mean().dropna()
-    print("DEBUG:",df_agg)
-    
+    df_agg = df.resample('30Min').mean()
     df_time_series(df_agg, subplots=subplots)
     fio.save_fig(model_run=model_run, script_name=_sn_, 
-                 pname='%s_%s_aggregate%s'%(AWS,model_run,['','_UTC'][UTC]), plt=plt)
+                 pname='%s_%s_aggregate%s'%(AWS,model_run,['','_UTC'][UTC]), plt=plt) 
     
+    ## Now we look at statistics
+    # if any columns are NAN, drop whole row
+    df_agg = df_agg.dropna(how='any') 
+    # now get correlation,bias between certaint column pairs:
+    comparipairs = [['Dta10','wind_direction10'],['S10','s10'],['QFE','air_pressure10'],['RH','relative_humidity10'],['T','air_temperature1']]
     
+    for pair in comparipairs:
+        # straight up correlation
+        corr = df_agg[pair].corr()
+        print("DEBUG: correlation:",corr)
+        
+        # remove diurnal trend (measured) from both measurement and model time series:
+        diurnal = df[pair[0]]
+        
+        # annotate onto correct axis
+        ax.annotate('axes fraction',
+                    xy=(3, 1), xycoords='data',
+                    xytext=(0.8, 0.95), textcoords='axes fraction',
+                    arrowprops=dict(facecolor='black', shrink=0.05),
+                    horizontalalignment='right', verticalalignment='top')
+        
+       
     
     return df_agg, subplots
     

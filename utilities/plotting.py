@@ -58,14 +58,6 @@ _latlons_['perth']      = -31.9505, 115.8605
 _latlons_['fire_waroona'] = -32.89, 116.17
 _latlons_['fire_waroona_upwind'] = -32.89 -0.004, 116.17+0.009 # ~ 1km from fire
 
-_latlons_['nest_centre'] = -32.9, 116.1
-__nest_res__ = [[.036, 384], [.01, 576], [.0028,576]] # resolution, nlats for each nest
-for i in range(3):
-    lat,lon = _latlons_['nest_centre']
-    rx, nx = __nest_res__[i]
-    hx=nx//2
-    _extents_['waroona_nest%d'%(i+1)] = [lon-hx*rx, lon+hx*rx, lat-hx*rx, lat+hx*rx]
-
 # two PyroCB
 _latlons_['pyrocb_waroona1'] = -32.87,116.1 # ~4pm first day
 _latlons_['pyrocb_waroona2'] = 0,0 # 1100-1400 second day

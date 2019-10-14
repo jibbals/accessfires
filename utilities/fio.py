@@ -156,8 +156,8 @@ def read_AWS_wagerup(UTC=True):
     #   so local time is inbuilt - 8, UTC is inbuilt inbuilt-16
     # or maybe they just did UTC and called it WAST
     #   so local time is inbuilt + 8
-    mistake1=True # this one appears reasonably against waroona_old
-    mistake2=False # this one does not really match wind direction, but temperature is great
+    mistake1=False # this one appears reasonably against waroona_old
+    mistake2=True # this one does not really match wind direction, but temperature is great
     mistake3=False # this one does not appear reasonable against waroona_old, model temperature is backwards
     if UTC:    
         wagerup = wagerup.rename(columns={'WAST':'UTC'})
