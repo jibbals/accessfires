@@ -25,29 +25,39 @@ from matplotlib.transforms import offset_copy
 # LOCAL IMPORTS
 from utilities import utils, fio, constants, plotting
 
-### 
+###
 ## GLOBALS
 ###
 _sn_ = 'maps' # scriptname
 
 # waroona nest centre and extents for run1
-waroona_lat0, waroona_lon0 = -32.9, 116.1
-waroona_res = [[.036, 384], [.01, 576], [.0028,576]] # resolution, nlats for each nest
-waroona_extents = [[waroona_lon0-rx*(nx//2), waroona_lon0+rx*(nx//2), waroona_lat0-rx*(nx//2), waroona_lat0+rx*(nx//2)] for (rx,nx) in waroona_res]
-# same for sirivan run1:
-sirivan_lat0, sirivan_lon0 = 
+__NESTS__ = {'waroona_run1':{'centre':[-32.9, 116.1],
+                             'resolution':[.036,.01,.0028],
+                             'nlats':[384,576,576],
+                             'nlons':[384,576,576],
+                             'wider_view':[107,140,-40,-10],
+                             },
+            'sirivan_run1':{'centre':[-32.001400, 149.798600],
+                            'resolution':[.036,.01,.0028],
+                             'nlats':[384,576,576],
+                             'nlons':[384,576,576],
+                             'wider_view':[117,155,-40,-10],
+                             },
+            }
 
 # Plot defaults
 plotting.init_plots()
 
-def waroona_nest():
+def show_nests(model_run='waroona_run1', annotate_res=True,):
     """
-    show waroona model run nested grids on google map, resolution annotated
+    show nested grids on google map, resolution annotated
     """
     #f, ax, gproj = plotting.map_google(plotting._extents_['waroona'], zoom=11)
+    nest=__NESTS__[model_run]
     
-    # Australia:
-    aust = [107,140,-40,-10]
+    
+    # look at nests within wider view:
+    aust = nest['wider_view']
     # Request map from google
     request = cimgt.GoogleTiles()
     gproj=request.crs
@@ -64,9 +74,10 @@ def waroona_nest():
     
     ## Show grid resolution maybe with annotations
     ## Add box around zoomed in area
-    xy=waroona_lon0,waroona_lat0
+    xy=nest['centre'][::-1]
     for i in range(3):
-        res,nres = waroona_res[i]
+        # our model grids are square, same number of lats and lons
+        res,nres = nest['resolution'][i], nest['nlats'][i]
         width=res*nres
         botleft = xy[0]-width/2.0, xy[1]-width/2.0
         
@@ -94,60 +105,9 @@ def waroona_nest():
                     ha='left', va='top')
 
     ## Add zoom of nest 3?
-    fio.save_fig('waroona_run1',_sn_,'nested_grid.png',plt)
-
-def sirivan_nest():
-    """
-    show sirivan model run nested grids on google map, resolution annotated
-    """
-    #f, ax, gproj = plotting.map_google(plotting._extents_['waroona'], zoom=11)
+    fio.save_fig(model_run,_sn_,'nested_grid',plt)
     
-    # East Australia:
-    aust = [117,155,-40,-10]
-    # Request map from google
-    request = cimgt.GoogleTiles()
-    gproj=request.crs
-    # Use projection to set up plot
-    fig = plt.figure()
-    ax = fig.add_subplot(1, 1, 1, projection=gproj)
+if __name__=='__main__':
     
-    # Where are we looking
-    ax.set_extent(aust)
-    
-    # default interpolation ruins location names
-    zoom = 4
-    ax.add_image(request, zoom, interpolation='spline36') 
-    
-    ## Show grid resolution maybe with annotations
-    ## Add box around zoomed in area
-    xy=plotting._latlons_['nest_centre'][::-1]
-    for i in range(3):
-        res,nres = plotting.__nest_res__[i]
-        width=res*nres
-        botleft = xy[0]-width/2.0, xy[1]-width/2
-        
-        ax.add_patch(patches.Rectangle(xy=botleft,
-                                       width=width, 
-                                       height=width,
-                                       #facecolor=None,
-                                       fill=False,
-                                       edgecolor='red',
-                                       linewidth=2,
-                                       #linestyle='-',
-                                       alpha=0.9,
-                                       transform=cartopy.crs.PlateCarree()
-                                       ))
-        
-        ## add text?
-        ax.annotate(['Nest 1','Nest 2','N3'][i], xy=botleft, 
-                    xycoords=cartopy.crs.PlateCarree()._as_mpl_transform(ax), color='k',
-                    ha='left', va='top')
-    
-        ax.annotate('Nest %d: %dx%d %0.1f km squares'%(i+1, nres, nres, [3.5, 1.0, 0.3][i]),
-                    xy=[.055, .95 - .05*i],
-                    xycoords='axes fraction',
-                    color='k', fontsize=13,
-                    ha='left', va='top')
-
-    ## Add zoom of nest 3?
-    fio.save_fig('sirivan_run1',_sn_,'nested_grid.png',plt)
+    for mr in ['sirivan_run1','waroona_run1']:
+        show_nests(mr)
