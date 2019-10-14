@@ -16,7 +16,7 @@ from utilities import fio, utils, plotting
 ## from command line I ran python -m numpy.f2py -c HFDiag_calc.f90 -m HFcalc
 ##     doesn't work on windows (no fortran compilers installed)
 # this created a .so file callable here
-import utilities.fortran.HFcalc as fortranbit
+import HFcalc as fortranbit
 
 '''
 ## Declare additional single-column arrays
@@ -32,8 +32,8 @@ dp = lvl*0.0               # Dew point temperature.  Units K
 '''
 
 ## First read a profile, and surface information required by fortran subroutine
-lat,lon = plotting._latlons_['upwind']
-extent = [lon-.02, lon+.02, lat-.02, lat+.02] # just grab real close to latlon
+lat,lon = plotting._latlons_['fire_waroona_upwind']
+extent = [lon-.01, lon+.01, lat-.01, lat+.01] # just grab real close to latlon
 cubes=fio.read_model_run('waroona_old',datetime(2016,1,6,5), extent=extent,
                          add_dewpoint=True, add_winds=True, add_RH=False,
                          add_topog=True, add_z=True)
