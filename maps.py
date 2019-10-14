@@ -41,14 +41,14 @@ __NESTS__ = {'waroona_run1':{'centre':[-32.9, 116.1],
                             'resolution':[.036,.01,.0028],
                              'nlats':[384,576,576],
                              'nlons':[384,576,576],
-                             'wider_view':[117,155,-40,-10],
+                             'wider_view':[125,162,-44,-11],
                              },
             }
 
 # Plot defaults
 plotting.init_plots()
 
-def show_nests(model_run='waroona_run1', annotate_res=True,):
+def show_nests(model_run='waroona_run1', annotate_res=True, title=''):
     """
     show nested grids on google map, resolution annotated
     """
@@ -97,13 +97,19 @@ def show_nests(model_run='waroona_run1', annotate_res=True,):
         ax.annotate(['Nest 1','Nest 2','N3'][i], xy=botleft, 
                     xycoords=cartopy.crs.PlateCarree()._as_mpl_transform(ax), color='k',
                     ha='left', va='top')
-    
-        ax.annotate('Nest %d: %dx%d %0.1f km squares'%(i+1, nres, nres, [3.5, 1.0, 0.3][i]),
-                    xy=[.055, .95 - .05*i],
-                    xycoords='axes fraction',
-                    color='k', fontsize=13,
-                    ha='left', va='top')
-
+        
+        if annotate_res:
+            ax.annotate('Nest %d: %dx%d %0.1f km squares'%(i+1, nres, nres, [3.5, 1.0, 0.3][i]),
+                        xy=[.055, .95 - .05*i],
+                        xycoords='axes fraction',
+                        color='k', fontsize=13,
+                        ha='left', va='top')
+    if title=='':
+        locname = str.capitalize(model_run.split('_')[0])
+        if locname == 'Sirivan':
+            locname = 'Sir Ivan'
+        title = "Fire-Access model run nests at %s"%locname
+    plt.title(title)
     ## Add zoom of nest 3?
     fio.save_fig(model_run,_sn_,'nested_grid',plt)
     
