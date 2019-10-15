@@ -32,10 +32,9 @@ _sn_ = 'cloud_outline'
 def clouds_2panel(topog,s,u,v,
                   qc,w,
                   z,lat,lon,
-                  dtime,
+                  transect,
                   ff = None,
                   extentname='waroona',
-                  transect=1, 
                   nquivers=20,
                   quiverscale=60,
                   ztop=10000,
@@ -57,17 +56,12 @@ def clouds_2panel(topog,s,u,v,
         ext is the plot extension { '.png' | '.eps' }
     '''
     
-    ## Plot data, inputs will be [[z],lat,lon]
-    
-    # datetime timestamp for title
-    stitle = dtime.strftime("%Y %b %d %H:%M (UTC)")
-    
     # set font sizes
     plotting.init_plots()
     
     # get plot extent, and transect
     extent = plotting._extents_[extentname]
-    start,end = plotting._transects_["%s%d"%(extentname,transect)]
+    start,end = transect
     
     plt.figure(figsize=[7,10])
     plt.subplot(3,1,1)
@@ -97,8 +91,11 @@ def clouds_2panel(topog,s,u,v,
     
     # Add fire outline
     if ff is not None:
-        plt.contour(lon,lat,np.transpose(ff),np.array([0]), 
-                    colors='red')
+        with warnings.catch_warnings():
+            # ignore warning when there is no fire:
+            warnings.simplefilter('ignore')
+            plt.contour(lon,lat,np.transpose(ff),np.array([0]), 
+                        colors='red')
     
     ## Second row is transect plots
     plt.subplot(3,1,2)
@@ -120,74 +117,68 @@ def clouds_2panel(topog,s,u,v,
     plt.ylabel('height (m)')
     plt.xlabel('')
     
+    ## subplot with cloud contourf
     plt.subplot(3,1,3)
     plotting.transect_qc(qc,z,lat,lon,start,end,topog=topog,
                         ztop=ztop,)
     # Show transect start and end
     xticks,xlabels = plotting.transect_ticks_labels(start,end)
-    plt.xticks(xticks[0::2],xlabels[0::2]) # show transect start and end
-    
-    # Save figure into animation folder with numeric identifier
-    plt.suptitle(stitle)
-    
-    return plt
+    plt.xticks(xticks[0::2],xlabels[0::2]) 
 
 
-def waroona_cloud_loop(dtime,model_version="waroona_run1"):
+def cloud_outline_model(model_run = 'waroona_run1', dtime=datetime(2016,1,5,15)):
     '''
     make an hours worth of clouds_2panel plots starting at argument dtime
-    First get iris cubes from each of the data files we will read,
-        subset the data before reading it to save ram and run faster
-        also read fire front at matching times
-    then send all the data to plotting method
+    Read model run, send good bits to be plotted over our 6 transects
     '''
-    extentname=model_version.split("_")[0]
+    extentname=model_run.split("_")[0]
     extent=plotting._extents_[extentname]
     
     # Read the cubes
-    cubes = fio.read_model_run(model_version, fdtime=dtime, 
+    cubes = fio.read_model_run(model_run, fdtime=dtime, 
                                extent=extent,
                                add_z=True,
                                add_winds=True,
                                add_theta=True)
-    print("DEBUG:",cubes)
+    
     zth, topog, u,v,s = cubes.extract(['z_th','surface_altitude','u','v','s'])
     qc, w, sh = cubes.extract(['qc','upward_air_velocity','specific_humidity'])
-    theta, Ta = cubes.extract(['air_temperature','potential_temperature'])
+    T, theta = cubes.extract(['air_temperature','potential_temperature'])
     cubetimes = utils.dates_from_iris(u)
     lat,lon = w.coord('latitude').points, w.coord('longitude').points
     
     ## fire front
     # read 6 time steps:
-    ff = None
-    if model_version in ['waroona_run1']:
-        ff1, = fio.read_fire(dtimes=cubetimes, extent=extent, firefront=True)
+    ff, = fio.read_fire(model_run, dtimes=cubetimes, extent=extent, firefront=True)
     
-    # loop over different transects
-    for i_transect in np.arange(1,6.5,1, dtype=int):
-        for tstep in range(len(cubetimes)):
-            if model_version in ['waroona_run1']:
-                ff = ff1[tstep].data.data
-            plt=clouds_2panel(topog.data.data, s[tstep,0].data.data, u[tstep,0].data.data, v[tstep,0].data.data,
-                              qc[tstep].data.data, w[tstep].data.data,
-                              zth.data.data, lat, lon,
-                              dtime=cubetimes[tstep],
-                              ff = ff,
-                              extentname=extentname,
-                              transect=i_transect)
-            # figure name and location
-            #pname="figures/%s/clouds_outline_X%d/fig_%s%s"%(extentname,transect,dstamp,ext)
-            #print("INFO: Saving figure:",pname)
-            #plt.savefig(pname,dpi=dpi)
-            #plt.close()
-            fio.save_fig(model_version,_sn_,cubetimes[tstep],plt,
-                         subdir='transect_%d'%i_transect)
-            
+    # loop over available timesteps
+    topogi = topog.data.data
+    zi = zth.data.data
+    for i,dt in enumerate(cubetimes):
+        # datetime timestamp for title
+        stitle = dt.strftime("%Y %b %d %H:%M (UTC)")
+        si, ui, vi, qci, wi, ffi = [s[i,0].data.data, u[i,0].data.data, 
+                                        v[i,0].data.data, qc[i].data.data, 
+                                        w[i].data.data, ff[i].data.data]
+        # loop over transects
+        for ii in range(6):
+            transect = plotting._transects_['%s%d'%(extentname,ii+1)]
+            clouds_2panel(topogi,si,ui,vi, qci,wi, zi, lat, lon,
+                          transect=transect, ff = ffi, extentname=extentname)
+            # Save figure into animation folder with numeric identifier
+            plt.suptitle(stitle)
+            fio.save_fig(model_run, _sn_, dt, plt,
+                         subdir='transect_%d'%(ii+1))
+
 if __name__ == '__main__':
     
-    print("INFO: testing cloud_outline.py")
-    #waroona_cloud_loop(datetime(2016,1,5,15))
-    for dtime in [ datetime(2016,1,6,7) + timedelta(hours=x) for x in range(2) ]:
-        for mv in ['waroona_old','waroona_run1']:
-            waroona_cloud_loop(dtime,model_version=mv)
+    testing=False
+    
+    for mv in ['sirivan_run1', 'waroona_old', 'waroona_run1']:
+        datetimes = fio.model_outputs[mv]['filedates']
+        if testing:
+            datetimes = datetimes[0:2]
+        
+        for dt in datetimes:
+            cloud_outline_model(mv, dt)
 

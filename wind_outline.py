@@ -76,12 +76,12 @@ def show_transects():
 def wind_outline(s,u,v,w,
                  qc, topog,
                  z,lat,lon,
-                 dtime,
+                 transect,
                  ff=None,
                  extentname='waroona',
-                 transect=1, 
                  nquivers=18,
                  quiverscale=60,
+                 ztop = 5000,
                  cloud_threshold=constants.cloud_threshold,
                 ):
     '''
@@ -92,19 +92,17 @@ def wind_outline(s,u,v,w,
         wind speed, x-wind, y-wind, vert-wind, cloud content, topography, model level altitude, lat,lon, datetime (for titles)
         ff: fire front array, negative where fire has burned, optional
         extentname = { 'waroona' | 'sirivan' } choice of two fire locations
-        transect = int from 1 to 6 for transect choice
+        transect = [[lat0,lon0],[lat1,lon1]]
         nquivers: int, roughly how many quivers are desired
         quiverscale: int, changes how long the arrows are (also may need to fiddle)
         cloud_threshold: float, g/kg where cloud outline is drawn
     '''
-    stitle = dtime.strftime("%Y %b %d %H:%M (UTC)")
-    
     # set font sizes
     plotting.init_plots()
     
     # get plot extent, and transect
-    extent = plotting._extents_[extentname]
-    start,end = plotting._transects_["%s%d"%(extentname,transect)]
+    extent = [lon[0],lon[-1],lat[0],lat[-1]]
+    start,end = transect
     
     plt.figure(figsize=[7,10])
     plt.subplot(3,1,1)
@@ -127,7 +125,8 @@ def wind_outline(s,u,v,w,
              marker='>', markersize=7,markerfacecolor='white')
     
     # add nearby towns
-    plotting.map_add_locations_extent(extentname)
+    if extentname is not None:
+        plotting.map_add_locations_extent(extentname)
     
     # Quiver, reduce arrow density
     vsu = len(lon)//nquivers
@@ -146,6 +145,7 @@ def wind_outline(s,u,v,w,
     plt.subplot(3,1,2)
     wslice, xslice, zslice  = plotting.transect_w(w,z, lat, lon,start,end,
                                                   npoints=100,topog=topog,
+                                                  ztop=ztop,
                                                   lines=None)
     plt.ylabel('height (m)')
     ## Add contour where clouds occur
@@ -156,7 +156,7 @@ def wind_outline(s,u,v,w,
         plt.contour(xslice,zslice,qcslice,np.array([cloud_threshold]),colors='teal')
     
     ax3 = plt.subplot(3,1,3)
-    trs, trx, trz = plotting.transect_s(s,z,lat,lon,start,end,topog=topog)
+    trs, trx, trz = plotting.transect_s(s,z,lat,lon,start,end,topog=topog, ztop=ztop)
     xticks,xlabels = plotting.transect_ticks_labels(start,end)
     plt.xticks(xticks[0::2],xlabels[0::2]) # show transect start and end
     
@@ -170,56 +170,14 @@ def wind_outline(s,u,v,w,
     ax3.annotate(note, fontsize=15,
                  xy=(0.33, -0.2 ), xycoords=trans)
     
-    # Save figure into animation folder with numeric identifier
-    plt.suptitle(stitle)
     return plt
-
-
-#def winds_outline_waroona1(dtime, model_version='waroona_run1', dpi=300):
-#    '''
-#    Loop over transects over waroona and make the wind outline figures
-#    '''
-#    extentname=model_version.split('_')[0]
-#    extent=plotting._extents_[extentname]
-#    
-#    # Read the cubes
-#    cubes = fio.read_model_run(model_version, fdtime=dtime, extent=extent,
-#                               add_topog=True,
-#                               add_z=True, 
-#                               add_winds=True)
-#    
-#    zth, topog = cubes.extract(['z_th','surface_altitude'])
-#    u,v,s, qc, w = cubes.extract(['u','v','s','qc','upward_air_velocity'])
-#
-#    cubetimes = utils.dates_from_iris(u)
-#    
-#    ## fire front
-#    ff1, = fio.read_fire(dtimes=cubetimes, extent=extent, firefront=True)
-#    lat,lon = w.coord('latitude').points, w.coord('longitude').points
-#    
-#    # also loop over different transects
-#    for i in range(6):
-#        for tstep in range(len(cubetimes)):
-#            ff = None
-#            if model_version == 'waroona_run1':
-#                ff = ff1[tstep].data.data
-#            plt = wind_outline(s[tstep].data.data, u[tstep].data.data, v[tstep].data.data, w[tstep].data.data,
-#                               qc[tstep].data.data, topog.data.data,
-#                               zth.data.data, lat,lon,
-#                               dtime=cubetimes[tstep],
-#                               ff = ff,
-#                               extentname=extentname,
-#                               transect=i+1)
-#            fio.save_fig(model_version,_sn_,cubetimes[tstep],plt, 
-#                         subdir='transect_%d'%i,
-#                         dpi=dpi)
 
 def outline_model_winds(model_run='sirivan_run1', hours=None, dpi=200):
     
     extentname=model_run.split('_')[0]
     extent=plotting._extents_[extentname]
     
-    # Read the cubes
+    ## Read the cubes
     cubes = fio.read_model_run(model_run, fdtime=hours, extent=extent,
                                add_topog=True,
                                add_z=True, 
@@ -227,29 +185,31 @@ def outline_model_winds(model_run='sirivan_run1', hours=None, dpi=200):
     
     zth, topog = cubes.extract(['z_th','surface_altitude'])
     u,v,s, qc, w = cubes.extract(['u','v','s','qc','upward_air_velocity'])
-
     cubetimes = utils.dates_from_iris(u)
     
     ## fire front
     ff, = fio.read_fire(model_run=model_run, dtimes=cubetimes, extent=extent, 
                         firefront=True)
+    lat, lon = w.coord('latitude').points, w.coord('longitude').points
     
-    lat,lon = w.coord('latitude').points, w.coord('longitude').points
-    #flat,flon = ff.coord('latitude').points, ff.coord('longitude').points
-    #print("DEBUG:",lat[:2],flat[:2], lat[-2:], flat[-2:], lon[:2],flon[:2],lon[-2:],flon[-2:])
-    # lat0 != flat0, lat-1 != flat-1, lon0 != flon0, lon-1 != flon-1
-    # also loop over different transects
+    ## loop over available timedate steps
     for i, dt in enumerate(cubetimes):
+        stitle = dt.strftime("%Y %b %d %H:%M (UTC)")
+        si, ui, vi, wi, qci, topogi, zthi, ffi = [s[i].data.data, u[i].data.data, 
+                                                 v[i].data.data, w[i].data.data, 
+                                                 qc[i].data.data, topog.data.data, 
+                                                 zth.data.data, ff[i].data.data]
+
+        ## loop over different transects
         for ii in range(6):
-            #print("DEBUG:",s.shape, lat.shape,lon.shape,ff.shape)
-            plt = wind_outline(s[i].data.data, u[i].data.data, v[i].data.data, w[i].data.data,
-                               qc[i].data.data, topog.data.data,
-                               zth.data.data, lat,lon,
-                               dtime=cubetimes[i],
-                               ff = ff[i].data.data,
-                               extentname=extentname,
-                               transect=ii+1)
-            fio.save_fig(model_run,_sn_,cubetimes[i],plt, 
+            transect = plotting._transects_["%s%d"%(extentname,ii+1)]
+            plt = wind_outline(si, ui, vi, wi, qci, topogi, zthi, lat, lon,
+                               transect=transect,
+                               ff = ffi,
+                               extentname=extentname)
+            # Save figure into subfolder with transect identifier
+            plt.suptitle(stitle)
+            fio.save_fig(model_run, _sn_, cubetimes[i], plt,
                          subdir='transect_%d'%(ii+1),
                          dpi=dpi)
 

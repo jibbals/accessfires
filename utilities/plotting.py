@@ -25,6 +25,7 @@ from cartopy.io import shapereader
 from cartopy.mpl.gridliner import LONGITUDE_FORMATTER, LATITUDE_FORMATTER
 import cartopy.io.img_tiles as cimgt
 from owslib.wmts import WebMapTileService
+import warnings
 
 # local stuff
 from utilities import utils, constants
@@ -197,7 +198,10 @@ def transect(data, z, lat, lon, start, end, npoints=100,
     
     # Add contour lines
     if lines is not None:
-        plt.contour(slicex,slicez,slicedata,lines,colors='k')            
+        with warnings.catch_warnings():
+            # ignore warning when there is no fire:
+            warnings.simplefilter('ignore')
+            plt.contour(slicex,slicez,slicedata,lines,colors='k')            
     
     # make sure land is obvious
     if topog is not None:
