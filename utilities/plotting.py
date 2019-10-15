@@ -91,9 +91,7 @@ _transects_['waroona3'] = [-32.86   , __x0__], [-32.88   , __x1__]
 _transects_['waroona4'] = [-32.92   , __x0__], [-32.82   , __x1__]
 _transects_['waroona5'] = [-32.96   , __x0__], [-32.85   , __x1__] 
 _transects_['waroona6'] = [-32.87   , __x0__], [-32.89   , __x1__]
-_transects_['pyrocb_waroona'] = [-32.89 , 115.9 ], [-32.88   , __x1__]
-_transects_['pyrocbx1_waroona'] = [-32.95, 116.09], [-32.78   , 116.16]
-_transects_['pyrocbx2_waroona'] = [-32.95, 116.15], [-32.78   , 116.09]
+
 _transects_['emberstorm1'] = [-32.86, __x0__+.09], [-32.88, __x0__+.2] # emberstorm 
 _transects_['emberstorm2'] = [-32.82, __x0__+.09], [-32.83, __x0__+.2] # north of emberstorm
 _transects_['emberstorm3'] = [-32.90, __x0__+.09], [-32.91, __x0__+.2] # south of emberstorm
@@ -136,10 +134,12 @@ def map_add_locations_extent(extentname, hide_text=False):
     dx=.025
     dxfire = .025
     dy=.015
+    dyfire = .015
     if extentname =='sirivan':
         dx=[.065,.02,.125]
-        dy =[.02,.015,-.05]
+        dy =[.02,.015,-.07]
         dxfire=.05
+        dyfire=-.06
     locs = locstrings[extentname]
     text = [name.capitalize() for name in locs]
     if hide_text:
@@ -147,8 +147,12 @@ def map_add_locations_extent(extentname, hide_text=False):
     
     map_add_locations(locs, text=text, textcolor='k', dx=dx,dy=dy)
     # add fire ignition
-    map_add_locations(['fire_%s'%extentname], text=[['Ignition'],['']][hide_text], 
-                      color='r', marker='*', dx=dxfire, textcolor='k')
+    map_add_locations(['fire_%s'%extentname], text=[['Ignition',''][hide_text]], 
+                      color='r', marker='*', dx=dxfire, dy=dyfire, textcolor='k')
+    # add weather stations
+    if extentname=='waroona':
+        map_add_locations(['wagerup'],[['AWS',''][hide_text]],
+                          color='b', marker='*', dx=-.025,dy=.01)
 
 def transect(data, z, lat, lon, start, end, npoints=100, 
              topog=None, latt=None, lont=None, ztop=4000,

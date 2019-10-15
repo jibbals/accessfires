@@ -16,7 +16,8 @@ from utilities import fio, utils, plotting
 ## from command line I ran python -m numpy.f2py -c HFDiag_calc.f90 -m HFcalc
 ##     doesn't work on windows (no fortran compilers installed)
 # this created a .so file callable here
-import HFcalc as fortranbit
+#import utilities.fortran.HFcalc as fortranbit
+#import HFcalc
 
 '''
 ## Declare additional single-column arrays
@@ -36,37 +37,48 @@ lat,lon = plotting._latlons_['fire_waroona_upwind']
 extent = [lon-.01, lon+.01, lat-.01, lat+.01] # just grab real close to latlon
 cubes=fio.read_model_run('waroona_old',datetime(2016,1,6,5), extent=extent,
                          add_dewpoint=True, add_winds=True, add_RH=False,
-                         add_topog=True, add_z=True)
+                         add_topog=True, add_z=True, add_theta=True)
+
+
 
 ## first interpolate everything to latlon
 for i in range(len(cubes)):
     cubes[i] = cubes[i].interpolate([('longitude',lon), ('latitude',lat)],
                                     iris.analysis.Linear())
+        
 print("debug:",cubes)
+# extract cubes, remove time dim
+qq = cubes.extract('specific_humidity')[0][0] # kg/kg
+th, = cubes.extract('potential_temperature')[0][0] # K
+pr, = cubes.extract('air_pressure')[0][0] # Pa
+TT, = cubes.extract('air_temperature')[0][0] # K
+uu,vv,ww = cubes.extract(['u','v','upward_air_velocity'])[0][0] # m/s
+dp, = cubes.extract('dewpoint_temperature')[0][0] # K
 
+# surface metrics
+# surface values in old run are on different time dimension...!?!
+zsfc, psfc, Tsfc = cubes.extract(['surface_altitude', 
+                                  'surface_air_pressure', 
+                                  'surface_temperature'])
+zsfc = float(zsfc.data) # m
+if len(psfc.shape) > 0:
+    psfc = float(zsfc[0].data) # Pa
+    Tsfc = float(Tsfc[0].data) # K
+else:
+    psfc = float(zsfc.data)
+    Tsfc = float(Tsfc.data)
 
-#press.convert_units('hPa') # convert to hPa
-#Temp.convert_units('K') # convert to sir Kelvin
-#Tempd.convert_units('K') # convert to kelvin
-    
-#
-## Plot T, and Td
-## pull out data array (units don't work with masked arrays)
-#p = np.squeeze(press0.data.data) * units(str(press.units))
-#p = p.to(units.mbar)
-#T = np.squeeze(temp0.data.data) * units(str(Temp.units))
-#T = T.to(units.degC)
-#Td = np.squeeze(tempd0.data.data) * units(str(Tempd.units))
-#Td = Td.to(units.degC)
-    
+## phi, DbSP, ni, nj, zp, beta_e, Pmin, betaSPmin, Wmin, Umin, Prcntg
+#  
+
+#  [UML,Um,Vm,betaFC,zFC,pFC,Bflux,Hflux]=subroutines.heat_flux_calc(TT,qq,uu,vv,ww,th,pr,nlvl,zsfc,psfc,Tsfc,\
+#                                             phi,DbSP,ni,nj,zp,beta_e,Pmin2,betaSPmin,Wmin,Umin,Prcntg)
 #heat_flux_calc(TT,qq,uu,vv,ww,th,pr,pd,zsfc,psfc,Tsfc, &
 #               phi,DbSP,ni,nj,zp,beta_e,Pmin,betaSPmin,Wmin,Umin,Prcntg, &
 #               UML,Um,Vm,betaFC,zFC,pFC,Bflux,Hflux)
 
-
-
 #
-print(fortranbit.subroutines.heat_flux_calc.__doc__)
+#print(fortranbit.subroutines.heat_flux_calc.__doc__)
 #
 #uml,um,vm,betafc,zfc,pfc,bflux,hflux = heat_flux_calc(tt,qq,uu,vv,ww,th,pr,pd,zsfc,psfc,tsfc,phi,dbsp,ni,nj,zp,beta_e,pmin,betaspmin,wmin,umin,prcntg)
 #

@@ -704,7 +704,9 @@ def read_waroona_old(dtime, constraints=None, extent=None):
                 'mass_fraction_of_cloud_ice_in_air',
                 'upward_air_velocity', # m/s [t,z,lat,lon]
                 'air_pressure', # Pa [t,z,lat,lon]
+                'surface_air_pressure', # Pa [lat,lon] ?? no time dim?
                 'air_temperature', # K [lat,lon]
+                'surface_temperature', # K [lat,lon] ?? no time dim??
                 'air_temperature_0', # K [t, z, lat, lon]
                 'x_wind','y_wind', # m/s [t,z,lat,lon]
                 'air_pressure_at_sea_level', # Pa [time, lat, lon]
@@ -726,7 +728,7 @@ def read_waroona_old(dtime, constraints=None, extent=None):
         cubes.remove(Ta)
     else:
         cubes.remove(Ta0)
-
+        
     return cubes
 
 def read_waroona_oldold(constraints=None, extent=None):
