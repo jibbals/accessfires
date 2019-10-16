@@ -16,6 +16,7 @@ module physical_constants
 
    real, parameter :: Cpd=1005.7           ! Specific heat of dry air (J/kg/K)
    real, parameter :: Rd=287.04            ! Gas constant for dry air (J/kg/K)
+   real, parameter :: kappa=Rd/Cpd         ! Ratio of gas constant to specific heat
    real, parameter :: LV=2.501e6           ! Latent heat of vapourisation (J/kg)
    real, parameter :: P0=1.0e5             ! Standard pressure (Pa)
    real, parameter :: grav=9.8             ! Acceleration due to gravity (m/s^2)
@@ -31,7 +32,7 @@ module subroutines
 contains
    subroutine heat_flux_calc(TT,qq,uu,vv,ww,th,pr,pd,zsfc,psfc,Tsfc, &
                              phi,DbSP,ni,nj,zp,beta_e,Pmin,betaSPmin,Wmin,Umin,Prcntg, &
-                             UML,Um,Vm,betaFC,zFC,pFC,Bflux,Hflux)
+                             UML,Um,Vm,betaFC,DthFC,zFC,pFC,Bflux,Hflux)
    use physical_constants
    implicit none
 
@@ -69,6 +70,7 @@ contains
    real, intent(out) :: Um         ! Mixed-layer zonal wind
    real, intent(out) :: Vm         ! Mixed-layer meridional wind
    real, intent(out) :: betaFC     ! Free convection beta parameter
+   real, intent(out) :: DthFC      ! Free-convection plume excess potential temperature (K)
    real, intent(out) :: zFC        ! Free convection height above ground level (m)
    real, intent(out) :: pFC        ! Free convection pressure (Pa)
    real, intent(out) :: Bflux      ! Net buoyancy flux required for the plume to reach zFC (m^4.s^-3)
@@ -111,6 +113,7 @@ contains
    real :: AA,BB                   ! Constants for linear function of pressure with theta
    real :: thenv                   ! environment potential temperature
    real :: qenv                    ! environment specific humidity
+   real :: pC                      ! Plume centreline pressure (Pa)      Added 2019-10-15
 
 
 ! Declare local vertical profile arrays
@@ -377,7 +380,8 @@ contains
    thFC = (betaFC+1)*thWML
    qqFC = qqWML + betaFC*phi*thWML
    call LCL(thFC,qqFC,pFC,TFC)
-   rhoFC = pFC/(Rd*TFC)
+!   rhoFC = pFC/(Rd*TFC)                        ! Commented out on 2019-10-15
+   DthFC = betaFC*thWML                         ! Added 2019-10-15
 
 ! Use linear interpolation to get the free convection height (zFC)
 ! First find the pressure level above the free convection level
@@ -430,8 +434,20 @@ contains
 ! be that the density does not change much (pressure and temperature decrease at
 ! a similar rate) in which case both BB and HH are conserved, and we can choose
 ! any value of rho that we have suitable data for.  
+!    2019-10-15  Much of the above uncertainty has been sorted out.
+! The buoyancy flux is conserved, which means the heatflux divided by pressure
+! is conserved.  Here the plume centreline pressure (pC) is used to represent
+! the pressure for the entire plume cross-section. For simplicity, assume the
+! ratio of zFC to the plume centreline height (zb) is the same as the ratios of
+! free-conveection pressure and plume centreline pressure above the surface.
+!   Calculate pC
+   pC = psfc + (pFC - psfc)/( zFC/zb(1) )
+
    Bflux = pi*grav*betaFC*UML*(beta_e*zb(1))**2
-   Hflux = (rhoFC*Cpd*thWML/grav)*Bflux
+!   Hflux = (rhoFC*Cpd*thWML/grav)*Bflux        ! Commented out on 2019-10-15
+   Hflux = pi/kappa*(pC/thFC)*(beta_e*zb(1))**2*UML*DthFC ! Added 2019-10-15
+
+!   write(6,*) "pC, DthFC, Hflux,kappa",pC, DthFC, Hflux,kappa
  
 !   write(6,*) "UML, WML,Umin,Wmin",UML,WML,Umin,Wmin
 
@@ -550,7 +566,7 @@ contains
    r_star = qq/(1 - qq)
 
 ! Calculate e_star
-   TT = th*(pr/P0)**(Rd/Cpd*(1 - 0.24*r_star))
+   TT = th*(pr/P0)**(kappa*(1 - 0.24*r_star))
    e_star = 611.2*exp( (17.67*TT- 4826.56)/(TT - 29.65) )
    
 ! Calculate pd_star
@@ -611,6 +627,7 @@ program Heatflux
 
 ! Declare output variables
    real :: betaFC     ! Free convection beta parameter
+   real :: DthFC      ! Free-convection plume excess potential temperature (K) Added 2019-10-15
    real :: zFC        ! Free convection height (m)
    real :: pFC        ! Free convection pressure (Pa)
    real :: Bflux      ! Net buoyancy flux required for the plume to reach zFC (m^4.s^-3)
@@ -768,8 +785,8 @@ program Heatflux
 !  Calculate potential temperature
    do k=1,pd
      rr = qq(k)/(1.0 - qq(k))
-     th(k) = TT(k)*(p0/pr(k))**(Rd/Cpd*(1 - 0.24*rr))
-!     write(6,*) rr,p0,(Rd/Cpd*(1 - 0.24*rr)),pr(k),th(k),k
+     th(k) = TT(k)*(p0/pr(k))**(kappa*(1 - 0.24*rr))
+!     write(6,*) rr,p0,(kappa*(1 - 0.24*rr)),pr(k),th(k),k
 !     write(6,*) pr(k)*0.01,TT(k)-273.15,qq(k)*1000.0
    enddo
 
@@ -779,7 +796,7 @@ program Heatflux
 
   call heat_flux_calc(TT,qq,uu,vv,ww,th,pr,pd,zsfc,psfc,Tsfc, &
                              phi,DbSP,ni,nj,zp,beta_e,Pmin,betaSPmin,Wmin,Umin,Prcntg, &
-                             UML,Um,Vm,betaFC,zFC,pFC,Bflux,Hflux)
+                             UML,Um,Vm,betaFC,DthFC,zFC,pFC,Bflux,Hflux)
 
 !   write(6,*) "betaFC,zFC,pFC,Bflux,Hflux",betaFC,zFC,pFC,Bflux,Hflux
 

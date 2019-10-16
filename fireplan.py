@@ -23,22 +23,25 @@ from utilities import plotting, utils, fio
 ## GLOBALS
 ###
 _sn_ = 'fireplan'
-PFT = {'waroona_run1':{'data':np.array([56.5, 42.1, 34.6]), # manually calculated PFT
+PFT = {'waroona_run1':{'data':np.array([56.5, 42.1, 34.6, 332.6, 53.2]), # manually calculated PFT
                        'units':'Gigawatts',
                        'time':np.array([datetime(2016,1,5,15,10),
                                         datetime(2016,1,6,5,10),
-                                        datetime(2016,1,6,6)]), # calculated at these times in UTC
-                       'latlon':[-32.89 -0.004, 116.17+0.009], # ~ 1km from fire
+                                        datetime(2016,1,6,6,10),
+                                        datetime(2016,1,6,8,10),
+                                        datetime(2016,1,6,12,10)]), # calculated at these times in UTC
+                       'latlon':plotting._latlons_['fire_waroona_upwind'], # ~ 1km from fire
                        'latlon_stamp':'fire_waroona_upwind',
                        'style':'--',
                        'color':'k',
                        },
-       'waroona_old':{'data':np.array([61.4, 67.9, 122.8]), # manually calculated PFT
+       'waroona_old':{'data':np.array([61.4, 67.9, 176.4, 145.7]), # manually calculated PFT
                       'units':'Gigawatts',
                       'time':np.array([datetime(2016,1,5,15),
                                        datetime(2016,1,6,5,1),
-                                       datetime(2016,1,6,6)]), # calculated at these times in UTC
-                      'latlon':[-32.89 -0.004, 116.17+0.009], # ~ 1km from fire
+                                       datetime(2016,1,6,6),
+                                       datetime(2016,1,6,8,1),]), # calculated at these times in UTC
+                      'latlon':plotting._latlons_['fire_waroona_upwind'], # ~ 1km from fire
                       'latlon_stamp':'fire_waroona_upwind',
                       'style':'--',
                       'color':'g',
@@ -46,11 +49,17 @@ PFT = {'waroona_run1':{'data':np.array([56.5, 42.1, 34.6]), # manually calculate
       }
 
 ## Calculations for PFT:
+
+## 201601060600OLD: q_ML=8.5, th_ML=34, z_fc=680mbar=3.5km, dth=6, U=8m/s :: PFT = .3*3.5**2*6*8 = 176.4 GW
+## 201601060800OLD: q_ML=8, th_ML=35, z_fc=685mbar=3.4km, dth=4, U=10.5 :: PFT = .3*3.4**2*4*10.5 = 145.7 GW
+
+## 201601060810RUN1: q_ML=8, th_ML=35.5, z_fc=690mbar=3.33km, dth=2, U=8 :: PFT = .3*3.33**2*2*8 = 53.2 GW
+
 ## 201601051500OLD: q_ML=8  , th_ML=35C, star_SP=(10  , 55C), z_fc=690mbar=3.24km, dth=1.5, U=13m/s ::: PFT = .3*3.24**2*1.5*13 = 61.4GW
 ## 201601060501OLD: q_ML=9  , th_ML=34C, star_SP=(11  , 54C), z_fc=710mbar=3.07km, dth=4.0, U= 6m/s ::: PFT = .3*3.07**2*4*6 = 67.9GW
-## 201601060600OLD: q_ML=8.5, th_ML=35C, star_SP=(10.5, 55C), z_fc=680mbar=3.42km, dth=5.0, U= 7m/s ::: PFT = .3*3.42**2*5*7 = 122.8GW
 ## 201601051510NEW: q_ML=8  , th_ML=35C, star_SP=(10  , 55C), z_fc=710mbar=3.07km, dth=2.0, U=10m/s ::: PFT = .3*3.07**2*2*10 = 56.5GW
 
+## 201601061210NEW: q_ML=7.2, th_ML=35.5, z_fc = 695mbar=4km, dth=4.5, U=15.4m/s ::: PFt = .3*4**2*4.5*15.4 = 332.6GW
 
 def pft_altitude_vs_pressure(model_run='waroona_run1', latlon=plotting._latlons_['fire_waroona_upwind'],
                              mbar_to_watch=700, datetimes=[datetime(2016,1,5,15)]):

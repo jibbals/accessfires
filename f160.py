@@ -25,7 +25,7 @@ import matplotlib.pyplot as plt
 #import matplotlib.colors as col
 #import matplotlib.ticker as tick
 import numpy as np
-from datetime import datetime,timedelta
+from datetime import datetime
 import iris # file reading and constraints etc
 #import warnings
 
@@ -177,15 +177,20 @@ def f160_hour(dtime=datetime(2016,1,6,7),
 
 if __name__ == '__main__':
     
+    testing=True
+    
     topleft = [-32.75, 115.8] # random point away from the fire influence
     pyrocb1 = plotting._latlons_['pyrocb_waroona1']
     upwind  = plotting._latlons_['fire_waroona_upwind'] # ~1 km upwind of fire
     loc_and_stamp = ([pyrocb1,topleft,upwind],['pyrocb1','topleft','upwind'])
-    loc_and_stamp = ([upwind],['upwind'])
+    #loc_and_stamp = ([upwind],['upwind'])
     #checktimes = [ datetime(2016,1,6,5) + timedelta(hours=x) for x in range(2) ]
     #checktimes = [ datetime(2016,1,5,15) ]
     old_times = fio.model_outputs['waroona_old']['filedates']
     run1_times = fio.model_outputs['waroona_run1']['filedates']
+    if testing:
+        old_times = fio.model_outputs['waroona_old']['filedates'][-5:]
+        run1_times = fio.model_outputs['waroona_run1']['filedates'][-5:]
     
     for mv, dtimes in zip(['waroona_run1','waroona_old'],[run1_times,old_times]):
         for dtime in dtimes:

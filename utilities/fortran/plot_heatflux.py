@@ -236,6 +236,7 @@ HfluxF = psfc1*0.0-1000. # Hflux divided by 10 m wind speed.  Hflux "flag". Base
 zFC1 = psfc1*0.0         # Free-convection height.  Units m
 #pFC1 = psfc1*0.0         # Free-convection pressure. Units
 betaFC1 = psfc1*0.0      # Free-convection buoyancy. Units m/s^2
+DthFC1 = psfc1*0.0       # Free-convection plume excess potential temperature.  Units K
 UML1 = psfc1*0.0         # Mean horizontal windspeed. Units m/s
 Um1 = psfc1*0.0          # Mean zonal wind. Units m/s
 Vm1 = psfc1*0.0          # Mean meridional wind. Units m/s
@@ -325,6 +326,14 @@ BFC_min = 0.0
 BFC_max = 0.55
 BFC_con = np.arange(BFC_min,BFC_max,BFC_int)
 bmap = plt.cm.get_cmap('PuBuGn_r') # Get colormap
+
+# Free-convection plume excess potential temeprature
+DTHFC_int = 1.5
+DTHFC_min = 0.0
+DTHFC_max = 16.5
+DTHFC_con = np.arange(DTHFC_min,DTHFC_max,DTHFC_int)
+dthmap = plt.cm.get_cmap('PuBuGn_r') # Get colormap
+
 
 # Free-convection height
 zFC_int = 500.0
@@ -497,13 +506,14 @@ for it in range(t1,t2):
 #        print Pmin
 #        print betaSPmin,Wmin,Umin,Prcntg
         if zsfc != 0:
-          [UML,Um,Vm,betaFC,zFC,pFC,Bflux,Hflux]=subroutines.heat_flux_calc(TT,qq,uu,vv,ww,th,pr,nlvl,zsfc,psfc,Tsfc,\
+          [UML,Um,Vm,betaFC,DthFC,zFC,pFC,Bflux,Hflux]=subroutines.heat_flux_calc(TT,qq,uu,vv,ww,th,pr,nlvl,zsfc,psfc,Tsfc,\
                                                      phi,DbSP,ni,nj,zp,beta_e,Pmin2,betaSPmin,Wmin,Umin,Prcntg)
         else:
           UML=S_max*1.0
           Um =0.0
           Vm =0.0
           betaFC=BFC_max*1.0
+          DthFC=DTHFC_max*1.0
           zFC=zFC_max*1.0
           pFC=100.0
           Bflux=1.0e9
@@ -517,6 +527,7 @@ for it in range(t1,t2):
         Um1[it,iy,ix] = Um
         Vm1[it,iy,ix] = Vm
         betaFC1[it,iy,ix] = betaFC
+        DthFC1[it,iy,ix] = DthFC
         zFC1[it,iy,ix] = zFC
 #        pFC1[it,iy,ix] = pFC
 #        Bflux1[it,iy,ix] = Bflux
@@ -676,7 +687,8 @@ for it in range(t1,t2):
 
 # Fourth plot
    plt.subplot(2,2,4,aspect='equal') # One subplot
-   plt.contourf(lon,lat,betaFC1[it,:,:],BFC_con,cmap=bmap) # draw filled contours
+#   plt.contourf(lon,lat,betaFC1[it,:,:],BFC_con,cmap=bmap) # draw filled contours
+   plt.contourf(lon,lat,DthFC1[it,:,:],DTHFC_con,cmap=dthmap) # draw filled contours
    cbar = plt.colorbar() # add colorbar to the plot
    cbar.ax.tick_params(labelsize=8)
    Q = plt.quiver(lon[::qx],lat[::qx],Um1[it,::qx,::qx],Vm1[it,::qx,::qx],scale=0.5/0.01,units='inches',color='k') # units='y')
@@ -685,7 +697,7 @@ for it in range(t1,t2):
    plt.xlabel('longitude', fontsize=14) # x-axis label
    plt.ylabel('latitude', fontsize=14)  # y-axis label
    plt.xlim(xl); plt.ylim(yl) # axis limits
-   plt.title('Free-convection buoyancy (m/s^2)  ',fontsize=14)
+   plt.title('Free-convection Delta theta (K)  ',fontsize=14)
 
    plt.tight_layout(h_pad=1)
    # Add warning label in the middle of the figure

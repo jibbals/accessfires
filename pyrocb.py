@@ -31,14 +31,70 @@ from utilities import plotting, utils, fio, constants
 _sn_ = 'pyrocb'
 
 # transects showing the pyroCB in model extents
-__PYRO_TRANSECTS__ = {'waroona':{'X1':[[-32.89 , 115.9 ], [-32.88   , 116.19]],
-                                 'X2':[[-32.95, 116.09], [-32.78   , 116.16]],
-                                 'X3':[[-32.95, 116.15], [-32.78   , 116.09]]},
-                      'sirivan':{'X1':[[-32.15, 149.4  ], [-32.0  , 150.1 ]],
-                                 'X2':[[-32.2, 149.6  ], [-31.85 , 149.85 ]],
-                                 'X3':[[-32.15, 149.9  ], [-31.85 , 149.6 ]]}}
+__PYRO_TRANSECTS__ = {'waroona':{'X1':[[-32.89, 115.90], [-32.88, 116.19]],
+                                 'X2':[[-32.95, 116.09], [-32.78, 116.16]],
+                                 'X3':[[-32.95, 116.15], [-32.78, 116.09]],
+                                 'LR1':[[-32.87, 115.90], [-32.87, 116.18]]}, # left to right transect, to allow easy quiver on (u,w) dims
+                      'sirivan':{'X1':[[-32.15, 149.40], [-32.00, 150.10]],
+                                 'X2':[[-32.20, 149.60], [-31.85, 149.85]],
+                                 'X3':[[-32.15, 149.90], [-31.85, 149.60]],
+                                 'LR1':[[-32.50, 149.50], [-32.50, 150.00]]}}
 
+def map_with_transect():
+    """
+    TODO: contourf of whatever, plus firefront, plus towns
+    """
+    assert False, "to be implemented"
 
+def left_right_slice(qc, u, w, z,
+                     topog, lat, lon, 
+                     transect,
+                     ztop=4000,
+                     cloud_threshold=constants.cloud_threshold,
+                     npoints=100, nquivers=15
+                     ):
+    '''
+    cloud content contourf, with u,w wind quiver overlaid
+    
+    INPUTS:
+        qc: cloud liquid + ice g/kg [z, lat, lon]
+        u,w : horizontal, vertical winds m/s [z,lat,lon]
+        z: model level heights m [z, lat, lon]
+        topog: surface altitude m [lat,lon]
+        transect: [[lat0,lon0],[lat0,lon1]]
+        ztop: height of z axis in transect
+        cloud_threshold: g/kg threshold of liquid + ice in air
+        npoints: how many points to interpolate to on the transect
+    '''
+    start,end = transect
+       
+    ## Plot vert motion transect
+    qcslice, xslice, zslice = plotting.transect_qc(qc, z, lat, lon, start, end,
+                                                   npoints=npoints, title='',
+                                                   topog=topog, ztop=ztop,
+                                                   colorbar=False)
+    ## add wind quivers
+    # need transect u and w
+    uslice = utils.cross_section(u, lat, lon, start, end, npoints=npoints)
+    wslice = utils.cross_section(w, lat, lon, start, end, npoints=npoints)
+    
+    # quiver without crazy density
+    print("DEBUG:",xslice.shape,zslice.shape)
+    vsx,vsz = np.array(xslice.shape)//nquivers
+    print("DEBUG:",vsx,vsz)
+    # also skip first few so that barbs don't extend the transect
+    skip = (slice(vsx,None,vsx),slice(None,None,vsz))
+    
+    # meters per second to knots
+    mpsk = 1.94384
+    plt.barbs(xslice[skip],zslice[skip],uslice[skip]*mpsk,wslice[skip]*mpsk, 
+              pivot='middle')
+    #plt.quiver(xslice[skip],zslice[skip],uslice[skip],wslice[skip], 
+    #           scale=quiverscale, pivot='Middle')
+    
+    plt.ylabel('height (m)')
+    plt.xlabel('')
+    
 
 def pyrocb(w, qc, z, wmean, topog, lat, lon,
            transect1,transect2, transect3,
@@ -196,7 +252,8 @@ def pyrocb(w, qc, z, wmean, topog, lat, lon,
     # -ve labelpad moves label closer to colourbar
     cb.set_label('m/s', labelpad=-3)
         
-            
+
+    
 def pyrocb_model_run(model_run='waroona_run1', dtime=datetime(2016,1,5,15)):
     """
     """
@@ -206,12 +263,14 @@ def pyrocb_model_run(model_run='waroona_run1', dtime=datetime(2016,1,5,15)):
     X1 = __PYRO_TRANSECTS__[extentname]['X1']
     X2 = __PYRO_TRANSECTS__[extentname]['X2']
     X3 = __PYRO_TRANSECTS__[extentname]['X3']
+    LR1 = __PYRO_TRANSECTS__[extentname]['LR1']
     
     ## read um output over extent [t, lev, lat, lon]
     cubes = fio.read_model_run(model_run, fdtime=[dtime], extent=extent,
-                               add_z=True, add_topog=True)
+                               add_z=True, add_winds=True, add_topog=True)
     
-    w,  = cubes.extract('upward_air_velocity')
+    w, = cubes.extract('upward_air_velocity')
+    u, = cubes.extract('u')
     qc, = cubes.extract('qc')
     topog, = cubes.extract('surface_altitude')
     z, = cubes.extract('z_th') 
@@ -231,8 +290,23 @@ def pyrocb_model_run(model_run='waroona_run1', dtime=datetime(2016,1,5,15)):
         wmean = w[:,25:48,:,:].collapsed('model_level_number', iris.analysis.MEAN)
     h0,h1 = wmean.coord('level_height').bounds[0]
     
+    # pull data from masked arrays from cubes
+    zi = z.data.data
+    topogi = topog.data.data
     # for each timestep:
     for i in range(len(ffdtimes)):
+        qci = qc[i].data.data
+        wi = w[i].data.data
+        ui = u[i].data.data
+        wmeani = wmean[i].data.data 
+        ffi = ff[i].data.data
+        
+        ## First make the left to right figure
+        left_right_slice(qci, ui, wi, zi, topogi, lat, lon, LR1)
+        fio.save_fig(model_run, _sn_, ffdtimes[i], plt, subdir='LR1')
+        
+        ## second make the full pyrocb plot:
+        
         # datetime timestamp for file,title
         stitle = ffdtimes[i].strftime("Vertical motion %Y %b %d %H:%M (UTC)")
         wmeantitle='Mean(%3.0fm - %4.0fm)'%(h0,h1)
@@ -243,10 +317,9 @@ def pyrocb_model_run(model_run='waroona_run1', dtime=datetime(2016,1,5,15)):
         #print(wmean.shape)
         #print(i)
         #print("DEBUG: =====")
-        pyrocb(w=w[i].data.data, qc=qc[i].data.data, z=z.data.data, 
-               wmean=wmean[i].data.data, topog=topog.data.data,
-               lat=lat,lon=lon, transect1=X1, transect2=X2, transect3=X3,
-               ff=ff[i].data.data,
+        pyrocb(w=wi, qc=qci, z=zi, wmean=wmeani, topog=topogi,
+               lat=lat, lon=lon, transect1=X1, transect2=X2, transect3=X3,
+               ff=ffi,
                wmeantitle=wmeantitle,
                extentname=extentname)
         # Save figure into animation folder with numeric identifier
@@ -254,6 +327,7 @@ def pyrocb_model_run(model_run='waroona_run1', dtime=datetime(2016,1,5,15)):
         fio.save_fig(model_run, _sn_, ffdtimes[i], plt, dpi=200)
 
 if __name__ == '__main__':
+    
     
     testing=False
     model_runs = ['sirivan_run1', 'waroona_run1','waroona_old']
