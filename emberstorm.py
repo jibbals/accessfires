@@ -11,23 +11,25 @@ matplotlib.use('Agg',warn=False)
 
 # plotting stuff
 import matplotlib.pyplot as plt
-import matplotlib.colors as col
-import matplotlib.ticker as tick
 import numpy as np
-from datetime import datetime,timedelta
-import iris # file reading and constraints etc
+
 import warnings
 
 # local modules
-from utilities import plotting, utils, fio, constants
+from utilities import plotting, utils, fio
 
 ###
 ## GLOBALS
 ###
 _sn_ = 'emberstorm'
 
+###
+## METHODS
+###
 
-def emberstorm(theta,u,v,w,z,topog,lat,lon,
+
+def emberstorm(theta, u, v, w, z, topog,
+               lat, lon,
                ff=None,
                nquivers=15,
                quiverscale=60,
@@ -84,7 +86,6 @@ def emberstorm(theta,u,v,w,z,topog,lat,lon,
     plt.quiver(lon[skip[1]],lat[skip[0]],u[0][skip],v[0][skip], 
                scale=quiverscale, pivot='middle')
     
-    
     ## Subplot 2, transect of potential temp
     # only looking up to 1km
     # horizontal points
@@ -116,7 +117,7 @@ def emberstorm(theta,u,v,w,z,topog,lat,lon,
     
 def make_plots_emberstorm(model_run='waroona_run1'):
     """
-
+    run emberstorm plotting method on model output read by my iris fio scripts
     """
     extent = plotting._extents_['waroona']
     # read topog
@@ -125,6 +126,7 @@ def make_plots_emberstorm(model_run='waroona_run1'):
     lon = topog.coord('longitude').points
     # Read model run
     umdtimes = fio.model_outputs[model_run]['filedates']
+    # read one model file at a time
     for umdtime in umdtimes:
         cubelist = fio.read_model_run(model_run, 
                                       fdtime=umdtime,

@@ -2,7 +2,7 @@
 """
 Created on Wed Aug 14 10:11:25 2019
     
-    Figures created for AFAC and analysis of sites is saved here
+    old plots that I don't know if I need any more
     
 @author: jgreensl
 """
@@ -16,73 +16,15 @@ matplotlib.use('Agg')
 import matplotlib.colors as col
 import matplotlib.pyplot as plt
 import matplotlib.ticker as tick
-import matplotlib.patches as mpatches
 import numpy as np
 
 # local modules
 from utilities import plotting, utils, fio
 
-# maps
-import cartopy.crs as ccrs
-
 
 ####################################
 ############ METHODS ###############
 ####################################
-
-
-
-
-def outline_waroona(pname='figures/site_outline_waroona.png'):
-    
-    plotting.init_plots()
-    extents = plotting._extents_
-    latlons = plotting._latlons_
-    
-    topog,latt,lont = fio.read_topog()
-    
-    # Google map image tiles view of synoptic map
-    fig,ax,proj=plotting.map_google(extents['waroonas'],
-                                    zoom=6,
-                                    subplotxyn=[2,1,1],
-                                    gridlines=[np.arange(-51,-10,2),
-                                               np.arange(100,150,4)])
-    plt.title("Waroona synoptic")
-    ## Add box around zoomed in area
-    ax.add_patch(mpatches.Rectangle(xy=latlons['waroona'][::-1], 
-                                    width=.4, 
-                                    height=.3,
-                                    #facecolor=None,
-                                    fill=False,
-                                    edgecolor='blue',
-                                    linewidth=2,
-                                    #linestyle='-',
-                                    alpha=0.6, 
-                                    transform=ccrs.PlateCarree()))
-    ## add text?
-    
-    ## Add scale
-    scaleloc=(0.2,0.05)
-    plotting.scale_bar(ax,proj,100, location=scaleloc)
-    
-    
-    ## Look at waroona and yarloop
-    _,ax2,_ = plotting.map_google(extents['waroona'],zoom=10,fig=fig,subplotxyn=[2,2,3],draw_gridlines=False)
-    plt.title("Fire location")
-    
-    ## Add scale
-    plotting.scale_bar(ax2,proj,10, location=scaleloc)
-    
-    ## Add contour plot showing topography
-    plt.subplot(2,2,4)
-    plotting.map_topography(extents['waroona'], topog,latt,lont)
-    
-    plt.savefig(pname)
-    print("FIGURE SAVED: ",pname)
-    plt.close()
-    
-
-
     
     
 def jeff_transect(pname="figures/jeff_transect_sample.png"):
@@ -186,5 +128,4 @@ def jeff_transect(pname="figures/jeff_transect_sample.png"):
     
 if __name__ == '__main__':
     
-    outline_waroona()
     jeff_transect()

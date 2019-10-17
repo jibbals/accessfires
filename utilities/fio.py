@@ -961,7 +961,7 @@ def save_fig(model_run,script_name,pname, plt, subdir=None,
 
     if len(pname.split('.')) == 1: # no extension
         pname=pname+ext
-
+    
     path='figures/%s/%s/%s'%(model_run,script_name,pname)
 
     save_fig_to_path(path,plt, dpi=dpi)

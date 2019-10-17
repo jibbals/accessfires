@@ -12,9 +12,8 @@ import matplotlib.pyplot as plt
 import matplotlib.ticker as tick
 
 import numpy as np
-from datetime import datetime, timedelta
+from datetime import datetime
 import warnings
-import iris
 
 from utilities import utils,fio,plotting, constants
 
@@ -23,9 +22,9 @@ from utilities import utils,fio,plotting, constants
 ###
 _sn_ = 'vert_motion_slices'
 
-def vert_motion_slices(qc,w,lh,lat,lon,dtime, 
+def vert_motion_slices(qc,w,lh,lat,lon,
                        ff=None,
-                       model_run='waroona_run1',
+                       extentname=None,
                        ext='.png',
                        cloud_threshold=constants.cloud_threshold,
                        dpi=300):
@@ -34,13 +33,6 @@ def vert_motion_slices(qc,w,lh,lat,lon,dtime,
     Trying to see pyroCB cloud
     '''
     
-    extentname=model_run.split('_')[0]
-    # datetime timestamp for file,title
-    stitle = dtime.strftime("%Y %b %d %H:%M (UTC)")
-    
-    # set font sizes etc.
-    plotting.init_plots()
-    
     # colour bar stuff
     cmap=plotting._cmaps_['verticalvelocity']
     norm=col.SymLogNorm(0.25)
@@ -48,12 +40,13 @@ def vert_motion_slices(qc,w,lh,lat,lon,dtime,
     contours=np.union1d(np.union1d(2.0**np.arange(-2,6),-1*(2.0**np.arange(-2,6))),np.array([0]))
     
     # get plot extent
-    extent = plotting._extents_[extentname]
+    extent = [lon[0],lon[-1],lat[0],lat[-1]]
     
     plt.close()
     f=plt.figure(figsize=[11,10])
     # model levels to plot
-    m_lvls = [30,60,72,90,  20,50,69,85,  10,40,66,80,  5,35,63,76] 
+    top_mlvl = w.shape[0]-5 # who cares about top 5 levels (moon people maybe)
+    m_lvls = np.round(np.linspace(0,top_mlvl,16)).astype(int)
     for i in range(16):
         plt.subplot(4,4,i+1)
         
@@ -73,16 +66,9 @@ def vert_motion_slices(qc,w,lh,lat,lon,dtime,
                         colors='k')
         
         # add nearby towns
-        if extentname == 'waroona':
-            plotting.map_add_locations(['waroona','yarloop'], 
-                                       text=['', ''], 
-                                       textcolor='k')
-            # add fire ignition
-            plotting.map_add_locations(['fire_waroona'],
-                                       text = [''], 
-                                       color='r', marker='*', 
-                                       textcolor='k')
-            # add pyroCB
+        if extentname is not None:
+            plotting.map_add_locations_extent(extentname,hide_text=True)
+            
         # Add fire front to first column
         if ff is not None:
             # Add fire outline
@@ -90,10 +76,8 @@ def vert_motion_slices(qc,w,lh,lat,lon,dtime,
                 # ignore warning when there is no fire yet:
                 warnings.simplefilter('ignore')
                 plt.contour(lon,lat,np.transpose(ff),np.array([0]), 
-                            colors='red',linewidths=1, alpha=0.5 + 0.5*(i==12))
+                            colors='red',linewidths=1, alpha=0.5 + 0.5*(i==0))
     
-    # Save figure into animation folder with numeric identifier
-    plt.suptitle(stitle)
     
     # add colour bar
     axes=[0.87, 0.20, 0.04, 0.6] 
@@ -102,10 +86,6 @@ def vert_motion_slices(qc,w,lh,lat,lon,dtime,
     f.subplots_adjust(right=axes[0]-0.03)
     cbar_ax = f.add_axes(axes)
     f.colorbar(cs, cax=cbar_ax, format=cbarform)
-    
-    fio.save_fig(model_run,_sn_,dtime,plt,
-                 ext=ext,dpi=dpi)
-    
 
 def vert_motion_hour(dtime=datetime(2016,1,6,7), model_run='waroona_run1'):
     '''
@@ -125,33 +105,34 @@ def vert_motion_hour(dtime=datetime(2016,1,6,7), model_run='waroona_run1'):
     ff_dtimes = utils.dates_from_iris(w)
     ff, = fio.read_fire(model_run=model_run, dtimes=ff_dtimes, extent=extent, firefront=True)
     
-    #print("DEBUG:",ff)
-    #print("DEBUG:",ff.coord('latitude'))
-    #print("DEBUG:",ff.coord('longitude'))
-    #
-    #print("DEBUG:",qc)
-    #print("DEBUG:",qc.coord('latitude'))
     lh  = w.coord('level_height').points
     lat = w.coord('latitude').points
     lon = w.coord('longitude').points
     
     for i in range(len(ff_dtimes)):
-        subtime = ff_dtimes[i]
         
         vert_motion_slices(qc[i].data, w[i].data,lh,lat,lon,
                            ff=ff[i].data,
-                           dtime=subtime,
-                           model_run=model_run,
+                           extentname=extentname,
                            dpi=dpi, ext=ext)                
+        
+        stitle = ff_dtimes[i].strftime("%Y %b %d %H:%M (UTC)")
+        # Save figure into animation folder with numeric identifier
+        plt.suptitle(stitle)
+        fio.save_fig(model_run,_sn_,ff_dtimes[i],plt,
+                     ext=ext,dpi=dpi)
 
 ### RUN THE CODE:
 if __name__ == '__main__':
-    ### pyrocb utc time window:
-    #run1_hours = [datetime(2016,1,6,7) + timedelta(hours=x) for x in range(2)]
-    #old_hours = [datetime(2016,1,6,4) + timedelta(hours=x) for x in range(5)]
+    # set font sizes etc.
+    plotting.init_plots()
     
-    for mr in ['sirivan_run1']:#,'waroona_old', 'waroona_run1']:
+    testing=True
+    
+    for mr in ['sirivan_run1','waroona_old', 'waroona_run1']:
         hours = fio.model_outputs[mr]['filedates']
+        if testing:
+            hours = hours[:3] 
         for dtime in hours:
             vert_motion_hour(dtime, model_run=mr)
     

@@ -31,6 +31,8 @@ from utilities import plotting, utils, fio, constants
 _sn_ = 'pyrocb'
 
 # transects showing the pyroCB in model extents
+# waroona (old run) gets pyrocb around Jan 6, 0600-0830
+# Sirivan gets some pyrocb around Feb 12, 0600 - 0800 UTC
 __PYRO_TRANSECTS__ = {'waroona':{'X1':[[-32.89, 115.90], [-32.88, 116.19]],
                                  'X2':[[-32.95, 116.09], [-32.78, 116.16]],
                                  'X3':[[-32.95, 116.15], [-32.78, 116.09]],
