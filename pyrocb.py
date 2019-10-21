@@ -81,9 +81,7 @@ def left_right_slice(qc, u, w, z,
     wslice = utils.cross_section(w, lat, lon, start, end, npoints=npoints)
     
     # quiver without crazy density
-    print("DEBUG:",xslice.shape,zslice.shape)
     vsx,vsz = np.array(xslice.shape)//nquivers
-    print("DEBUG:",vsx,vsz)
     # also skip first few so that barbs don't extend the transect
     skip = (slice(vsx,None,vsx),slice(None,None,vsz))
     

@@ -36,7 +36,7 @@ def plot_weather_summary(U,V,W, height, lat, lon, extentname, Q=None):
     row3 = (1500<=height) * (height<3000)
     row4 = (3000<=height) * (height<5000)
     # todo row 5
-    row5 = (5000<height)*(height<10000)
+    row5 = (5000<height) * (height<10000)
     
     # vertical wind colourbar is constant
     wcmap=plotting._cmaps_['verticalvelocity']
@@ -70,7 +70,7 @@ def plot_weather_summary(U,V,W, height, lat, lon, extentname, Q=None):
         
         plt.contourf(lon, lat, Sr, 10)
         
-        plotting.map_add_locations_extent(extentname, hide_text=ii>0)
+        plotting.map_add_locations_extent(extentname, hide_text=True)
         
         plt.colorbar(ticklocation=ticker.MaxNLocator(5),pad=0)
         plt.quiver(lon[::vsu], lat[::vsv], Uvs, Vvs, scale=30)
@@ -86,7 +86,7 @@ def plot_weather_summary(U,V,W, height, lat, lon, extentname, Q=None):
         Wr = np.mean(Wi,axis=0)
         
         cs = plt.contourf(lon, lat, Wr, wcontours, cmap=wcmap, norm=wnorm)
-        plotting.map_add_locations_extent(extentname, hide_text=True)
+        plotting.map_add_locations_extent(extentname, hide_text=ii>0)
         
         # add cloud hatching
         if Q is not None:

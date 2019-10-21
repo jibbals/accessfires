@@ -36,13 +36,13 @@ def show_transects():
     # Show transects
     
     transects = plotting._transects_
-    waroona_xticks = np.arange(115.8,116.21,.1)
-    waroona_yticks = np.arange(-33,-32.7,.02)
-    sirivan_xticks = np.arange(149.2,150.4,.2) #149.2, 150.4
+    waroona_xticks = np.arange(115.8, 116.21, .1)
+    waroona_yticks = np.arange(-33, -32.701, .05)
+    sirivan_xticks = np.arange(149.2, 150.4, .2) #149.2, 150.4
     sirivan_yticks = np.arange(-32.4,-31.6,.1) #-32.4, -31.6
-    for extentname, xticks,yticks in zip(['waroona','sirivan'],
-                                         [waroona_xticks,sirivan_xticks],
-                                         [waroona_yticks,sirivan_yticks]):
+    for extentname, xticks, yticks in zip(['waroona','sirivan'],
+                                          [waroona_xticks,sirivan_xticks],
+                                          [waroona_yticks,sirivan_yticks]):
         extent = plotting._extents_[extentname]
         mr = '%s_run1'%extentname
         
