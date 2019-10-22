@@ -208,7 +208,8 @@ def PFT(TT,qq,uu,vv,ww,th,pr,
         else:
             thWML = th[k]*wt[k]
             qqWML = qq[k]*wt[k]
-       # write(6,*) "th(k),qq(k),thWML,qqWML,k",th(k),qq(k)*1000,thWML,qqWML*1000,k
+        print("debug: k, thWML",k, thWML)
+        # write(6,*) "th(k),qq(k),thWML,qqWML,k",th(k),qq(k)*1000,thWML,qqWML*1000,k
     # write(6,*) "thWML,qqWML",thWML,qqWML
     print("debug: thWML,qqWML",thWML,qqWML)
     
@@ -315,6 +316,7 @@ def PFT(TT,qq,uu,vv,ww,th,pr,
         else:
             kup = k
             break
+    print("debug: kup",kup)
     ## this one could be rewritten with no loop
     ## TODO
     ##
@@ -342,6 +344,8 @@ def PFT(TT,qq,uu,vv,ww,th,pr,
     #! Loop through increments along the SP curve starting at the WML-LCL
     #   write(6,*) "loop over SP curve increments from WML-LCL"
     sSP[:] = 0.0   # Reset sSP array
+    print("debug: sSP[i],thpl[i],qqpl[i]*1000,pSP[i],bSP[i],i")
+    jflag=0
     for i in range(imax,ni):
         bSP[i] = (i-1)*DbSP
         thpl[i] = (1 + bSP[i])*thWML
@@ -349,6 +353,9 @@ def PFT(TT,qq,uu,vv,ww,th,pr,
         pSP[i],TSP[i] = LCL(thpl[i],qqpl[i])
         sSP[i] = sat_spec_entr(thpl[i],qqpl[i],pSP[i])
         #write(6,*) sSP[i],thpl[i],qqpl[i]*1000,pSP[i],bSP[i],i
+        if jflag < 50:
+            print("debug: ",sSP[i],thpl[i],qqpl[i]*1000,pSP[i],bSP[i],i)
+            jflag += 1
         if (sSP[i] >= s_star_max):  # Maximum i-index found
             imax = i
             break

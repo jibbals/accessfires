@@ -11,6 +11,8 @@ import numpy as np
 from datetime import datetime
 import iris
 from platform import platform # check for windows
+from metpy.plots import SkewT
+
 
 import matplotlib.pyplot as plt
 
@@ -75,6 +77,7 @@ th = cubes.extract('potential_temperature')[0][0].data.data # K
 prcube = cubes.extract('air_pressure')[0][0] # Pa
 pr = prcube.data.data # Pa
 TT = TTcube.data.data # K
+Td = cubes.extract('dewpoint_temperature')[0][0].data.data # K
 uu,vv,ww = [cube[0].data.data for cube in cubes.extract(['u','v','upward_air_velocity'])] # m/s
 dp = cubes.extract('dewpoint_temperature')[0][0].data.data # K
 
@@ -109,7 +112,7 @@ else:
 #
 
 skip = slice(None,None,3) # lets make the vert dim less fine for printing simplicity
-[TT,qq,uu,vv,ww,th,pr] = [ arr[skip] for arr in [TT,qq,uu,vv,ww,th,pr]]
+[TT,qq,uu,vv,ww,th,pr,Td] = [ arr[skip] for arr in [TT,qq,uu,vv,ww,th,pr,Td]]
 # Remove values where pressure is lower than 100 hPa
 #sub100 = pr>10000
 #[TT,qq,uu,vv,ww,th,pr] = [ arr[sub100] for arr in [TT,qq,uu,vv,ww,th,pr]]
@@ -138,8 +141,7 @@ plt.legend()
 '''
 [UML,Um,Vm,betaFC,DthFC,zFC,pFC,Bflux,Hflux]=HFj.PFT(TT,qq,uu,vv,ww,th,pr, zsfc,psfc,Tsfc, phi,DbSP,ni,nj,zp,beta_e,Pmin,betaSPmin,Wmin,Umin,Prcntg-1)
 
-"""
-print("\n *** results from heat_flux_calc ***\n")
+print("\n *** results from PORTED heat_flux_calc ***\n")
 
 print("UML, Um, Vm")
 print(UML, Um, Vm)
@@ -147,37 +149,46 @@ print("betaFC, DthFC, zFC, pFC")
 print(betaFC, DthFC, zFC, pFC)
 print("Bflux:",Bflux/1e9,"e9")
 print(Hflux/1e9, "GWatts")
-print(" *** end results from heat_flux_calc ***\n")
-"""
+print(" *** end results from PORTED heat_flux_calc ***\n")
 
-## Run also on fortran code to compare..
-if onlaptop:
-    
-    
-    print("DEBUG: RUNNING FORTRAN SUBROUTINE:", )
 
-    print("Outside heatflux subroutine:")
-    print("zsfc,psfc,Tsfc")
-    print(zsfc,psfc,Tsfc)
-    print("TT:",TT[:5],"qq:",qq[:5])
-    print("uu:",uu[:5],"vv:",vv[:5],"ww:",ww[:5])
-    print("th:",th[:5],"pr:",pr[:5])
-    print("phi,DbSP,ni,nj,zp,beta_e,Pmin,betaSPmin,Wmin,Umin,Prcntg")
-    print(phi,DbSP,ni,nj,zp,beta_e,Pmin,betaSPmin,Wmin,Umin,Prcntg)
-    print("\n\n")
-    [UML,Um,Vm,betaFC,DthFC,zFC,pFC,Bflux,Hflux]=fortranbit.subroutines.heat_flux_calc(TT,qq,uu,vv,ww,th,pr,nlvl,zsfc,psfc,Tsfc,\
-                                                     phi,DbSP,ni,nj,zp,beta_e,Pmin,betaSPmin,Wmin,Umin,Prcntg)
-    
-    """
-    print("\n *** results from heat_flux_calc ***\n")
-    
-    print("UML, Um, Vm")
-    print(UML, Um, Vm)
-    print("betaFC, DthFC, zFC, pFC")
-    print(betaFC, DthFC, zFC, pFC)
-    print("Bflux:",Bflux/1e9,"e9")
-    print(Hflux/1e9, "GWatts")
-    print(" *** end results from heat_flux_calc ***\n")
-    """
-    
-    
+### Run also on fortran code to compare..
+#if onlaptop:
+#    
+#    
+#    print("DEBUG: RUNNING FORTRAN SUBROUTINE:", )
+#
+#    print("Outside heatflux subroutine:")
+#    print("zsfc,psfc,Tsfc")
+#    print(zsfc,psfc,Tsfc)
+#    print("TT:",TT[:5],"qq:",qq[:5])
+#    print("uu:",uu[:5],"vv:",vv[:5],"ww:",ww[:5])
+#    print("th:",th[:5],"pr:",pr[:5])
+#    print("phi,DbSP,ni,nj,zp,beta_e,Pmin,betaSPmin,Wmin,Umin,Prcntg")
+#    print(phi,DbSP,ni,nj,zp,beta_e,Pmin,betaSPmin,Wmin,Umin,Prcntg)
+#    print("\n\n")
+#    [UML,Um,Vm,betaFC,DthFC,zFC,pFC,Bflux,Hflux]=fortranbit.subroutines.heat_flux_calc(TT,qq,uu,vv,ww,th,pr,nlvl,zsfc,psfc,Tsfc,\
+#                                                     phi,DbSP,ni,nj,zp,beta_e,Pmin,betaSPmin,Wmin,Umin,Prcntg)
+#    
+#    """
+#    print("\n *** results from fortran heat_flux_calc ***\n")
+#    
+#    print("UML, Um, Vm")
+#    print(UML, Um, Vm)
+#    print("betaFC, DthFC, zFC, pFC")
+#    print(betaFC, DthFC, zFC, pFC)
+#    print("Bflux:",Bflux/1e9,"e9")
+#    print(Hflux/1e9, "GWatts")
+#    print(" *** end results from heat_flux_calc ***\n")
+#    """
+
+skew = SkewT(rotation=45)
+skew.plot(pr/100.,TT-273.15,'r', linewidth=2)
+skew.plot(pr/100.,Td-273.15,'m', linewidth=2)
+#skew.plot(pr/100.,th-273.15,'k', linewidth=2)
+skew.plot_moist_adiabats()
+#skew.plot_dry_adiabats()
+# set limits
+skew.ax.set_ylim(1000,100)
+skew.ax.set_xlim(-30,60)
+plt.show()

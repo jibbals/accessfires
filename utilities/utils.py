@@ -188,10 +188,11 @@ def potential_temperature(p,T):
     # with gas constant R = 287.05 and specific heat capacity c_p = 1004.64
     '''
     nt,nz,ny,nx = p.shape
-    Ta  = T[:,0:1,:,:] # [t,1,lat,lon] at surface
-    repTa = np.repeat(Ta[:,:,:,:], nz, axis=1) # repeat Ta along z axis
-    assert np.all(repTa[:,0,:,:] - repTa[:,1,:,:] == 0), "Repeated z dim is not the same"
-    return repTa*(1e5/p)**(287.05/1004.64)
+    #Ta  = T[:,0:1,:,:] # [t,1,lat,lon] at surface
+    #repTa = np.repeat(Ta[:,:,:,:], nz, axis=1) # repeat Ta along z axis
+    #assert np.all(repTa[:,0,:,:] - repTa[:,1,:,:] == 0), "Repeated z dim is not the same"
+    #return repTa*(1e5/p)**(287.05/1004.64)
+    return T*(1e5/p)**(287.05/1004.64)
     #print("DEBUG: ",p.shape, theta.shape, repTa.shape, Ta.shape)
     #print("DEBUG: ",'theta' in keepdata[k].keys())
     

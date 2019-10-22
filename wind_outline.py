@@ -220,7 +220,7 @@ def outline_model_winds(model_run='sirivan_run1', hours=None, dpi=200):
 
 if __name__ == '__main__':
     
-    for mr in ['sirivan_run1','waroona_old','waroona_run1']:
+    for mr in ['sirivan_run1']:#,'waroona_old','waroona_run1']:
         hours = fio.model_outputs[mr]['filedates']
         for hour in hours:
             print("info: wind_outline", mr, hour)
