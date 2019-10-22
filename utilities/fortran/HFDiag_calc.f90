@@ -145,8 +145,16 @@ contains
 !  Now using Prcntg to pass an index referring to the cosphi values here:
    data cosphi/1.0, 0.8054, 0.6870, 0.5851, 0.4919, 0.4040, 0.3197, 0.2379, 0.1577, 0.0786, 0.0, &
                -0.0786, -0.1577, -0.2379, -0.3197, -0.4040, -0.4919, -0.5851, -0.6870, -0.8054, -1.0/
-!   write(6,*) "Inside subroutine heat_flux_calc"
 
+   write(6,*) "\n\n *** Inside subroutine heat_flux_calc *** \n\n"
+   write(6,*) TT(1:5),qq(1:5)
+   write(6,*) uu(1:5),vv(1:5),ww(1:5)
+   write(6,*) th(1:5),pr(1:5)
+   write(6,*) "zsfc,psfc,Tsfc"
+   write(6,*) zsfc,psfc,Tsfc
+   write(6,*) "phi,DbSP,ni,nj,zp,beta_e,Pmin,betaSPmin,Wmin,Umin,Prcntg"
+   write(6,*) phi,DbSP,ni,nj,zp,beta_e,Pmin,betaSPmin,Wmin,Umin,Prcntg
+   write(6,*) "END OF INPUT PRINT STATEMENTS \n\n"
 ! Find the lowest pressure level above the land surface
    ksfc = 0
    do k=1,pd
@@ -156,7 +164,7 @@ contains
         exit
      endif
    enddo
-!   write(6,*) "ksfc",ksfc
+   write(6,*) "ksfc",ksfc
 
 ! Find the height index above the mixed-layer LCL (assumes pressure indices begin
 ! with 1 at the lowest model level)
@@ -165,6 +173,8 @@ contains
 !  to a minimum height (e.g., 250 m) when there are more frequent pressure
 !  levels.  Option added 13-09-2018.
 
+   write(6,*) "Calculating LCL:"
+!   write(6,*) "Theta (C),      q (g/kg),     P_LCL (hPa),    T_LCL (C),  pr(k) (hPa), k" 
    do k=ksfc+1,pd
      recipk = 1.0/real(k)
      thmean = sum(th(1:k))*recipk
@@ -177,9 +187,9 @@ contains
          exit
        endif
      endif
+!     write(6,*) thmean-273.15,qmean*1000,PLCL*0.01,TLCL-273.15,pr(k)*0.01,k
    enddo
-
-!   write(6,*) "thmean,qmean,PLCL,TLCL,kLCL",thmean-273.15,qmean*1000,PLCL*0.01,TLCL-273.15,kLCL
+   write(6,*) "KLCL, pr(KLCL), TT(KLCL)",KLCL, pr(KLCL), TT(KLCL)
 
 ! Calculate the weighting factors for a weighted mixed-layer LCL
    ! First fill the height array zz
@@ -193,12 +203,14 @@ contains
        zz(k) = zz(k-1) + log( (plower)/pr(k) )*Rd*(TT(k)+Tlower)/(2*grav)
        plower = pr(k)  ! Reset for next iteration
        Tlower = TT(k)
+!       write(6,*) "zz(k),plower,Tlower,k",zz(k),plower,Tlower,k
      endif
    enddo
-!   write(6,*) "zz",zz
+   write(6,*) "zz",zz
    ! Now all sub-ground height levels are set to the topographic height
    ! and ksfc is the k-index of the pressure level just below the sfc
-   ! 
+   !
+   write(6,*) "weight the profile boundary layer using pressure differences"
    wt = 0.0
    sum_wt = 0.0
    do k=ksfc+1,kLCL
@@ -213,13 +225,14 @@ contains
    enddo 
    ! Express the weighting factor as a fraction of the total wt
    wt = wt/sum_wt
-!   write(6,*) "wt",wt
+   write(6,*) "wt",wt
    ! Here the weighting factor wt(k) represents the layer between k and
    ! k-1
 
 ! Calculate the weighted mixed-layer potential temperature and specific
 ! humidity. 
 !  These calculations ignore the surface/near-surface values.
+   write(6,*) "weighted mixed-layer potential temp and qq"
    thWML = 0.0
    qqWML = 0.0
    do k = ksfc+1,kLCL
@@ -230,9 +243,9 @@ contains
        thWML = th(k)*wt(k)
        qqWML = qq(k)*wt(k)
      endif
-!     write(6,*) th(k),qq(k),k
+     write(6,*) "th(k),qq(k),thWML,qqWML,k",th(k),qq(k)*1000,thWML,qqWML*1000,k
    enddo
-!   write(6,*) "thWML,qqWML",thWML-273.15,qqWML*1000
+   write(6,*) "thWML,qqWML",thWML,qqWML
 
 ! Calculate the  mixed-layer horizontal (UML) and vertical (WML) winds.
 ! Here UML is the magnitude of the average vector wind (not the average wind
@@ -244,7 +257,7 @@ contains
    Vm = sum(vv(ksfc+1:kLCL))*recipk
    UML = sqrt(Um**2 + Vm**2)
    UML = amax1(UML,Umin)   
-!   write(6,*) "UML,WML",UML,WML
+   write(6,*) "UML,WML",UML,WML
 
 ! Determine the maximum value of saturation specific entropy (s*) 
 ! on the pressure levels above the LCL up to the specified upper 
@@ -280,8 +293,9 @@ contains
 ! from here.
 
    call find_k_index_below_intersection(th,qq,TT,pr,pd,thWML,qqWML,phi,kl)
-
-!   write(6,*) "kl,pr(kl),TT(kl)",kl,pr(kl)*0.01,TT(kl)-273.15
+   write(6,*) "found k index below intersection (kl)"
+   write(6,*) "kl,pr(kl),TT(kl)",kl,pr(kl),TT(kl)
+   write(6,*) "pd,thWML,qqWML,phi",pd,thWML,qqWML,phi
 
 ! Calculate linear function thenv = AA*pr + BB
    AA = (th(kl+1) - th(kl))/(pr(kl+1) - pr(kl))
@@ -293,16 +307,18 @@ contains
 ! intersecton has been exceeded.  Assume this is close enough to the 
 ! true intersection position.  Store the SP curve increment in 'imax'.
 ! Calculate s* at this position and set it to s_star_max.
+   write(6,*) "walking along the sp curve to calculate when theta exceeds theta_env"
    do i = 1,ni
      bSP(i) = (i-1)*DbSP
      thpl(i) = (1 + bSP(i))*thWML
      qqpl(i) = qqWML + bSP(i)*phi*thWML
      call LCL(thpl(i),qqpl(i),pSP(i),TSP(i))
      thenv = AA*pSP(i) + BB 
-!     write(6,*) "thpl,pSP,thenv",thpl(i)-273.15,pSP(i)*0.01,thenv-273.15
      if(thpl(i) > thenv) then
        imax = i
        call sat_spec_entr(thpl(i),qqpl(i),pSP(i),s_star_max)
+       write(6,*) "imax,thpl(imax),qqpl(imax),pSP(imax),bSP(imax),thenv,s_star_max"
+       write(6,*) imax,thpl(imax),qqpl(imax),pSP(imax),bSP(imax),thenv,s_star_max
        exit
      endif
      if(i == ni) then
@@ -318,10 +334,11 @@ contains
 ! Calculate s* at all the levels above kl, and search for the maximum
 ! value below Pmin.
 ! Store s* in the first position of the sSP array. 
+!   write(6,*) "calculate s* at all levels above kl (",kl,")"
    do k = kl+1,pd
      if(pr(k) > Pmin) then
        call sat_spec_entr(th(k),qq(k),pr(k),sSP(1))
-!       write(6,*) sSP(1),pr(k)*0.01,k
+       write(6,*) sSP(1),pr(k),k
        if(sSP(1) > s_star_max) s_star_max = sSP(1)
      else
        kup = k
@@ -345,7 +362,7 @@ contains
 !   write(6,*) "s_star_max",s_star_max
 
 ! Loop through increments along the SP curve starting at the WML-LCL
-
+   write(6,*) "loop over SP curve increments from WML-LCL"
    sSP = 0.0   ! Reset sSP array
    do i = imax,ni
      bSP(i) = (i-1)*DbSP
@@ -353,13 +370,13 @@ contains
      qqpl(i) = qqWML + bSP(i)*phi*thWML
      call LCL(thpl(i),qqpl(i),pSP(i),TSP(i))
      call sat_spec_entr(thpl(i),qqpl(i),pSP(i),sSP(i))
-!     write(6,*) sSP(i),thpl(i)-273.15,qqpl(i)*1000,pSP(i)*.01,bSP(i),i
+!     write(6,*) sSP(i),thpl(i),qqpl(i)*1000,pSP(i),bSP(i),i
      if (sSP(i) >= s_star_max) then   ! Maximum i-index found
        imax = i
        exit
      endif
    enddo
-!   write(6,*) "sSP,bSP,pSP,thpl,qqpl",sSP(imax),bSP(imax),pSP(imax)*0.01,thpl(imax)-273.15,qqpl(imax)*1000,imax
+   write(6,*) "sSP,bSP,pSP,thpl,qqpl",sSP(imax),bSP(imax),pSP(imax),thpl(imax),qqpl(imax)*1000,imax
 
 ! Use linear interpolation to find specific values of betaSP, PrSP that
 ! more closely match where sSP = s_star_max
@@ -369,7 +386,8 @@ contains
    else
      betaSP = bSP(1)
    endif
-
+!   write(6,*) "s_star_max,betaSP,imax",s_star_max,betaSP,imax
+!   write(6,*) "bSP, sSP",bSP,sSP
 ! Add the minimum buoyancy to betaSP to get betaFC (free convection
 ! beta).  This is to account for some dilution of the rising cloud.  It
 ! could be defined by how dry the air is above the LCL (a future
@@ -447,12 +465,13 @@ contains
 !   Hflux = (rhoFC*Cpd*thWML/grav)*Bflux        ! Commented out on 2019-10-15
    Hflux = pi/kappa*(pC/thFC)*(beta_e*zb(1))**2*UML*DthFC ! Added 2019-10-15
 
-!   write(6,*) "pC, DthFC, Hflux,kappa",pC, DthFC, Hflux,kappa
+   write(6,*) "pC, DthFC, Hflux,kappa",pC, DthFC, Hflux,kappa
  
-!   write(6,*) "UML, WML,Umin,Wmin",UML,WML,Umin,Wmin
+   write(6,*) "UML, WML,Umin,Wmin",UML,WML,Umin,Wmin
 
-!   write(6,*) "Buoyancy Froude Number =",UML/sqrt(betaFC*grav*zb(1))
-!   write(6,*) "dzb/dx =",sqrt(2./3.*betaFC*grav*zb(1))/UML
+   write(6,*) "Buoyancy Froude Number =",UML/sqrt(betaFC*grav*zb(1))
+   write(6,*) "dzb/dx =",sqrt(2./3.*betaFC*grav*zb(1))/UML
+   write(6,*) "END OF HEAT_FLUX_CALC SUBROUTINE"
 
    end subroutine heat_flux_calc
 

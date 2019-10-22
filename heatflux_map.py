@@ -10,6 +10,9 @@ Created on Wed Oct  9 21:04:13 2019
 import numpy as np
 from datetime import datetime
 import iris
+from time import sleep
+
+import matplotlib.pyplot as plt
 
 from utilities import fio, utils, plotting
 
@@ -69,8 +72,6 @@ cubes=fio.read_model_run('waroona_old',datetime(2016,1,6,6), extent=extent,
                          add_dewpoint=True, add_winds=True, add_RH=False,
                          add_topog=True, add_z=True, add_theta=True)
 
-
-
 ## first interpolate everything to latlon
 for i in range(len(cubes)):
     cubes[i] = cubes[i].interpolate([('longitude',lon), ('latitude',lat)],
@@ -82,9 +83,9 @@ print(cubes)
 # extract cubes, remove time dim
 TTcube = cubes.extract('air_temperature')[0][0]
 qq = cubes.extract('specific_humidity')[0][0].data.data # kg/kg
-nlvl = qq.shape[0] # number of elements in z dimension
 th = cubes.extract('potential_temperature')[0][0].data.data # K
-pr = cubes.extract('air_pressure')[0][0].data.data # Pa
+prcube = cubes.extract('air_pressure')[0][0] # Pa?
+pr = prcube.data.data # Pa
 TT = TTcube.data.data # K
 uu,vv,ww = [cube[0].data.data for cube in cubes.extract(['u','v','upward_air_velocity'])] # m/s
 dp = cubes.extract('dewpoint_temperature')[0][0].data.data # K
@@ -104,11 +105,9 @@ else:
 
 # Find pressure level at which T = Tmin
 if PorT == 'T':
-    # Where is TT closest to Tmin
-    Tmin_index = np.argmin(np.abs(TT - Tmin))
-    Pmin=pr.data[Tmin_index]
-    # better version of getting Pmin?
-    
+    # get first instance where TT is less than Tmin
+    Tmin_indices = TT < Tmin
+    Pmin = pr[Tmin_indices][0]
 
 if PorT == 'P':
   print('Plume top defined by pressure minimum: ',Pmin/100.0, 'hPa')
@@ -121,21 +120,49 @@ else:
 #print(fortranbit.subroutines.heat_flux_calc.__doc__)
 #
 
+skip = slice(None,None,3) # lets make the vert dim less fine for printing simplicity
+[TT,qq,uu,vv,ww,th,pr] = [ arr[skip] for arr in [TT,qq,uu,vv,ww,th,pr]]
+# Remove values where pressure is lower than 100 hPa
+#sub100 = pr>10000
+#[TT,qq,uu,vv,ww,th,pr] = [ arr[sub100] for arr in [TT,qq,uu,vv,ww,th,pr]]
+nlvl = qq.shape[0] # number of elements in z dimension
+
+"""
+plt.plot(th, pr/100., label='th', color='m')
+plt.plot(TT, pr/100., label='TT', color='r')
+plt.ylim([1000,100])
+plt.xlim([200,500])
+plt.yscale('log')
+plt.legend()
+"""
+
 print("DEBUG: RUNNING FORTRAN SUBROUTINE:", )
+
+print("Outside heatflux subroutine:")
 print("zsfc,psfc,Tsfc")
 print(zsfc,psfc,Tsfc)
-print("DbSP,ni,nj,zp")
-print(DbSP,ni,nj,zp)
-print("beta_e,Pmin,betaSPmin,Wmin,Umin,Prcntg")
-print(beta_e,Pmin,betaSPmin,Wmin,Umin,Prcntg)
+print("TT:",TT[:5],"qq:",qq[:5])
+print("uu:",uu[:5],"vv:",vv[:5],"ww:",ww[:5])
+print("th:",th[:5],"pr:",pr[:5])
+print("phi,DbSP,ni,nj,zp,beta_e,Pmin,betaSPmin,Wmin,Umin,Prcntg")
+print(phi,DbSP,ni,nj,zp,beta_e,Pmin,betaSPmin,Wmin,Umin,Prcntg)
+
+print("\n\n")
 [UML,Um,Vm,betaFC,DthFC,zFC,pFC,Bflux,Hflux]=fortranbit.subroutines.heat_flux_calc(TT,qq,uu,vv,ww,th,pr,nlvl,zsfc,psfc,Tsfc,\
                                                      phi,DbSP,ni,nj,zp,beta_e,Pmin,betaSPmin,Wmin,Umin,Prcntg)
+
+"""
+print("\n *** results from heat_flux_calc ***\n")
 
 print("UML, Um, Vm")
 print(UML, Um, Vm)
 print("betaFC, DthFC, zFC, pFC")
 print(betaFC, DthFC, zFC, pFC)
+print("Bflux:",Bflux/1e9,"e9")
 print(Hflux/1e9, "GWatts")
+print(" *** end results from heat_flux_calc ***\n")
+"""
+
 
 #
 #Wrapper for ``heat_flux_calc``.

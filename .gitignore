@@ -3,7 +3,8 @@ data/**
 data.lnk
 
 # ignore figures unless added specifically
-
+figures_old
+figures
 
 # ignore notebook checkpoints
 .ipynb*
