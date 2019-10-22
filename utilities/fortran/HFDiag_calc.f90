@@ -189,7 +189,7 @@ contains
      endif
 !     write(6,*) thmean-273.15,qmean*1000,PLCL*0.01,TLCL-273.15,pr(k)*0.01,k
    enddo
-   write(6,*) "KLCL, pr(KLCL), TT(KLCL)",KLCL, pr(KLCL), TT(KLCL)
+   write(6,*) "kLCL, pr(kLCL), TT(kLCL)",kLCL, pr(kLCL), TT(kLCL)
 
 ! Calculate the weighting factors for a weighted mixed-layer LCL
    ! First fill the height array zz

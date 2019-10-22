@@ -322,11 +322,10 @@ def compare_site_to_model(AWS='wagerup',
     
 if __name__=='__main__':
     d0,dN = datetime(2016,1,4,10), datetime(2016,1,7,10)
-    summary_wagerup(d0,dN,UTC=True)
     summary_wagerup(d0,dN,UTC=False)
     
     for mr in ['waroona_run1','waroona_old']:
-        for UTC in [True, False]:
+        for UTC in [False]:
             compare_site_to_model(AWS='wagerup',
                                   model_run=mr,
                                   showrange=[datetime(2016,1,5,6),datetime(2016,1,7,6)],

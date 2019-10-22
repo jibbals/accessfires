@@ -10,7 +10,7 @@ Created on Wed Oct  9 21:04:13 2019
 import numpy as np
 from datetime import datetime
 import iris
-from time import sleep
+from platform import platform # check for windows
 
 import matplotlib.pyplot as plt
 
@@ -21,9 +21,15 @@ from utilities import fio, utils, plotting
 ## actually I ran f2py3 -c HFDiag_calc.f90 -m HFcalc
 ## then I renamed the .so file to just HFcalc.so
 # this created a .so file callable here
-import utilities.fortran.HFcalc as fortranbit
-#import HFcalc
 
+onlaptop=True
+if 'Windows' in platform():
+    onlaptop=False
+else:
+    import utilities.fortran.HFcalc as fortranbit
+import utilities.fortran.HFcalc_jesse as HFj
+
+    
 ## CONSTANTS
 phi = 6.0e-5        # Ratio of fire moisture to heat (kg/kg/K)
 DbSP = 0.001        # Beta increment along the saturation point curve
@@ -47,23 +53,7 @@ pi=3.1415926536     # pi
 Prcntg = 7          # 1 = 0.0 %, 2 = 5%, 3 = 10% and so on until 21 = 100% (7 used for all experiments up to 23-05-2019)
 Dp = 60.0*100.0      # Pressure layer above the surface for which the HDW index is calculated (Pa)
                      # Srock et al. use 500m, ~60 hPa at sea level.  Also grid spacing is 50 hPa above 900 hPa
-nlvl = 140             # Number of elements in the pressure (vertical) dimension
 
-
-'''
-
-! Declare output variables
-   real, intent(out) :: UML        ! Mixed-layer horizontal velocity magnitude
-   real, intent(out) :: Um         ! Mixed-layer zonal wind
-   real, intent(out) :: Vm         ! Mixed-layer meridional wind
-   real, intent(out) :: betaFC     ! Free convection beta parameter
-   real, intent(out) :: DthFC      ! Free-convection plume excess potential temperature (K)
-   real, intent(out) :: zFC        ! Free convection height above ground level (m)
-   real, intent(out) :: pFC        ! Free convection pressure (Pa)
-   real, intent(out) :: Bflux      ! Net buoyancy flux required for the plume to reach zFC (m^4.s^-3)
-   real, intent(out) :: Hflux      ! Net heat flux required for the plume to reach zFC (J.s^-1 = W)
-
-'''
 
 ## First read a profile, and surface information required by fortran subroutine
 lat,lon = plotting._latlons_['fire_waroona_upwind']
@@ -77,14 +67,12 @@ for i in range(len(cubes)):
     cubes[i] = cubes[i].interpolate([('longitude',lon), ('latitude',lat)],
                                     iris.analysis.Linear())
 cubedtimes = utils.dates_from_iris(cubes[0])
-print("DEBUG:",cubedtimes[0])
-print(cubes)
 
 # extract cubes, remove time dim
 TTcube = cubes.extract('air_temperature')[0][0]
 qq = cubes.extract('specific_humidity')[0][0].data.data # kg/kg
 th = cubes.extract('potential_temperature')[0][0].data.data # K
-prcube = cubes.extract('air_pressure')[0][0] # Pa?
+prcube = cubes.extract('air_pressure')[0][0] # Pa
 pr = prcube.data.data # Pa
 TT = TTcube.data.data # K
 uu,vv,ww = [cube[0].data.data for cube in cubes.extract(['u','v','upward_air_velocity'])] # m/s
@@ -136,20 +124,19 @@ plt.yscale('log')
 plt.legend()
 """
 
-print("DEBUG: RUNNING FORTRAN SUBROUTINE:", )
-
-print("Outside heatflux subroutine:")
-print("zsfc,psfc,Tsfc")
-print(zsfc,psfc,Tsfc)
-print("TT:",TT[:5],"qq:",qq[:5])
-print("uu:",uu[:5],"vv:",vv[:5],"ww:",ww[:5])
-print("th:",th[:5],"pr:",pr[:5])
-print("phi,DbSP,ni,nj,zp,beta_e,Pmin,betaSPmin,Wmin,Umin,Prcntg")
-print(phi,DbSP,ni,nj,zp,beta_e,Pmin,betaSPmin,Wmin,Umin,Prcntg)
-
-print("\n\n")
-[UML,Um,Vm,betaFC,DthFC,zFC,pFC,Bflux,Hflux]=fortranbit.subroutines.heat_flux_calc(TT,qq,uu,vv,ww,th,pr,nlvl,zsfc,psfc,Tsfc,\
-                                                     phi,DbSP,ni,nj,zp,beta_e,Pmin,betaSPmin,Wmin,Umin,Prcntg)
+'''
+! Declare output variables
+   real, intent(out) :: UML        ! Mixed-layer horizontal velocity magnitude
+   real, intent(out) :: Um         ! Mixed-layer zonal wind
+   real, intent(out) :: Vm         ! Mixed-layer meridional wind
+   real, intent(out) :: betaFC     ! Free convection beta parameter
+   real, intent(out) :: DthFC      ! Free-convection plume excess potential temperature (K)
+   real, intent(out) :: zFC        ! Free convection height above ground level (m)
+   real, intent(out) :: pFC        ! Free convection pressure (Pa)
+   real, intent(out) :: Bflux      ! Net buoyancy flux required for the plume to reach zFC (m^4.s^-3)
+   real, intent(out) :: Hflux      ! Net heat flux required for the plume to reach zFC (J.s^-1 = W)
+'''
+[UML,Um,Vm,betaFC,DthFC,zFC,pFC,Bflux,Hflux]=HFj.PFT(TT,qq,uu,vv,ww,th,pr, zsfc,psfc,Tsfc, phi,DbSP,ni,nj,zp,beta_e,Pmin,betaSPmin,Wmin,Umin,Prcntg-1)
 
 """
 print("\n *** results from heat_flux_calc ***\n")
@@ -163,43 +150,34 @@ print(Hflux/1e9, "GWatts")
 print(" *** end results from heat_flux_calc ***\n")
 """
 
+## Run also on fortran code to compare..
+if onlaptop:
+    
+    
+    print("DEBUG: RUNNING FORTRAN SUBROUTINE:", )
 
-#
-#Wrapper for ``heat_flux_calc``.
-#
-#Parameters
-#----------
-
-#tt : input rank-1 array('f') with bounds (f2py_tt_d0) # temperature
-#qq : input rank-1 array('f') with bounds (f2py_qq_d0) # 
-#uu : input rank-1 array('f') with bounds (f2py_uu_d0)
-#vv : input rank-1 array('f') with bounds (f2py_vv_d0)
-#ww : input rank-1 array('f') with bounds (f2py_ww_d0)
-#th : input rank-1 array('f') with bounds (f2py_th_d0)
-#pr : input rank-1 array('f') with bounds (f2py_pr_d0)
-#nlvl : input int
-#zsfc : input float
-#psfc : input float
-#tsfc : input float
-#phi : input float
-#dbsp : input float
-#ni : input int
-#nj : input int
-#zp : input float
-#beta_e : input float
-#pmin : input float
-#betaspmin : input float
-#wmin : input float
-#umin : input float
-#prcntg : input int
-#
-#Returns
-#-------
-#uml : float
-#um : float
-#vm : float
-#betafc : float
-#zfc : float
-#pfc : float
-#bflux : float
-#hflux : float
+    print("Outside heatflux subroutine:")
+    print("zsfc,psfc,Tsfc")
+    print(zsfc,psfc,Tsfc)
+    print("TT:",TT[:5],"qq:",qq[:5])
+    print("uu:",uu[:5],"vv:",vv[:5],"ww:",ww[:5])
+    print("th:",th[:5],"pr:",pr[:5])
+    print("phi,DbSP,ni,nj,zp,beta_e,Pmin,betaSPmin,Wmin,Umin,Prcntg")
+    print(phi,DbSP,ni,nj,zp,beta_e,Pmin,betaSPmin,Wmin,Umin,Prcntg)
+    print("\n\n")
+    [UML,Um,Vm,betaFC,DthFC,zFC,pFC,Bflux,Hflux]=fortranbit.subroutines.heat_flux_calc(TT,qq,uu,vv,ww,th,pr,nlvl,zsfc,psfc,Tsfc,\
+                                                     phi,DbSP,ni,nj,zp,beta_e,Pmin,betaSPmin,Wmin,Umin,Prcntg)
+    
+    """
+    print("\n *** results from heat_flux_calc ***\n")
+    
+    print("UML, Um, Vm")
+    print(UML, Um, Vm)
+    print("betaFC, DthFC, zFC, pFC")
+    print(betaFC, DthFC, zFC, pFC)
+    print("Bflux:",Bflux/1e9,"e9")
+    print(Hflux/1e9, "GWatts")
+    print(" *** end results from heat_flux_calc ***\n")
+    """
+    
+    

@@ -158,9 +158,9 @@ def fireplan(ff, fire_contour_map = 'autumn',
                                               draw_gridlines=False)
     else:
         fig, gax, gproj, _ = plotting.map_satellite(extent=extent, fig=fig,
-                                                         subplot_row_col_n=subplot_row_col_n,
-                                                         show_name=True,
-                                                         name_size=10)
+                                                    subplot_row_col_n=subplot_row_col_n,
+                                                    show_name=True,
+                                                    name_size=10)
 
     # add waroona and waroona fire if we're over there
     latlons = plotting._latlons_
@@ -363,7 +363,8 @@ if __name__=='__main__':
         ff, = fio.read_fire(model_run=mr, dtimes=None,
                             extent=extent, firefront=True)
         #print("DEBUG:", ff)
-        for google in [False,]:
+        for google in [True,]:
+            
             fireplan(ff, show_cbar=True, cbar_XYWH=[.2,.24,.2,.02],google=google)
             fio.save_fig(mr,_sn_,'fire_outline%s'%(['','_google'][google]),plt,dpi=300)
         
