@@ -29,7 +29,7 @@ if 'Windows' in platform():
     onlaptop=False
 else:
     import utilities.fortran.HFcalc as fortranbit
-import utilities.fortran.HFcalc_jesse as HFj
+import utilities.fortran.PFT as HFj
 
     
 ## CONSTANTS
@@ -118,69 +118,39 @@ skip = slice(None,None,3) # lets make the vert dim less fine for printing simpli
 #[TT,qq,uu,vv,ww,th,pr] = [ arr[sub100] for arr in [TT,qq,uu,vv,ww,th,pr]]
 nlvl = qq.shape[0] # number of elements in z dimension
 
-"""
-plt.plot(th, pr/100., label='th', color='m')
-plt.plot(TT, pr/100., label='TT', color='r')
-plt.ylim([1000,100])
-plt.xlim([200,500])
-plt.yscale('log')
-plt.legend()
-"""
 
-'''
-! Declare output variables
-   real, intent(out) :: UML        ! Mixed-layer horizontal velocity magnitude
-   real, intent(out) :: Um         ! Mixed-layer zonal wind
-   real, intent(out) :: Vm         ! Mixed-layer meridional wind
-   real, intent(out) :: betaFC     ! Free convection beta parameter
-   real, intent(out) :: DthFC      ! Free-convection plume excess potential temperature (K)
-   real, intent(out) :: zFC        ! Free convection height above ground level (m)
-   real, intent(out) :: pFC        ! Free convection pressure (Pa)
-   real, intent(out) :: Bflux      ! Net buoyancy flux required for the plume to reach zFC (m^4.s^-3)
-   real, intent(out) :: Hflux      ! Net heat flux required for the plume to reach zFC (J.s^-1 = W)
-'''
-[UML,Um,Vm,betaFC,DthFC,zFC,pFC,Bflux,Hflux]=HFj.PFT(TT,qq,uu,vv,ww,th,pr, zsfc,psfc,Tsfc, phi,DbSP,ni,nj,zp,beta_e,Pmin,betaSPmin,Wmin,Umin,Prcntg-1)
+[UMLp,Ump,Vmp,betaFCp,DthFCp,zFCp,pFCp,Bfluxp,Hfluxp]=HFj.PFT(TT,qq,uu,vv,ww,th,pr, zsfc,psfc,Tsfc, phi,DbSP,ni,nj,zp,beta_e,Pmin,betaSPmin,Wmin,Umin,Prcntg-1)
 
-print("\n *** results from PORTED heat_flux_calc ***\n")
+#### Run also on fortran code to compare..
+if onlaptop:
+    
+    
+    print("DEBUG: RUNNING FORTRAN SUBROUTINE:", )
 
+    print("\n\n")
+    [UML,Um,Vm,betaFC,DthFC,zFC,pFC,Bflux,Hflux]=fortranbit.subroutines.heat_flux_calc(TT,qq,uu,vv,ww,th,pr,nlvl,zsfc,psfc,Tsfc,\
+                                                     phi,DbSP,ni,nj,zp,beta_e,Pmin,betaSPmin,Wmin,Umin,Prcntg)
+    
+    """
+    print("\n *** results from fortran heat_flux_calc ***\n")
+    
+    print("UML, Um, Vm")
+    print(UML, Um, Vm)
+    print("betaFC, DthFC, zFC, pFC")
+    print(betaFC, DthFC, zFC, pFC)
+    print("Bflux:",Bflux/1e9,"e9")
+    print(Hflux/1e9, "GWatts")
+    print(" *** end results from heat_flux_calc ***\n")
+
+print("\n *** results from PORTED heat_flux_calc ***\n")    
 print("UML, Um, Vm")
-print(UML, Um, Vm)
+print(UMLp, Ump, Vmp)
 print("betaFC, DthFC, zFC, pFC")
-print(betaFC, DthFC, zFC, pFC)
-print("Bflux:",Bflux/1e9,"e9")
-print(Hflux/1e9, "GWatts")
+print(betaFCp, DthFCp, zFCp, pFCp)
+print("Bflux:",Bfluxp/1e9,"e9")
+print(Hfluxp/1e9, "GWatts")
 print(" *** end results from PORTED heat_flux_calc ***\n")
-
-
-### Run also on fortran code to compare..
-#if onlaptop:
-#    
-#    
-#    print("DEBUG: RUNNING FORTRAN SUBROUTINE:", )
-#
-#    print("Outside heatflux subroutine:")
-#    print("zsfc,psfc,Tsfc")
-#    print(zsfc,psfc,Tsfc)
-#    print("TT:",TT[:5],"qq:",qq[:5])
-#    print("uu:",uu[:5],"vv:",vv[:5],"ww:",ww[:5])
-#    print("th:",th[:5],"pr:",pr[:5])
-#    print("phi,DbSP,ni,nj,zp,beta_e,Pmin,betaSPmin,Wmin,Umin,Prcntg")
-#    print(phi,DbSP,ni,nj,zp,beta_e,Pmin,betaSPmin,Wmin,Umin,Prcntg)
-#    print("\n\n")
-#    [UML,Um,Vm,betaFC,DthFC,zFC,pFC,Bflux,Hflux]=fortranbit.subroutines.heat_flux_calc(TT,qq,uu,vv,ww,th,pr,nlvl,zsfc,psfc,Tsfc,\
-#                                                     phi,DbSP,ni,nj,zp,beta_e,Pmin,betaSPmin,Wmin,Umin,Prcntg)
-#    
-#    """
-#    print("\n *** results from fortran heat_flux_calc ***\n")
-#    
-#    print("UML, Um, Vm")
-#    print(UML, Um, Vm)
-#    print("betaFC, DthFC, zFC, pFC")
-#    print(betaFC, DthFC, zFC, pFC)
-#    print("Bflux:",Bflux/1e9,"e9")
-#    print(Hflux/1e9, "GWatts")
-#    print(" *** end results from heat_flux_calc ***\n")
-#    """
+"""
 
 skew = SkewT(rotation=45)
 skew.plot(pr/100.,TT-273.15,'r', linewidth=2)

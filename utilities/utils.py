@@ -187,14 +187,12 @@ def potential_temperature(p,T):
     # Potential temperature based on https://en.wikipedia.org/wiki/Potential_temperature
     # with gas constant R = 287.05 and specific heat capacity c_p = 1004.64
     '''
-    nt,nz,ny,nx = p.shape
-    #Ta  = T[:,0:1,:,:] # [t,1,lat,lon] at surface
-    #repTa = np.repeat(Ta[:,:,:,:], nz, axis=1) # repeat Ta along z axis
-    #assert np.all(repTa[:,0,:,:] - repTa[:,1,:,:] == 0), "Repeated z dim is not the same"
-    #return repTa*(1e5/p)**(287.05/1004.64)
+    # maybe check for units
+    if np.max(p) < 50000:
+        print("WARNING: Potential temperature assumes pressure is in Pascals, highest input pressure is only ", np.max(p))
+    if np.min(T) < 50:
+        print("WARNING: Potential temperature assumes Temperature is in Kelvin, lowest input temp is only ", np.min(T))
     return T*(1e5/p)**(287.05/1004.64)
-    #print("DEBUG: ",p.shape, theta.shape, repTa.shape, Ta.shape)
-    #print("DEBUG: ",'theta' in keepdata[k].keys())
     
 def destagger_winds(u1,v1):
     '''

@@ -12,3 +12,5 @@ figures
 # ignore pycache
 **__pycache__
 
+# ignore fortran code (it's Kevin's, property of CSIRO)
+utilities/fortran
