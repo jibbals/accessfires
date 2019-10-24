@@ -40,6 +40,7 @@ _cmaps_['verticalvelocity'] = 'PiYG_r'  # jeff likes this for vert velocity
 _cmaps_['windspeed']        = 'YlGnBu' # jeff likes this for wind speeds
 _cmaps_['qc']               = 'BuPu' # white through to purple for water+ice content in air
 _cmaps_['topog']            = 'terrain'
+_cmaps_['th']               = 'plasma' # potential temperature
 # Extents: EWSN
 _extents_               = {}
 _latlons_               = {}
@@ -243,8 +244,11 @@ def transect_s(s, z, lat, lon, start, end, npoints=100,
 def transect_theta(theta, z, lat, lon, start, end, npoints=100, 
                    topog=None, latt=None, lont=None, ztop=4000,
                    title="$T_{\\theta}$ (K)", ax=None, colorbar=True,
-                   cmap='YlOrRd', norm=None, cbarform=None,
-                   contours=np.arange(280,320,2),lines=np.arange(280,320,2)):
+                   cmap=_cmaps_['th'], norm=col.SymLogNorm(300),
+                   cbarform=tick.ScalarFormatter(),
+                   contours = np.arange(280,350,1),
+                   lines = np.union1d(np.arange(280,301,2), np.arange(310,351,10))
+                   ):
     '''
     Draw theta cross section
         theta is 3d potential temperature

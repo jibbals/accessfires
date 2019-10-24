@@ -11,12 +11,13 @@ import matplotlib
 matplotlib.use('Agg', warn=False)
 
 # plotting stuff
-#import matplotlib.colors as col
+from matplotlib import colors
 import matplotlib.pyplot as plt
 #import matplotlib.ticker as tick
 #import matplotlib.patches as mpatches
 import numpy as np
-from datetime import datetime,timedelta
+from datetime import datetime
+
 # ignore some warnings
 import warnings
 
@@ -30,7 +31,7 @@ _sn_ = 'cloud_outline'
 
 
 def clouds_2panel(topog,s,u,v,
-                  qc,w,
+                  qc,th,
                   z,lat,lon,
                   transect,
                   ff = None,
@@ -47,7 +48,10 @@ def clouds_2panel(topog,s,u,v,
     312 relative humidity along transect
     313 water and ice content along transect
     INPUTS:
-        cubes need to be passed in
+        topog: [lat,lon] surface altitude (m)
+        s,u,v: [z, lat, lon] wind speed, x-wind, y-wind (m/s)
+        qc,th: [z,lat,lon] cloud content, potential temp (g/kg, K)
+        z,lat,lon: dimensions for other inputs
         extentname = { 'waroona' | 'sirivan' } choice of two fire locations
         transect = int from 1 to 6 for transect choice (see figures/transects.png)
         vectorskip reduces quiver density (may need to fiddle)
@@ -60,7 +64,8 @@ def clouds_2panel(topog,s,u,v,
     plotting.init_plots()
     
     # get plot extent, and transect
-    extent = plotting._extents_[extentname]
+    extent = [lon[0],lon[-1],lat[0],lat[-1]]
+    #extent = plotting._extents_[extentname]
     start,end = transect
     
     plt.figure(figsize=[7,10])
@@ -99,13 +104,14 @@ def clouds_2panel(topog,s,u,v,
     
     ## Second row is transect plots
     plt.subplot(3,1,2)
-    #plotting.transect(theta,z,lat,lon,start,end,topog=topog,
-    #                  cmap='plasma',
-    #                  contours=np.linspace(290,400,111),
-    #                  ztop=ztop)
-    wslice, xslice, zslice = plotting.transect_w(w,z,lat,lon,start,end,topog=topog,
-                                                 npoints=100,lines=None,
-                                                 ztop=ztop)
+    #Lets do theta using log normal after 300 degrees
+    #norm = colors.SymLogNorm(300)
+    #contours = np.arange(280,350,1)
+    #lines = np.union1d(np.arange(280,301,2), np.arange(310,351,10))
+    thslice, xslice, zslice = plotting.transect_theta(th,z,lat,lon,start,end,topog=topog,
+                                                      npoints=100,
+                                                      lines=None,
+                                                      ztop=ztop)
     plt.title("Vertical motion (m/s)")
     
     qcslice = utils.cross_section(qc,lat,lon,start,end, npoints=100)
@@ -157,13 +163,13 @@ def cloud_outline_model(model_run = 'waroona_run1', dtime=datetime(2016,1,5,15))
     for i,dt in enumerate(cubetimes):
         # datetime timestamp for title
         stitle = dt.strftime("%Y %b %d %H:%M (UTC)")
-        si, ui, vi, qci, wi, ffi = [s[i,0].data.data, u[i,0].data.data, 
+        si, ui, vi, qci, thi, ffi = [s[i,0].data.data, u[i,0].data.data, 
                                         v[i,0].data.data, qc[i].data.data, 
-                                        w[i].data.data, ff[i].data.data]
+                                        theta[i].data.data, ff[i].data.data]
         # loop over transects
         for ii in range(6):
             transect = plotting._transects_['%s%d'%(extentname,ii+1)]
-            clouds_2panel(topogi,si,ui,vi, qci,wi, zi, lat, lon,
+            clouds_2panel(topogi,si,ui,vi, qci,thi, zi, lat, lon,
                           transect=transect, ff = ffi, extentname=extentname)
             # Save figure into animation folder with numeric identifier
             plt.suptitle(stitle)
@@ -172,7 +178,7 @@ def cloud_outline_model(model_run = 'waroona_run1', dtime=datetime(2016,1,5,15))
 
 if __name__ == '__main__':
     
-    testing=False
+    testing=True
     
     for mv in ['sirivan_run1', 'waroona_old', 'waroona_run1']:
         datetimes = fio.model_outputs[mv]['filedates']
