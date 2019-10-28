@@ -178,7 +178,7 @@ def cloud_outline_model(model_run = 'waroona_run1', dtime=datetime(2016,1,5,15))
 
 if __name__ == '__main__':
     
-    testing=True
+    testing=False
     
     for mv in ['sirivan_run1', 'waroona_old', 'waroona_run1']:
         datetimes = fio.model_outputs[mv]['filedates']

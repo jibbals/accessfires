@@ -14,13 +14,21 @@ from timeit import default_timer as timer
 from metpy.plots import SkewT
 
 import matplotlib.pyplot as plt
+from matplotlib import colors
 
 from utilities import fio, utils, plotting
-
 
 ## PFT is my port of Kevin's proprietry fortran code
 ## if this is not available, we are out of luck
 import utilities.fortran.PFT as HFj    
+
+
+###
+## GLOBALS
+###
+_sn_ = 'PFT_work'
+
+
 
 def PFT_from_cubelist(cubes0, latlon=None, tskip=None, latskip=None, lonskip=None):
     """
@@ -196,40 +204,41 @@ def PFT_from_cubelist(cubes0, latlon=None, tskip=None, latskip=None, lonskip=Non
     print("Info: time to produce PFT(%s): %.2f minutes"%(str(PFT.shape), (end-start)/60.0))
     return PFT
 
-if __name__ == '__main__':
+#def model_run_PFT_map(mr = 'waroona_run1', hour=datetime(2016,1,5,15)):
+"""
+Read model outputs and produce PFT maps for each available time step
+"""
+mr = 'waroona_run1'
+hour=datetime(2016,1,5,15)
+plotting.init_plots()
+extentname=mr.split("_")[0]
+extent=plotting._extents_[extentname]
+
+# Read the cubes
+cubes = fio.read_model_run(mr, fdtime=hour,
+                           extent=extent,
+                           add_z=True, add_RH=True,
+                           add_topog=True, add_winds=True,
+                           add_theta=True)
+dtimes = utils.dates_from_iris(cubes.extract('u')[0])
+# Read PFT over time,lats,lons (somewhat deresolved..)
+Hskip = 10
+PFT = PFT_from_cubelist(cubes, latskip=Hskip, lonskip=Hskip)
+lats = cubes[0].coord('latitude').points[::Hskip]
+lons = cubes[0].coord('longitude').points[::Hskip]
+
+vmin=0
+vmax=1000
+norm = colors.SymLogNorm(200) # linear up to 200, then logarithmic
+for i,dtime in enumerate(dtimes):
+    
+    cs = plt.contourf(lats,lons,PFT[i], 200, norm=norm, vmin=vmin, vmax=vmax)
+    cb = plt.colorbar()
+    
+    plt.title(dtime.strftime("PFT at %b %d %H:%M (UTC)"))
+    fio.save_fig(mr,_sn_,dtime,plt)
+    
+#if __name__ == '__main__':
 
     # Run a few tests:
-    
-    ## First read a profile, and surface information required by fortran subroutine
-    latlon = plotting._latlons_['fire_waroona_upwind']
-    lat,lon = latlon
-    extent = [lon-.01, lon+.01, lat-.01, lat+.01] # just grab real close to latlon
-    cubes=fio.read_model_run('waroona_run1',fdtime=[datetime(2016,1,6,5),datetime(2016,1,6,6)],
-                             extent=extent, add_dewpoint=True, 
-                             add_winds=True, add_RH=False,
-                             add_topog=True, add_z=True, add_theta=True)
-    
-    PFT0 = PFT_from_cubelist(cubes) # whole map with time steps etc
-    
-    PFT1 = PFT_from_cubelist(cubes,latlon=latlon) # just a time series
-    
-    PFT2 = PFT_from_cubelist(cubes,latskip=2,tskip=2) # subset
-    
-    print("OUTPUT:           Min,    mean,    max for PFT calculations")
-    print("OUTPUT: PFT0:  %.2f, %.2f, %.2f"%(np.min(PFT0), np.mean(PFT0), np.max(PFT0)))
-    print("OUTPUT: PFT1:  %.2f, %.2f, %.2f"%(np.min(PFT1), np.mean(PFT1), np.max(PFT1)))
-    print("OUTPUT: PFT2:  %.2f, %.2f, %.2f"%(np.min(PFT2), np.mean(PFT2), np.max(PFT2)))
-    plt.subplot(211)
-    for yi in range(PFT0.shape[1]):
-        for xi in range(PFT0.shape[2]):
-            plt.plot(PFT0[:,yi,xi], alpha=0.4, linestyle=':')
-    for yi in range(PFT2.shape[1]):
-        for xi in range(PFT2.shape[2]):
-            plt.plot(PFT2[:,yi,xi], alpha=0.5, linestyle='--')
-
-    plt.plot(PFT1, linewidth=2, color='k') # should be a series
-    plt.title("PFT series at, or near, %.3f, %.3f"%(lat,lon))
-    
-    plt.subplot(212)
-    plt.contourf(PFT0[0])
-    plt.colorbar()
+    #model_run_PFT_map()

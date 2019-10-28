@@ -17,7 +17,7 @@ import matplotlib.pyplot as plt
 #import matplotlib.ticker as tick
 #import matplotlib.patches as mpatches
 import numpy as np
-from datetime import datetime,timedelta
+
 import warnings
 
 # local modules
@@ -219,9 +219,11 @@ def outline_model_winds(model_run='sirivan_run1', hours=None, dpi=200):
 
 
 if __name__ == '__main__':
-    
-    for mr in ['sirivan_run1']:#,'waroona_old','waroona_run1']:
+    Testing = True
+    for mr in ['sirivan_run1', 'waroona_old', 'waroona_run1']:
         hours = fio.model_outputs[mr]['filedates']
+        if Testing:
+            hours=hours[:2]
         for hour in hours:
             print("info: wind_outline", mr, hour)
             outline_model_winds(mr, hours=[hour])
