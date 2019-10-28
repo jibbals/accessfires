@@ -36,7 +36,7 @@ _topog_sirivan_ = 'data/sirivan/umnsaa_pa2017021121.nc'
 _files_sirivan_ = sorted(glob('data/sirivan/umnsaa_pc*.nc'))
 
 model_outputs = {
-        # Sirivan high resolution run around June (this year)
+        ## Sirivan run around June (2019)
         'sirivan_run1':{
             'path':'data/sirivan_run1/',
             'topog':'umnsaa_pa2017021121.nc',
@@ -45,7 +45,7 @@ model_outputs = {
             'origdir':'/short/en0/hxy548/cylc-run/au-aa860/share/cycle/20170211T2100Z/sirivan/0p3/ukv_os38/um',
             'origfiredir':'/short/en0/hxy548/cylc-run/au-aa860/work/20170211T2100Z/sirivan_0p3_ukv_os38_um_fcst_000/',
             },
-        # Attemp to recreate 'old' run weather and pyrocb
+        ## Attemp to recreate 'old' run weather and pyrocb
         'waroona_run2':{
             'path':'data/waroona_run2/',
             'topog':'',
@@ -53,7 +53,7 @@ model_outputs = {
             'run':'Run in September 2019',
             'origdir':'/short/en0/hxy548/tmp/waroona/0p3/',
             'origfiredir':''},
-        # Run 1 was the first one I looked at, with east west rolls and no pyrocb
+        ## Run 1 was the first one I looked at, with east west rolls and no pyrocb
         'waroona_run1':{
             'path':'data/waroona_run1/',
             'topog':'umnsaa_2016010515_slv.nc',
@@ -61,7 +61,7 @@ model_outputs = {
             'run':'Run in august 2019',
             'origdir':'/short/en0/hxy548/cylc-run/au-aa799/share/cycle/20160105T1500Z/waroona/0p3/ukv_os38/um/',
             'origfiredir':'/short/en0/hxy548/tmp/waroona/0p3/'},
-        # Old run had pyrocb but also lots of high clouds and hooked F160 bases
+        ## Old run had pyrocb but also lots of high clouds and hooked F160 bases
         'waroona_old':{
             'path':'data/waroona_old/',
             'topog':'umnsaa_pa2016010515.nc',
@@ -69,7 +69,8 @@ model_outputs = {
             'run':'Run in August 2018',
             'origdir':'/g/data1a/en0/mxp548/access-fire/waroona/run3/accessdata/',
             'origfiredir':'/short/en0/mxp548/cylc-run/au-aa714/work/20160105T1500Z/waroona_0p4_ukv_os38_um_fcst_000/'},
-        # Old Old run has bad lat/lons...
+        ## Old Old run has bad lat/lons...
+        ## Note oldold run doesn't have QC at stage 5 resolution
         'waroona_oldold':{
             'path':'data/waroona_oldold/',
             'topog':'stage5_sfc_orog.nc',
