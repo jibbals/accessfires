@@ -21,11 +21,13 @@ from utilities import fio, plotting, utils
 _sn_ = 'localtests'
 
 
+from cartopy import crs as ccrs
+import cartopy.io.img_tiles as cimgt
 
-ff, = fio.read_fire('sirivan_run1',dtimes=[datetime(2017,2,11,21)])
-
-lats,lons = ff.coord('latitude').points, ff.coord('longitude').points
-
-for metric in [lats,lons]:
-    print("%.5f - %.5f, mid = %.6f"%(metric[0],metric[-1], (metric[-1]+metric[0]) / 2.0))
-    print("res: %.5f, count: %5d"%(metric[1]-metric[0], len(metric)))
+linescan_extent = [149.48, 150.04, -32.18, -31.85]
+subplot_extent2 = [0,0.02,1,0.45]
+fig = plt.figure()
+stamen_terrain = cimgt.Stamen('terrain-background')
+ax2 = fig.add_axes(subplot_extent2, frameon=False, projection=stamen_terrain.crs)
+ax2.set_extent(linescan_extent)
+ax2.add_image(stamen_terrain, 10)

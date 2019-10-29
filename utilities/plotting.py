@@ -432,7 +432,7 @@ def map_satellite(extent = _extents_['waroona'],
         https://wiki.earthdata.nasa.gov/display/GIBS/GIBS+Available+Imagery+Products#expand-SurfaceReflectance16Products
     
     '''
-    URL = 'http://gibs.earthdata.nasa.gov/wmts/epsg4326/best/wmts.cgi'
+    URL = 'https://gibs.earthdata.nasa.gov/wmts/epsg4326/best/wmts.cgi'
     wmts = WebMapTileService(URL)
     
     layer = 'Landsat_WELD_CorrectedReflectance_TrueColor_Global_Annual'
@@ -534,7 +534,7 @@ def map_add_nice_text(ax, latlons, texts=None, markers=None,
             # Add background (outline)
             txt.set_path_effects(text_effects)
     
-def map_topography(extent, topog,lat,lon,title="Topography"):
+def map_topography(extent, topog,lat,lon,title="Topography", cbar=True):
     '''
     Show topography map matching extents
     '''
@@ -544,8 +544,9 @@ def map_topography(extent, topog,lat,lon,title="Topography"):
     if extent[0] > 140:
         clevs = np.linspace(100,800,50,endpoint=True)
     cmaptr=plt.cm.get_cmap("terrain")
-    return map_contourf(extent, topog,lat,lon,title=title,clevs=clevs,
-                        cmap=cmaptr,clabel="m")
+    return map_contourf(extent, topog, lat, lon, 
+                        title=title, clevs=clevs, cmap=cmaptr, 
+                        clabel="m", cbar=cbar)
     
 
 def utm_from_lon(lon):

@@ -13,23 +13,28 @@ from glob import glob
 from datetime import datetime, timedelta
 from os.path import basename
 from cartopy import crs as ccrs
+import cartopy.io.img_tiles as cimgt
 
 from utilities import fio, utils, plotting
 
 _sn_ = 'linescan_comparison'
 
-def linescan_vs_firefront(model_run='sirivan_run1',google=False):
+def linescan_vs_firefront(model_run='sirivan_run1',option='stamen'):
     """
     show linescan above firefront on as similar as possible extents
     if firefront is not avail at the desired time, show closest
     
     can show against satellite imagery or googlemap (with roads etc)
+    options: 
+        'google' for google map
+        'satellite' for satellite map
+        'topog' for model topography
+        NOTE: These are currently broken... use 'topog' as option
     """
     # sirivan linescan figures extent (eyeballed using google map + matplotlib gridlines)
     linescan_extent =  [149.48, 150.04, -32.18, -31.85]
-    uarbry_offset = timedelta(hours=10) # UARBRY LOCAL TIME OFFSET FROM UTC
     latlon_CRS = ccrs.PlateCarree()
-    
+        
     # read fire front (all datetimes)
     ff, = fio.read_fire(model_run,extent=linescan_extent)
     ffdates = utils.dates_from_iris(ff)
@@ -42,15 +47,16 @@ def linescan_vs_firefront(model_run='sirivan_run1',google=False):
     
     for file in files:
         fname=basename(file)
-        local_dtime = datetime.strptime(fname,"SIRIVAN_%Y%m%d %H%M.jpg")
+        AEST = datetime.strptime(fname,"SIRIVAN_%Y%m%d %H%M.jpg")
         # local time is offset by 10hrs from UTC
-        #dtime = local_dtime - uarbry_offset
-        dtime = local_dtime # maybe timestamp is UTC?
-        dstamp = dtime.strftime('%Y%m%d %H:%M (UTC)')
-        dstr = dtime.strftime('%Y%m%d_%H%M')
+        # AEST = UTC+10H
+        UTC = AEST - timedelta(hours=10)
+        #dtime = local_dtime # maybe timestamp is UTC?
+        dstamp = UTC.strftime('%Y%m%d %H:%M (UTC)')
+        dstr = UTC.strftime('%Y%m%d_%H%M')
         
-        # closest index:
-        di = utils.nearest_date_index(dtime,ffdates,allowed_seconds=1e10)
+        # closest index (model output in UTC)
+        di = utils.nearest_date_index(UTC,ffdates,allowed_seconds=1e10)
         ffstamp = ffdates[di].strftime('%Y%m%d %H:%M (UTC)')
         #show linescans on row 1
         img1 = mpimg.imread(file)
@@ -66,13 +72,20 @@ def linescan_vs_firefront(model_run='sirivan_run1',google=False):
         #show fire plan on row 2 (matching linescan times)
         # can show either googlemap (roads, rivers), or satellite map (true colour)
         # map first
-        if google:
+        subplot_extent2 = [0,0.02,1,0.45]
+        if option=='stamen':
+            stamen_terrain = cimgt.Stamen('terrain-background')
+            ax2 = fig.add_axes(subplot_extent2, frameon=False, projection=stamen_terrain.crs)
+            ax2.set_extent(linescan_extent)
+            ax2.add_image(stamen_terrain, 10) # 10 seems to be max zoom for resolution
+            mproj = stamen_terrain.crs
+        elif option == 'google':
             _,ax2,mproj = plotting.map_google(linescan_extent, fig=fig, zoom=12,
-                                              subplot_extent=[0,0.02,1,0.45],
+                                              subplot_extent=subplot_extent2,
                                               draw_gridlines=False)
         else:
             _,ax2,mproj,dproj = plotting.map_satellite(linescan_extent, fig=fig,
-                                                       subplot_extent=[0,0.02,1,0.45])
+                                                       subplot_extent=subplot_extent2)
         plt.sca(ax2)
         # add firefront hourly up to current datetime indext
         # just read hourly
@@ -84,18 +97,18 @@ def linescan_vs_firefront(model_run='sirivan_run1',google=False):
             # contour the hours up to our linescan datetime
             for ii,dt in enumerate(ffdates[hourinds]):
                 ffdata = ff[hourinds][ii].data.data
-                if np.min(ffdata>0):
+                if np.min(ffdata)>0:
                     continue
                 plt.contour(lon, lat, ffdata.T, np.array([0]),
-                            colors='orange', linewidths=1,
+                            colors='orangered', linewidths=2,
                             transform=latlon_CRS)
 
         # final outline contour
         ffdata = ff[di].data.data
-        if np.min(ffdata<0):
-            plt.contour(lon,lat,ffdata.T, np.array([0]), 
+        if np.min(ffdata)<0:
+            plt.contour(lon, lat, ffdata.T, np.array([0]), 
                         linestyles='dotted',
-                        colors='red', linewidths=2, transform=latlon_CRS)
+                        colors='magenta', linewidths=2, transform=latlon_CRS)
         plt.title(ffstamp)
         fio.save_fig('sirivan_run1',_sn_,"linescan_%s"%dstr,plt,dpi=150)
 
