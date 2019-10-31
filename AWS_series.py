@@ -114,7 +114,6 @@ def summary_wagerup(d0=None,dN=None, UTC=True):
     fio.save_fig('measurements',_sn_,'summary_wagerup'+['','_UTC'][UTC],plt)
 
 def combine_site_and_model(AWS='wagerup', model_run='waroona_run1',
-                           heights=[1,10,30],
                            groupbystr=None,
                            UTC=True):
     """
@@ -123,12 +122,12 @@ def combine_site_and_model(AWS='wagerup', model_run='waroona_run1',
     
     arguments
     ---------
-    heights: list, interpolate model parameters at site to these heights (m)
     groupbystr: string, make all columns binned (by '30Min' for example)
     """
     lat,lon = plotting._latlons_[AWS]
     extent = [lon-.02, lon+.02, lat-.02, lat+.02] # just grab real close to latlon
-
+    heights=[1,10,30] # look at model heights 1m, 10m and 30m
+    
     ## Read AWS: eventually handle multiple weather stations
     #if AWS == 'wagerup':
     subplots = deepcopy(__AWS_PLOTS__)
@@ -179,6 +178,12 @@ def combine_site_and_model(AWS='wagerup', model_run='waroona_run1',
         
         # put time series for each vertical level in a dictionary
         for zi in range(len(heights)):
+            # don't bother with a couple of metrics
+            if (model_cube.name() == 'air_pressure') and (heights[zi]==30):
+                continue
+            elif (model_cube.name() == 's') and (heights[zi] == 1):
+                continue
+            
             cubedata = model_cube[:,zi].data
             if isinstance(cubedata, np.ma.MaskedArray):
                 cubedata = cubedata.data
@@ -207,11 +212,22 @@ def combine_site_and_model(AWS='wagerup', model_run='waroona_run1',
     for title, mname in zip(['Wind direction','Wind speed','Pressure','Relative humidity','Temperature'],
                             ['wind_direction','s','air_pressure','relative_humidity','air_temperature']):
         # add model name to list of dataframe columns to be plotted within corresponding subplot
-        subplots[title]['dfnames'].extend([mname+'%d'%d for d in [1,10,30]])
+        heights = [1,10,30]
+        hcolors = ['crimson','fuchsia','blueviolet']
+        hmarkers = ['v','.','^']
+        if mname=='s':
+            heights = heights[1:]
+            hcolors = hcolors[1:]
+            hmarkers = hmarkers[1:]
+        elif mname=='air_pressure':
+            heights = heights[:2]
+            hcolors = hcolors[:2]
+            hmarkers = hmarkers[:2]
+        subplots[title]['dfnames'].extend([mname+'%d'%d for d in heights])
         # add marker,color,linestyle too
-        subplots[title]['colors'].extend(['crimson','fuchsia','blueviolet'])
-        subplots[title]['linestyles'].extend(['None']*3)
-        subplots[title]['markers'].extend(['v','.','^'])
+        subplots[title]['colors'].extend(hcolors)
+        subplots[title]['linestyles'].extend(['None']*len(hcolors))
+        subplots[title]['markers'].extend(hmarkers)
     
     df = df_both
     if groupbystr is not None:
@@ -221,7 +237,6 @@ def combine_site_and_model(AWS='wagerup', model_run='waroona_run1',
     
 def compare_site_to_model(AWS='wagerup',
                           model_run='waroona_run1',
-                          heights=[1,10,30], # what heights to look at in model output
                           showrange=None, # subset the time series to this range
                           UTC=True,
                           ):
@@ -230,9 +245,8 @@ def compare_site_to_model(AWS='wagerup',
     
     compare site to model run
     """
-    df, subplots = combine_site_and_model(AWS=AWS, model_run=model_run,
-                                          heights=heights, UTC=UTC)
     
+    df, subplots = combine_site_and_model(AWS=AWS, model_run=model_run, UTC=UTC)
     df_subset = df
     if showrange is not None:
         rangestr = [showrange[0].strftime("%Y-%m-%d %H"),
@@ -245,7 +259,7 @@ def compare_site_to_model(AWS='wagerup',
                  pname='%s_%s_all%s'%(AWS,model_run,['','_UTC'][UTC]), plt=plt)
     
     ## aggregate and compare model to aws
-    df_agg = df.resample('30Min').mean()
+    df_agg = df_subset.resample('30Min').mean()
     df_time_series(df_agg, subplots=subplots)
     fio.save_fig(model_run=model_run, script_name=_sn_, 
                  pname='%s_%s_aggregate%s'%(AWS,model_run,['','_UTC'][UTC]), plt=plt)
