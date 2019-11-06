@@ -109,20 +109,20 @@ _transects_['sirivan6'] = [-31.7 , 149.5  ], [-32.1  , 150.3 ]
 
 
 def init_plots():
-  matplotlib.rcParams['font.size'] = 15.0
-  matplotlib.rcParams["text.usetex"]      = False     # I forget what this is for, maybe allows latex labels?
-  matplotlib.rcParams["legend.numpoints"] = 1         # one point for marker legends
-  matplotlib.rcParams["figure.figsize"]   = (9, 7)    # Default figure size
-  matplotlib.rcParams["axes.titlesize"]   = 19        # title font size
-  matplotlib.rcParams["figure.titlesize"] = 21        # figure suptitle size
-  matplotlib.rcParams["axes.labelsize"]   = 15        #
-  matplotlib.rcParams["xtick.labelsize"]  = 11        #
-  matplotlib.rcParams["ytick.labelsize"]  = 11        #
-  matplotlib.rcParams['image.cmap'] = 'plasma'        # Colormap default
-  matplotlib.rcParams['axes.formatter.useoffset'] = False # another one I've forgotten the purpose of
-  # rcParams["figure.dpi"] 
-  #matplotlib.rcParams["figure.dpi"] = 400           # DEFAULT DPI for plot output
-  # THIS MESSES UP THE PLOTTING
+    matplotlib.rcParams['font.size'] = 15.0
+    matplotlib.rcParams["text.usetex"]      = False     # I forget what this is for, maybe allows latex labels?
+    matplotlib.rcParams["legend.numpoints"] = 1         # one point for marker legends
+    matplotlib.rcParams["figure.figsize"]   = (9, 7)    # Default figure size
+    matplotlib.rcParams["axes.titlesize"]   = 19        # title font size
+    matplotlib.rcParams["figure.titlesize"] = 21        # figure suptitle size
+    matplotlib.rcParams["axes.labelsize"]   = 15        #
+    matplotlib.rcParams["xtick.labelsize"]  = 11        #
+    matplotlib.rcParams["ytick.labelsize"]  = 11        #
+    matplotlib.rcParams['image.cmap'] = 'plasma'        # Colormap default
+    matplotlib.rcParams['axes.formatter.useoffset'] = False # another one I've forgotten the purpose of
+    # rcParams["figure.dpi"] 
+    #matplotlib.rcParams["figure.dpi"] = 400           # DEFAULT DPI for plot output
+    # THIS MESSES UP THE PLOTTING
 
 
 def map_add_locations_extent(extentname, hide_text=False):
@@ -220,7 +220,7 @@ def transect(data, z, lat, lon, start, end, npoints=100,
 def transect_s(s, z, lat, lon, start, end, npoints=100, 
                topog=None, latt=None, lont=None, ztop=4000,
                title="Wind speed (m/s)", ax=None, colorbar=True,
-               cmap='YlGnBu', norm=None, cbarform=None,
+               cmap=_cmaps_['windspeed'], norm=None, cbarform=None,
                contours=np.arange(0,25,2.5),lines=np.arange(0,25,2.5)):
     '''
     Draw wind speed cross section

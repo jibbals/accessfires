@@ -357,6 +357,7 @@ def read_model_run(model_version, fdtime=None, subdtimes=None, extent=None,
                 allcubes = cubelist
             else:
                 allcubes.extend(cubelist)
+            
     elif model_version=='sirivan_run1':
         for dtime in fdtimes:
             cubelist = read_sirivan_run1(dtime)
@@ -444,6 +445,24 @@ def read_model_run(model_version, fdtime=None, subdtimes=None, extent=None,
         tslice = np.array([utils.nearest_date_index(dt, cubedates, allowed_seconds=120) for dt in subdtimes])
         for i in range(len(allcubes)):
             allcubes[i] = allcubes[i][tslice]
+    
+    # surface stuff may have no time dim...
+    for varname in ['surface_air_pressure','surface_temperature']:
+        saps = allcubes.extract(varname)
+        if len(saps) > 1:
+            sap = saps.merge_cube()
+            for cube in saps:
+                allcubes.remove(cube)
+            tube = allcubes[0]
+            time = tube.coord('time')
+            # add time steps for easyness
+            sap0 = sap
+            if tube.shape[0] != sap.shape[0]:
+                sap0 = sap.interpolate([('time',time.points)],
+                                        iris.analysis.Linear())
+            # add single cube with time dim
+            allcubes.append(sap0)
+            
 
     ## NOW add any timeless cubes
     allcubes.extend(timelesscubes)
@@ -729,7 +748,7 @@ def read_waroona_old(dtime, constraints=None, extent=None):
         cubes.remove(Ta)
     else:
         cubes.remove(Ta0)
-        
+    
     return cubes
 
 def read_waroona_oldold(constraints=None, extent=None):

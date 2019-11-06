@@ -155,7 +155,7 @@ def weather_summary_model(model_version='waroona_oldold',
 
 if __name__=='__main__':
     
-    for mv in ['sirivan_run1']:#,'waroona_old','waroona_oldold','waroona_run1']:#,'sirivan_run1']:
+    for mv in ['waroona_old','waroona_oldold','waroona_run1','sirivan_run1']:
         weather_summary_model(mv)
     
     print("weather_summary.py done")

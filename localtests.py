@@ -20,14 +20,20 @@ from utilities import fio, plotting, utils
 
 _sn_ = 'localtests'
 
+import iris
 
-from cartopy import crs as ccrs
-import cartopy.io.img_tiles as cimgt
+cubes = fio.read_model_run('waroona_old', extent=plotting._extents_['waroonaz'],
+                           fdtime=[datetime(2016,1,5,15),datetime(2016,1,5,16)],
+                           add_theta=True, add_winds=True, add_RH=True, 
+                           add_z=True, add_topog=True)
+print(cubes)
+#u, = cubes.extract('u')
+#time = u.coord('time')
+#sap, = cubes.extract('surface_air_pressure')
+#sap0 = sap.interpolate([('time',time.points)],
+#                           iris.analysis.Linear())
 
-linescan_extent = [149.48, 150.04, -32.18, -31.85]
-subplot_extent2 = [0,0.02,1,0.45]
-fig = plt.figure()
-stamen_terrain = cimgt.Stamen('terrain-background')
-ax2 = fig.add_axes(subplot_extent2, frameon=False, projection=stamen_terrain.crs)
-ax2.set_extent(linescan_extent)
-ax2.add_image(stamen_terrain, 10)
+
+#sap = saps.merge_cube()
+#for cube in saps:
+#    cubes.remove(cube)

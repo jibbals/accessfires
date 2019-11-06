@@ -50,6 +50,7 @@ def PFT_from_cubelist(cubes0, latlon=None, tskip=None, latskip=None, lonskip=Non
                     'upward_air_velocity', 'surface_altitude', 
                     'surface_air_pressure', 'surface_temperature'], strict=True):
         cubes.append(cube.copy())
+    lat,lon = latlon
     
     ## first interpolate everything to latlon
     if latlon is not None:
@@ -204,40 +205,43 @@ def PFT_from_cubelist(cubes0, latlon=None, tskip=None, latskip=None, lonskip=Non
     print("Info: time to produce PFT(%s): %.2f minutes"%(str(PFT.shape), (end-start)/60.0))
     return PFT
 
-#def model_run_PFT_map(mr = 'waroona_run1', hour=datetime(2016,1,5,15)):
-"""
-Read model outputs and produce PFT maps for each available time step
-"""
-mr = 'waroona_run1'
-hour=datetime(2016,1,5,15)
-plotting.init_plots()
-extentname=mr.split("_")[0]
-extent=plotting._extents_[extentname]
+def model_run_PFT_map(mr = 'waroona_run1', hour=datetime(2016,1,5,15)):
+    """
+    Read model outputs and produce PFT maps for each available time step
+    """
+    mr = 'waroona_run1'
+    hour=datetime(2016,1,5,15)
+    plotting.init_plots()
+    extentname=mr.split("_")[0]
+    extent=plotting._extents_[extentname]
+    
+    # Read the cubes
+    cubes = fio.read_model_run(mr, fdtime=hour,
+                               extent=extent,
+                               add_z=True, add_RH=True,
+                               add_topog=True, add_winds=True,
+                               add_theta=True)
+    dtimes = utils.dates_from_iris(cubes.extract('u')[0])
+    # Read PFT over time,lats,lons (somewhat deresolved..)
+    Hskip = 10
+    PFT = PFT_from_cubelist(cubes, latskip=Hskip, lonskip=Hskip)
+    lats = cubes[0].coord('latitude').points[::Hskip]
+    lons = cubes[0].coord('longitude').points[::Hskip]
+    
+    vmin=0
+    vmax=1000
+    norm = colors.SymLogNorm(200) # linear up to 200, then logarithmic
+    for i,dtime in enumerate(dtimes):
+        
+        cs = plt.contourf(lats,lons,PFT[i], 200, norm=norm, vmin=vmin, vmax=vmax)
+        cb = plt.colorbar()
+        
+        plt.title(dtime.strftime("PFT at %b %d %H:%M (UTC)"))
+        fio.save_fig(mr,_sn_,dtime,plt)
 
-# Read the cubes
-cubes = fio.read_model_run(mr, fdtime=hour,
-                           extent=extent,
-                           add_z=True, add_RH=True,
-                           add_topog=True, add_winds=True,
-                           add_theta=True)
-dtimes = utils.dates_from_iris(cubes.extract('u')[0])
-# Read PFT over time,lats,lons (somewhat deresolved..)
-Hskip = 10
-PFT = PFT_from_cubelist(cubes, latskip=Hskip, lonskip=Hskip)
-lats = cubes[0].coord('latitude').points[::Hskip]
-lons = cubes[0].coord('longitude').points[::Hskip]
 
-vmin=0
-vmax=1000
-norm = colors.SymLogNorm(200) # linear up to 200, then logarithmic
-for i,dtime in enumerate(dtimes):
-    
-    cs = plt.contourf(lats,lons,PFT[i], 200, norm=norm, vmin=vmin, vmax=vmax)
-    cb = plt.colorbar()
-    
-    plt.title(dtime.strftime("PFT at %b %d %H:%M (UTC)"))
-    fio.save_fig(mr,_sn_,dtime,plt)
-    
+
+
 #if __name__ == '__main__':
 
     # Run a few tests:

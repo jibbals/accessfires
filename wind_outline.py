@@ -219,8 +219,9 @@ def outline_model_winds(model_run='sirivan_run1', hours=None, dpi=200):
 
 
 if __name__ == '__main__':
-    Testing = True
-    for mr in ['sirivan_run1', 'waroona_old', 'waroona_run1']:
+    Testing = False
+    allmr = ['sirivan_run1', 'waroona_old', 'waroona_run1']
+    for mr in ['waroona_run1','waroona_old']:
         hours = fio.model_outputs[mr]['filedates']
         if Testing:
             hours=hours[:2]

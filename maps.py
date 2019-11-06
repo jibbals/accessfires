@@ -66,7 +66,7 @@ def outline_waroona():
     # Google map image tiles view of synoptic map
     fig,ax,proj=plotting.map_google(extent,
                                     zoom=6,
-                                    subplotxyn=[2,1,1],
+                                    subplot_row_col_n=[2,1,1],
                                     gridlines=[np.arange(-51,-10,2),
                                                np.arange(100,150,4)])
     plt.title("Waroona synoptic")
@@ -92,7 +92,7 @@ def outline_waroona():
     
     ## Look at waroona and yarloop
     _,ax2,gproj = plotting.map_google(inner, zoom=10, fig=fig,
-                                      subplotxyn=[2,2,3], draw_gridlines=False)
+                                      subplot_row_col_n=[2,2,3], draw_gridlines=False)
     plt.title("Fire location")
     
     ## Add scale

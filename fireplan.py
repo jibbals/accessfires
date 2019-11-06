@@ -17,6 +17,7 @@ import iris
 
 from cartopy import crs as ccrs
 
+import PFT_work
 from utilities import plotting, utils, fio
 
 ###
@@ -60,6 +61,27 @@ PFT = {'waroona_run1':{'data':np.array([56.5, 42.1, 34.6, 332.6, 53.2]), # manua
 ## 201601051510NEW: q_ML=8  , th_ML=35C, star_SP=(10  , 55C), z_fc=710mbar=3.07km, dth=2.0, U=10m/s ::: PFT = .3*3.07**2*2*10 = 56.5GW
 
 ## 201601061210NEW: q_ML=7.2, th_ML=35.5, z_fc = 695mbar=4km, dth=4.5, U=15.4m/s ::: PFt = .3*4**2*4.5*15.4 = 332.6GW
+
+
+
+def firepower_from_cube(shcube):
+    """
+    calculate and return firepower over time in GWatts
+    
+    Inputs
+    ======
+        shcube: sensible heat flux in Watts/m2
+    """
+    
+    lon,lat = shcube.coord('longitude'), shcube.coord('latitude')
+    ### get areas in m2
+    # Add boundaries to grid
+    lat.guess_bounds()
+    lon.guess_bounds()
+    grid_areas = iris.analysis.cartography.area_weights(shcube)
+
+    firepower = shcube.data.data * grid_areas # W/m2 * m2
+    return firepower/1e9 # Watts to Gigawatts
 
 def pft_altitude_vs_pressure(model_run='waroona_run1', latlon=plotting._latlons_['fire_waroona_upwind'],
                              mbar_to_watch=700, datetimes=[datetime(2016,1,5,15)]):
@@ -110,7 +132,7 @@ def pft_altitude_vs_pressure(model_run='waroona_run1', latlon=plotting._latlons_
     plt.ylabel('altitude [km]')
 
 def fireplan(ff, fire_contour_map = 'autumn',
-             show_cbar=True, cbar_XYWH= [0.2,0.6,.2,.02],
+             show_cbar=True, cbar_XYWH= [0.2, 0.6, .2, .02],
              fig=None,subplot_row_col_n=None,
              draw_gridlines=False,gridlines=None,
              google=False):
@@ -324,15 +346,8 @@ def fire_power_waroona():
 
         ax2 = plt.subplot(2,1,2)
 
-        ### get areas in m2
-        # Add boundaries to grid
-        lat.guess_bounds()
-        lon.guess_bounds()
-        grid_areas = iris.analysis.cartography.area_weights(ff)
-
-        firepower = sh.data.data * grid_areas # W/m2 * m2
-        firepower = firepower/1e9 # Watts to Gigawatts
-
+        firepower = firepower_from_cube(sh)
+        
         # Plot firepower
         plt.plot_date(ftimes,np.sum(firepower,axis=(1,2)), '-'+PFT[model_run]['color'], label='Fire power '+model_run)
 
@@ -352,25 +367,88 @@ def fire_power_waroona():
         ax2.xaxis.set_major_formatter(mdates.DateFormatter("%H:%M"))
         fio.save_fig(model_run, _sn_, 'firepower.png',plt)
 
+def firepower_comparison(runs=['waroona_new1','waroona_old'], localtime=False):
+    """
+    Plot overlaid time series of two model runs fire power from integral of intensity
+    """
+    
+    extentname = runs[0].split('_')[0]+'z' # fire zoomed
+    extent = plotting._extents_[extentname]
+    plt.figure(figsize=[10,5]) # time series
+    
+    labels = runs
+    labels = ['new','orig'] # just for poster
+    
+    for i,run in enumerate(runs):
+        # read all the fire data
+        sh, = fio.read_fire(model_run=run, dtimes=None,
+                            extent=extent, firefront=False, sensibleheat=True)
+        
+        ftimes = utils.dates_from_iris(sh)
+        if localtime:
+            ftimes = np.array([ft + timedelta(hours=8) for ft in ftimes ])
+        firepower = np.sum(firepower_from_cube(sh), axis=(1,2)) # over time
+        
+        # remove zeros:
+        prefire = np.isclose(np.cumsum(firepower), 0)
+        firepower[prefire] = np.NaN
+        
+        # Plot firepower
+        plt.plot_date(ftimes, firepower, '-'+PFT[run]['color'], \
+                      label=labels[i])
+        
+        # also PFT values:
+        linestyle = PFT[run]['style']+PFT[run]['color']
+        # calculate using kevin's code
+        cubes = fio.read_model_run(run, extent=extent,
+                                   add_theta=True, add_winds=True, add_RH=True, 
+                                   add_z=True, add_topog=True)
+        
+        
+        utimes = utils.dates_from_iris(cubes.extract('u')[0])
+        if localtime:
+            utimes = np.array([ut + timedelta(hours=8) for ut in utimes ])
+        latlon = plotting._latlons_['fire_waroona_upwind']
+        pft = PFT_work.PFT_from_cubelist(cubes,latlon=latlon)
+        plt.plot_date(utimes, pft, linestyle, label='PFT '+labels[i])
+    
+    # fix up labels, axes
+    plt.legend(loc='best')
+    # ylabel and units
+    plt.ylabel('Gigawatts')
+    plt.title('Firepower')
+    # format ticks
+    #plt.xticks(hours[::4]) # just show one tick per 4 hours
+    ax = plt.gca()
+    ax.xaxis.set_major_locator(mdates.HourLocator(interval=4)) # every 4 hours
+    ax.xaxis.set_minor_locator(mdates.HourLocator())
+    ax.xaxis.set_major_formatter(mdates.DateFormatter("%H:%M"))
+    fio.save_fig(run, _sn_, 'firepower_comparison.png',plt)
+    
+
 if __name__=='__main__':
     ### Run the stuff
-
-    # Add nice figure all on it's own:
-    # read all the fire data
-    for mr in ['sirivan_run1','waroona_run1','waroona_old']:
-        #print("DEBUG: running ",mr)
-        extent = plotting._extents_[mr.split('_')[0]+'z'] # zoomed extent
-        ff, = fio.read_fire(model_run=mr, dtimes=None,
-                            extent=extent, firefront=True)
-        #print("DEBUG:", ff)
-        for google in [True,]:
-            
-            fireplan(ff, show_cbar=True, cbar_XYWH=[.2,.24,.2,.02],google=google)
-            fio.save_fig(mr,_sn_,'fire_outline%s'%(['','_google'][google]),plt,dpi=300)
-        
-        # Now run summary
-        fireplan_summary(model_run=mr)
+    testing=True
     
-    #fire_power_waroona()
+    firepower_comparison(runs=['waroona_run1','waroona_old'], localtime=True)
+    
+    if not testing:
+        # Add nice figure all on it's own:
+        # read all the fire data
+        for mr in ['sirivan_run1','waroona_run1','waroona_old']:
+            #print("DEBUG: running ",mr)
+            extent = plotting._extents_[mr.split('_')[0]+'z'] # zoomed extent
+            ff, = fio.read_fire(model_run=mr, dtimes=None,
+                                extent=extent, firefront=True)
+            #print("DEBUG:", ff)
+            for google in [True,]:
+                
+                fireplan(ff, show_cbar=True, cbar_XYWH=[.2,.24,.2,.02],google=google)
+                fio.save_fig(mr,_sn_,'fire_outline%s'%(['','_google'][google]),plt,dpi=300)
+            
+            # Now run summary
+            fireplan_summary(model_run=mr)
+        
+        #fire_power_waroona()
     
     
