@@ -47,6 +47,14 @@ PFT = {'waroona_run1':{'data':np.array([56.5, 42.1, 34.6, 332.6, 53.2]), # manua
                       'style':'--',
                       'color':'g',
                        },
+       'sirivan_run1':{'data':None, # manually calculated PFT
+                       'units':'Gigawatts',
+                       'time':None, # calculated at these times in UTC
+                       'latlon':plotting._latlons_['fire_sirivan_upwind'], # ~ 1km from fire
+                       'latlon_stamp':'fire_sirivan_upwind',
+                       'style':'--',
+                       'color':'k',
+                       },
       }
 
 ## Calculations for PFT:
@@ -76,8 +84,10 @@ def firepower_from_cube(shcube):
     lon,lat = shcube.coord('longitude'), shcube.coord('latitude')
     ### get areas in m2
     # Add boundaries to grid
-    lat.guess_bounds()
-    lon.guess_bounds()
+    if lat.bounds is None:
+        lat.guess_bounds()
+    if lon.bounds is None:
+        lon.guess_bounds()
     grid_areas = iris.analysis.cartography.area_weights(shcube)
 
     firepower = shcube.data.data * grid_areas # W/m2 * m2
@@ -371,22 +381,25 @@ def firepower_comparison(runs=['waroona_new1','waroona_old'], localtime=False):
     """
     Plot overlaid time series of two model runs fire power from integral of intensity
     """
-    
-    extentname = runs[0].split('_')[0]+'z' # fire zoomed
-    extent = plotting._extents_[extentname]
+    lat,lon = PFT[runs[0]]['latlon']
+    fpextent = plotting._extents_[runs[0].split('_')[0]+'z']
+    pftextent = [lon-.01, lon+.01, lat-.01, lat+.01]
+    offset = timedelta(hours=8)
+    if lon > 130:
+        offset = timedelta(hours=10)
     plt.figure(figsize=[10,5]) # time series
     
     labels = runs
-    labels = ['new','orig'] # just for poster
+    #labels = ['new','orig'] # just for poster
     
     for i,run in enumerate(runs):
         # read all the fire data
         sh, = fio.read_fire(model_run=run, dtimes=None,
-                            extent=extent, firefront=False, sensibleheat=True)
+                            extent=fpextent, firefront=False, sensibleheat=True)
         
         ftimes = utils.dates_from_iris(sh)
         if localtime:
-            ftimes = np.array([ft + timedelta(hours=8) for ft in ftimes ])
+            ftimes = np.array([ft + offset for ft in ftimes ])
         firepower = np.sum(firepower_from_cube(sh), axis=(1,2)) # over time
         
         # remove zeros:
@@ -400,16 +413,17 @@ def firepower_comparison(runs=['waroona_new1','waroona_old'], localtime=False):
         # also PFT values:
         linestyle = PFT[run]['style']+PFT[run]['color']
         # calculate using kevin's code
-        cubes = fio.read_model_run(run, extent=extent,
+        print("DEBUG: reading sirivan")
+        cubes = fio.read_model_run(run, extent=pftextent,
                                    add_theta=True, add_winds=True, add_RH=True, 
                                    add_z=True, add_topog=True)
         
-        
+        print("DEBUG:",cubes)
         utimes = utils.dates_from_iris(cubes.extract('u')[0])
         if localtime:
-            utimes = np.array([ut + timedelta(hours=8) for ut in utimes ])
-        latlon = plotting._latlons_['fire_waroona_upwind']
-        pft = PFT_work.PFT_from_cubelist(cubes,latlon=latlon)
+            utimes = np.array([ut + offset for ut in utimes ])
+        
+        pft = PFT_work.PFT_from_cubelist(cubes,latlon=[lat,lon])
         plt.plot_date(utimes, pft, linestyle, label='PFT '+labels[i])
     
     # fix up labels, axes
@@ -430,7 +444,10 @@ if __name__=='__main__':
     ### Run the stuff
     testing=True
     
-    firepower_comparison(runs=['waroona_run1','waroona_old'], localtime=True)
+    
+    #firepower_comparison(runs=['waroona_run1','waroona_old'], localtime=True)
+    
+    firepower_comparison(runs=['sirivan_run1'])
     
     if not testing:
         # Add nice figure all on it's own:

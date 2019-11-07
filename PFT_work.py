@@ -45,6 +45,18 @@ def PFT_from_cubelist(cubes0, latlon=None, tskip=None, latskip=None, lonskip=Non
     """
     # local cubelist copy, so that original cubes aren't modified
     cubes = iris.cube.CubeList()
+    # if there's no surface data, use first level as surf
+    if len(cubes0.extract('surface_temperature')) == 0:
+        st = cubes0.extract('air_temperature')[0].copy()
+        st.rename("surface_temperature")
+        st = st[:,0,:,:]
+        cubes0.append(st)
+    if len(cubes0.extract('surface_air_pressure')) == 0:
+        sap = cubes0.extract('air_pressure')[0].copy()
+        sap.rename("surface_air_pressure")
+        sap = sap[:,0,:,:]
+        cubes0.append(sap)
+        
     for cube in cubes0.extract(['air_temperature', 'specific_humidity', 
                     'potential_temperature', 'air_pressure', 'u', 'v',
                     'upward_air_velocity', 'surface_altitude', 

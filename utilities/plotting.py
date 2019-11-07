@@ -73,6 +73,7 @@ _latlons_['dunedoo']    = -31.99, 149.53
 _latlons_['uarbry']      = -32.047280, 149.71
 _latlons_['cassillis']      = -32.01, 150.0
 _latlons_['fire_sirivan'] = -32.05, 149.59
+_latlons_['fire_sirivan_upwind'] = -32.01, 149.5
 # one pyrocb
 _latlons_['pyrocb_sirivan'] = 0,0 # 0530UTC=XXXX local time
 # The pycb over Sir Ivan was around 0530 UTC on Sunday 12 Feb (or a bit after).

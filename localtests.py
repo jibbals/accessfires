@@ -22,8 +22,8 @@ _sn_ = 'localtests'
 
 import iris
 
-cubes = fio.read_model_run('waroona_old', extent=plotting._extents_['waroonaz'],
-                           fdtime=[datetime(2016,1,5,15),datetime(2016,1,5,16)],
+cubes = fio.read_model_run('sirivan_run1', extent=plotting._extents_['sirivanz'],
+                           fdtime=[datetime(2017,2,12,19),datetime(2017,2,12,20)],
                            add_theta=True, add_winds=True, add_RH=True, 
                            add_z=True, add_topog=True)
 print(cubes)
