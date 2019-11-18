@@ -42,11 +42,48 @@ __PYRO_TRANSECTS__ = {'waroona':{'X1':[[-32.89, 115.90], [-32.88, 116.19]],
                                  'X3':[[-32.15, 149.90], [-31.85, 149.60]],
                                  'LR1':[[-32.50, 149.50], [-32.50, 150.00]]}}
 
-def map_with_transect():
+def map_with_transect(data,lat,lon, transect, clevs=None,
+                      ff=None, 
+                      color='m', linestyle='--', linewidth=2,
+                      extralines=[], extracolors=[],
+                      **map_contourf_args):
     """
     TODO: contourf of whatever, plus firefront, plus towns
     """
-    assert False, "to be implemented"
+    extent=[lon[0],lon[-1],lat[0],lat[-1]]
+    start,end = transect
+    
+    # map contour using input data and arguments
+    cs, cb = plotting.map_contourf(extent, data, lat, lon,
+                                   **map_contourf_args)
+    
+    # fn for adding little arrow to map
+    def myarrow(yx0, yx1):
+        y0,x0=yx0
+        y1,x1=yx1
+        dx,dy = (x1-x0)/15.0,(y1-y0)/15.0
+        plt.arrow(x0-1.4*dx,y0-1.4*dy,dx,dy,width=0.0015)
+    
+    # start to end x=[lon0,lon1], y=[lat0, lat1]
+    plt.plot([start[1],end[1]],[start[0],end[0], ], linestyle+color, 
+             linewidth=linewidth)
+    myarrow(start,end)
+    
+    # any extra lines do them too
+    for [startx,endx],xcolor in zip(extralines, extracolors):
+        plt.plot([startx[1],endx[1]],[startx[0],endx[0], ], '--',
+                 color=xcolor,
+                 linewidth=2)
+        myarrow(startx,endx)
+    
+    # Add fire outline
+    if ff is not None:
+        with warnings.catch_warnings():
+        # ignore warning when there are no fires:
+            warnings.simplefilter('ignore')
+            plt.contour(lon,lat,np.transpose(ff),np.array([0]), colors='red')
+    
+    return cs,cb
 
 def left_right_slice(qc, u, w, z,
                      topog, lat, lon, 
@@ -128,8 +165,7 @@ def pyrocb(w, qc, z, wmean, topog, lat, lon,
     ## Plotting setup
     # set font sizes etc
     plotting.init_plots()
-    # get plot extent, and transect
-    extent=[lon[0],lon[-1],lat[0],lat[-1]]
+    # get transects
     start,end = transect1
     startx1,endx1 = transect2
     startx2,endx2 = transect3
@@ -146,40 +182,18 @@ def pyrocb(w, qc, z, wmean, topog, lat, lon,
     clevs_vertwind = np.union1d(np.union1d(2.0**np.arange(-2,6),
                                            -1*(2.0**np.arange(-2,6))),
                                 np.array([0]))
-    cs, _ = plotting.map_contourf(extent,wmean,lat,lon,
-                                   clevs = clevs_vertwind,
-                                   cbar=False, 
-                                   cmap=plotting._cmaps_['verticalvelocity'],
-                                   norm=col.SymLogNorm(0.25),
-                                   cbarform=tick.ScalarFormatter(),
-                                   clabel='m/s')
+    cs, _ = map_with_transect(wmean, lat, lon, ff=ff, 
+                              extralines=[transect2,transect3],
+                              extracolors=['b','teal'],
+                              clevs = clevs_vertwind, cbar=False, 
+                              cmap=plotting._cmaps_['verticalvelocity'],
+                              norm=col.SymLogNorm(0.25), 
+                              cbarform=tick.ScalarFormatter(), clabel='m/s')
     plt.title(wmeantitle)
-    
-    # start to end x=[lon0,lon1], y=[lat0, lat1]
-    plt.plot([start[1],end[1]],[start[0],end[0], ], '--m', 
-             linewidth=2)
-    def myarrow(yx0, yx1):
-        y0,x0=yx0
-        y1,x1=yx1
-        dx,dy = (x1-x0)/15.0,(y1-y0)/15.0
-        plt.arrow(x0-1.4*dx,y0-1.4*dy,dx,dy,width=0.0015)
-    myarrow(start,end)
-    for startx,endx,xcolor in zip([startx1,startx2],[endx1,endx2],[colorx1,colorx2]):
-        plt.plot([startx[1],endx[1]],[startx[0],endx[0], ], '--',
-                 color=xcolor,
-                 linewidth=2)
-        myarrow(startx,endx)
     
     # add nearby towns
     if extentname is not None:
         plotting.map_add_locations_extent(extentname)
-
-    # Add fire outline
-    if ff is not None:
-        with warnings.catch_warnings():
-        # ignore warning when there are no fires:
-            warnings.simplefilter('ignore')
-            plt.contour(lon,lat,np.transpose(ff),np.array([0]), colors='red')
     
     ### transect plots
     ###
@@ -252,7 +266,15 @@ def pyrocb(w, qc, z, wmean, topog, lat, lon,
     # -ve labelpad moves label closer to colourbar
     cb.set_label('m/s', labelpad=-3)
         
-
+def moving_pyrocb(model_run='sirivan_run1'):
+    """
+    follow pyrocb with a transect showing vert motion and pot temp
+    """
+    # zoomed in transects for pyrocb:
+    tran = {'sirivan_run1':[[-32.05,149.5,-32.075,149.8],]*9+
+                            [[-32.07,149.55,-32.1,149.85]]+
+                            [[-32.07,149.6,-32.1,150.0],]*2 + 
+                            }
     
 def pyrocb_model_run(model_run='waroona_run1', dtime=datetime(2016,1,5,15)):
     """
@@ -311,12 +333,7 @@ def pyrocb_model_run(model_run='waroona_run1', dtime=datetime(2016,1,5,15)):
         stitle = ffdtimes[i].strftime("Vertical motion %Y %b %d %H:%M (UTC)")
         wmeantitle='Mean(%3.0fm - %4.0fm)'%(h0,h1)
         
-        #print("DEBUG: =====")
-        #print(cubes)
-        #print(ff.shape)
-        #print(wmean.shape)
-        #print(i)
-        #print("DEBUG: =====")
+        
         pyrocb(w=wi, qc=qci, z=zi, wmean=wmeani, topog=topogi,
                lat=lat, lon=lon, transect1=X1, transect2=X2, transect3=X3,
                ff=ffi,
@@ -326,17 +343,20 @@ def pyrocb_model_run(model_run='waroona_run1', dtime=datetime(2016,1,5,15)):
         plt.suptitle(stitle)
         fio.save_fig(model_run, _sn_, ffdtimes[i], plt, dpi=200)
 
+
+
 if __name__ == '__main__':
     
-    
-    testing=False
     model_runs = ['sirivan_run1', 'waroona_run1','waroona_old']
-    if testing:
-        model_runs=model_runs[0:2]
-        
-    for mr in model_runs :
-        dtimes = fio.model_outputs[mr]['filedates']
-        if testing:
-            dtimes = dtimes[0:2]
-        for dtime in dtimes:
-            pyrocb_model_run(model_run=mr, dtime=dtime)
+    testing=False
+    
+    ## New zoomed, moving pyrocb plotting
+    
+    
+    ### These are the first pyrocb plots I made (3 transects, not moving)
+    #for mr in model_runs :
+    #    dtimes = fio.model_outputs[mr]['filedates']
+    #    if testing:
+    #        dtimes = dtimes[0:2]
+    #    for dtime in dtimes:
+    #        pyrocb_model_run(model_run=mr, dtime=dtime)
