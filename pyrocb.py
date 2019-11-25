@@ -288,18 +288,31 @@ def moving_pyrocb(model_run='sirivan_run1'):
         
     # zoomed in transects for pyrocb:
     tran = {'sirivan_run1':[[-32.05,149.5,-32.11,149.8],]*9+
-                            [[-32.07,149.6,-32.15,150.0],]*5 + # up to 0331utc
-                            [[-32.05, 149.6, -32.1, 150.0], #0401
-                             [-32.038, 149.58, -32.075, 150.0], # 0431
-                             [-32.026, 149.56, -32.05, 150.0], # 0501
-                             [-32.025, 149.55, -32.04, 150.0], # 0531
-                             [-32.025, 149.65, -32.04, 150.1], # 0601
-                             [-32.00, 149.53, -32.03, 150.0], # 0631
-                             [-31.98, 149.58, -32.02, 150.1],  # 0701
-                             [-31.96, 149.53, -31.92, 150.1],  # 0730
-                             [-31.96, 149.55, -31.88, 150.1]]+  # 0801
-                            lin_space_transect([-31.94,149.5,-31.90,150.1],
-                                               [-31.83,149.5,-31.82,150.2],25)}
+                           [[-32.07,149.6,-32.15,150.0],]*5 + # up to 0331utc
+                           [[-32.05, 149.6, -32.1, 150.0], #0401
+                            [-32.038, 149.58, -32.075, 150.0], # 0431
+                            [-32.026, 149.56, -32.05, 150.0], # 0501
+                            [-32.025, 149.55, -32.04, 150.0], # 0531
+                            [-32.025, 149.65, -32.04, 150.1], # 0601
+                            [-32.00, 149.53, -32.03, 150.0], # 0631
+                            [-31.98, 149.58, -32.02, 150.1],  # 0701
+                            [-31.96, 149.53, -31.92, 150.1],  # 0730
+                            [-31.96, 149.55, -31.88, 150.1]]+  # 0801
+                           lin_space_transect([-31.94,149.5,-31.90,150.1],
+                                              [-31.83,149.5,-31.82,150.2],25),
+            'waroona_old':[[-32.9, 116.15, -32.86, 116.19],]*15 + # up to 2201
+                           [[-32.9, 116.15, -32.86, 116.19], # 2231
+                            [-32.898, 116.144, -32.86, 116.19], # 2301
+                            [-32.896, 116.138, -32.86, 116.19], # 2330
+                            [-32.893, 116.133, -32.86, 116.19], # 0000
+                            [-32.891, 116.127, -32.86, 116.19], # 0030
+                            [-32.888, 116.122, -32.86, 116.19], # 0100
+                            [-32.886, 116.116, -32.86, 116.19], # 0130
+                            [-32.884, 116.111, -32.86, 116.19], # 0200
+                            [-32.882, 116.105, -32.86, 116.19],]+ # 0230
+                            lin_space_transect([-32.88, 116.1, -32.86, 116.19],
+                                               [-32.92, 116.1, -32.84, 116.17],13), # 0300 - 0830
+            'waroona_run1':[[]],}
     
     transects = tran[model_run]
     #datetimes = fio.model_outputs[model_run]['filedates']
@@ -357,7 +370,7 @@ def moving_pyrocb(model_run='sirivan_run1'):
                                   cbarform=tick.ScalarFormatter(), 
                                   clabel='m/s')
         plotting.map_add_locations_extent(extentname,hide_text=True) 
-        wmeantitle='Mean(%3.0fm - %4.0fm)'%(h0,h1)
+        wmeantitle='Vertical motion mean (%3.0fm - %4.0fm)'%(h0,h1)
         plt.title(wmeantitle)
         
         ## Transect of vert motion
@@ -392,7 +405,7 @@ def moving_pyrocb(model_run='sirivan_run1'):
         plt.suptitle(stitle)
         
         #fig=plt.gcf()
-        #axes=[0.85, 0.5, 0.03, 0.3]
+        #axes=[0.33, 0.65, 0.33, 0.02]
         #f.subplots_adjust(right=axes[0]-0.01)
         #cbar_ax = fig.add_axes(axes)
         #cb = fig.colorbar(cs, cax=cbar_ax, 
@@ -477,7 +490,7 @@ if __name__ == '__main__':
     testing=False
     
     ## New zoomed, moving pyrocb plotting
-    moving_pyrocb()
+    moving_pyrocb(model_run='waroona_old')
     
     ### These are the first pyrocb plots I made (3 transects, not moving)
     #for mr in model_runs :

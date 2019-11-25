@@ -14,7 +14,7 @@ from timeit import default_timer as timer
 from metpy.plots import SkewT
 
 import matplotlib.pyplot as plt
-from matplotlib import colors
+from matplotlib import colors, ticker
 
 from utilities import fio, utils, plotting
 
@@ -62,10 +62,11 @@ def PFT_from_cubelist(cubes0, latlon=None, tskip=None, latskip=None, lonskip=Non
                     'upward_air_velocity', 'surface_altitude', 
                     'surface_air_pressure', 'surface_temperature'], strict=True):
         cubes.append(cube.copy())
-    lat,lon = latlon
+    
     
     ## first interpolate everything to latlon
     if latlon is not None:
+        lat,lon = latlon
         for i in range(len(cubes)):
             cubes[i] = cubes[i].interpolate([('longitude',lon), ('latitude',lat)],
                                             iris.analysis.Linear())
@@ -112,13 +113,16 @@ def PFT_from_cubelist(cubes0, latlon=None, tskip=None, latskip=None, lonskip=Non
     zsfc, psfc, Tsfc = cubes.extract(['surface_altitude', 
                                       'surface_air_pressure', 
                                       'surface_temperature'])
+    print(zsfc.shape, psfc.shape, Tsfc.shape, has_time_dim, len(cubedtimes), latlon)
+    print(wwcube)
+    print(wwcube.coord('time'))
     zsfc = zsfc.data # m
     if len(zsfc.shape) == 0:
         zsfc = float(zsfc)
     
     # psfc and Tsfc may not have time dim.
     # if they do, or if nothing has time dims, just treat normally
-    if (len(psfc.coords('time')) == 1) or (not has_time_dim):
+    if (len(wwcube.coord('time').points) == 1) or (not has_time_dim):
         psfc = psfc.data # Pa
         Tsfc = Tsfc.data # K
         if len(psfc.shape) == 0:
@@ -221,8 +225,7 @@ def model_run_PFT_map(mr = 'waroona_run1', hour=datetime(2016,1,5,15)):
     """
     Read model outputs and produce PFT maps for each available time step
     """
-    mr = 'waroona_run1'
-    hour=datetime(2016,1,5,15)
+    
     plotting.init_plots()
     extentname=mr.split("_")[0]
     extent=plotting._extents_[extentname]
@@ -241,20 +244,42 @@ def model_run_PFT_map(mr = 'waroona_run1', hour=datetime(2016,1,5,15)):
     lons = cubes[0].coord('longitude').points[::Hskip]
     
     vmin=0
-    vmax=1000
-    norm = colors.SymLogNorm(200) # linear up to 200, then logarithmic
+    vmax=10000
+    norm = colors.SymLogNorm(200,
+                             #vmin=vmin,vmax=vmax
+                             ) # linear up to 100, then logarithmic
     for i,dtime in enumerate(dtimes):
+        [print(np.shape(arr)) for arr in [lats,lons,PFT]]
+        cs = plt.contourf(lons,lats,PFT[i], 200, 
+                          norm=norm, 
+                          #vmin=vmin, vmax=vmax, 
+                          cmap="jet")
+        cb = plt.colorbar(cs, 
+                          #norm=norm, pad=.015, 
+                          format=ticker.ScalarFormatter(),
+                          )
+        cb.set_ticks([0,50,75,100,125,150,175,200,300,400,500,1000,5000,10000])
+        #cb.set_clim(0,10000)
+        print(cb.get_clim())
         
-        cs = plt.contourf(lats,lons,PFT[i], 200, norm=norm, vmin=vmin, vmax=vmax)
-        cb = plt.colorbar()
         
+        plotting.map_add_locations_extent(extentname,hide_text=True)
         plt.title(dtime.strftime("PFT at %b %d %H:%M (UTC)"))
         fio.save_fig(mr,_sn_,dtime,plt)
 
 
 
 
-#if __name__ == '__main__':
+if __name__ == '__main__':
 
     # Run a few tests:
-    #model_run_PFT_map()
+    model_runs=['waroona_old','sirivan_run1','waroona_run1']
+    testing = True
+    
+    for mr in model_runs:
+        dtimes = fio.model_outputs[mr]['filedates']
+        if testing:
+            dtimes = dtimes[0:2]
+        for dtime in dtimes:
+            model_run_PFT_map(mr=mr,hour=dtime)
+    

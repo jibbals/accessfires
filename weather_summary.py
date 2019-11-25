@@ -12,6 +12,7 @@ from matplotlib import colors, ticker
 
 import numpy as np
 import matplotlib.pyplot as plt
+import warnings
 
 from utilities import utils, plotting, fio, constants
 
@@ -20,7 +21,7 @@ from utilities import utils, plotting, fio, constants
 _sn_ = 'weather_summary'
 __cloud_thresh__ = constants.cloud_threshold
 
-def plot_weather_summary(U,V,W, height, lat, lon, extentname, Q=None):
+def plot_weather_summary(U,V,W, height, lat, lon, extentname, Q=None, FF=None):
     '''
     Show horizontal slices of horizontal and vertical winds averaged between several vertical levels
     TODO: Show clouds summed over several levels if they are available
@@ -69,8 +70,8 @@ def plot_weather_summary(U,V,W, height, lat, lon, extentname, Q=None):
         Vvs = Vvs / np.sqrt(Uvs**2 + Vvs**2);
         
         plt.contourf(lon, lat, Sr, 10)
-        
-        plotting.map_add_locations_extent(extentname, hide_text=True)
+        if extentname is not None:
+            plotting.map_add_locations_extent(extentname, hide_text=True)
         
         plt.colorbar(ticklocation=ticker.MaxNLocator(5),pad=0)
         plt.quiver(lon[::vsu], lat[::vsv], Uvs, Vvs, scale=30)
@@ -86,7 +87,8 @@ def plot_weather_summary(U,V,W, height, lat, lon, extentname, Q=None):
         Wr = np.mean(Wi,axis=0)
         
         cs = plt.contourf(lon, lat, Wr, wcontours, cmap=wcmap, norm=wnorm)
-        plotting.map_add_locations_extent(extentname, hide_text=ii>0)
+        if extentname is not None:
+            plotting.map_add_locations_extent(extentname, hide_text=ii>0)
         
         # add cloud hatching
         if Q is not None:
@@ -95,6 +97,12 @@ def plot_weather_summary(U,V,W, height, lat, lon, extentname, Q=None):
             plt.contourf(lon,lat,Qmax, [0,__cloud_thresh__], 
                          colors='none', hatches=[None,'//'],
                          extend='both')
+        
+        if FF is not None:
+            with warnings.catch_warnings():
+            # ignore warning when there are no fires:
+                warnings.simplefilter('ignore')
+                plt.contour(lon,lat,np.transpose(FF),np.array([0]), colors='red')
         
         plt.xticks([],[])
         plt.yticks([],[])
@@ -109,7 +117,8 @@ def plot_weather_summary(U,V,W, height, lat, lon, extentname, Q=None):
         
 
 def weather_summary_model(model_version='waroona_oldold',
-                          fdtimes=None):
+                          fdtimes=None,
+                          zoom_in=None):
     '''
     '''
     # font sizes etc
@@ -117,6 +126,9 @@ def weather_summary_model(model_version='waroona_oldold',
     
     extentname = model_version.split('_')[0]
     extent = plotting._extents_[extentname]
+    if zoom_in is not None:
+        extentname=None
+        extent = zoom_in
     if fdtimes is None:
         fdtimes = fio.model_outputs[model_version]['filedates']
     
@@ -137,6 +149,11 @@ def weather_summary_model(model_version='waroona_oldold',
         height = w.coord('level_height').points
         dtimes = utils.dates_from_iris(u)
         
+        if model_version == 'waroona_oldold':
+            ff=None
+        else:
+            ff, = fio.read_fire(model_version, dtimes, extent=extent)
+        
         # for each time slice create a weather summary plot
         for i,dtime in enumerate(dtimes):
             
@@ -145,17 +162,24 @@ def weather_summary_model(model_version='waroona_oldold',
             qci = None
             if qc is not None:
                 qci = qc[i].data.data
+            if ff is not None:
+                FF = ff[i].data.data
             plot_weather_summary(ui, vi, wi, height, lat, lon, 
                                  extentname=extentname,
-                                 Q = qci)
+                                 Q = qci, FF=FF)
             
             plt.suptitle("%s weather "%model_version + dtime.strftime("%Y %b %d %H:%M (UTC)"))
-            fio.save_fig(model_version,_sn_, dtime, plt)
+            subdir=None
+            if zoom_in is not None: 
+                subdir = 'zoomed'
+            fio.save_fig(model_version,_sn_, dtime, plt, subdir=subdir)
 
 
 if __name__=='__main__':
     
-    for mv in ['waroona_old','waroona_oldold','waroona_run1','sirivan_run1']:
+    weather_summary_model('sirivan_run1',zoom_in=plotting._extents_['sirivanz'])
+    
+    for mv in ['sirivan_run1','waroona_old','waroona_oldold','waroona_run1']:
         weather_summary_model(mv)
     
     print("weather_summary.py done")
