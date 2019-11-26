@@ -122,14 +122,14 @@ def PFT_from_cubelist(cubes0, latlon=None, tskip=None, latskip=None, lonskip=Non
     
     # psfc and Tsfc may not have time dim.
     # if they do, or if nothing has time dims, just treat normally
-    if (len(wwcube.coord('time').points) == 1) or (not has_time_dim):
-        psfc = psfc.data # Pa
-        Tsfc = Tsfc.data # K
-        if len(psfc.shape) == 0:
-            psfc = float(psfc)
-            Tsfc = float(Tsfc)
+    #if (len(wwcube.coord('time').points) == 1) or (not has_time_dim):
+    #    psfc = psfc.data # Pa
+    #    Tsfc = Tsfc.data # K
+    #    if len(psfc.shape) == 0:
+    #        psfc = float(psfc)
+    #        Tsfc = float(Tsfc)
     # if they don't, and our other data has a time dim, repeat these over the time dim
-    else:
+    if psfc.shape[0] != wwcube.shape[0]:
         # repeat along time dim
         if latlon is None:
             psfc = np.repeat(psfc.data[np.newaxis,:,:], len(cubedtimes),axis=0)
@@ -137,7 +137,13 @@ def PFT_from_cubelist(cubes0, latlon=None, tskip=None, latskip=None, lonskip=Non
         else:
             psfc = np.repeat(float(psfc.data), len(cubedtimes),axis=0)
             Tsfc = np.repeat(float(Tsfc.data), len(cubedtimes),axis=0)
-    
+    else:
+        psfc = psfc.data # Pa
+        Tsfc = Tsfc.data # K
+        if len(psfc.shape) == 0:
+            psfc = float(psfc)
+            Tsfc = float(Tsfc)
+            
     # Return array
     PFT = np.zeros(Tsfc.shape)+np.NaN 
     
@@ -242,6 +248,8 @@ def model_run_PFT_map(mr = 'waroona_run1', hour=datetime(2016,1,5,15)):
     PFT = PFT_from_cubelist(cubes, latskip=Hskip, lonskip=Hskip)
     lats = cubes[0].coord('latitude').points[::Hskip]
     lons = cubes[0].coord('longitude').points[::Hskip]
+    terrain = cubes.extract('surface_altitude',strict=True)[::Hskip,::Hskip]
+    #print(terrain)
     
     vmin=0
     vmax=10000
@@ -249,19 +257,24 @@ def model_run_PFT_map(mr = 'waroona_run1', hour=datetime(2016,1,5,15)):
                              #vmin=vmin,vmax=vmax
                              ) # linear up to 100, then logarithmic
     for i,dtime in enumerate(dtimes):
-        [print(np.shape(arr)) for arr in [lats,lons,PFT]]
+        #[print(np.shape(arr)) for arr in [lats,lons,PFT]]
         cs = plt.contourf(lons,lats,PFT[i], 200, 
                           norm=norm, 
                           #vmin=vmin, vmax=vmax, 
-                          cmap="jet")
+                          cmap="jet_r")
         cb = plt.colorbar(cs, 
                           #norm=norm, pad=.015, 
                           format=ticker.ScalarFormatter(),
                           )
-        cb.set_ticks([0,50,75,100,125,150,175,200,300,400,500,1000,5000,10000])
-        #cb.set_clim(0,10000)
-        print(cb.get_clim())
         
+        ticks = [np.nanmin(PFT[i]), np.nanmax(PFT[i]),0,50,75,100,125,150,175,200,300,400,500,1000,5000,10000]
+        ticks.sort()
+        cb.set_ticks(ticks)
+        #cb.set_clim(0,10000)
+        
+        ## Add contour lines for terrain height
+        cs2 = plt.contour(lons, lats, terrain.data, cmap='terrain', levels=np.arange(0,1001,50))
+        plt.clabel(cs2, cs2.levels[0:2], fontsize=13, inline=1, fmt = '%4.0fm') # label lowest two levels
         
         plotting.map_add_locations_extent(extentname,hide_text=True)
         plt.title(dtime.strftime("PFT at %b %d %H:%M (UTC)"))
@@ -273,7 +286,7 @@ def model_run_PFT_map(mr = 'waroona_run1', hour=datetime(2016,1,5,15)):
 if __name__ == '__main__':
 
     # Run a few tests:
-    model_runs=['waroona_old','sirivan_run1','waroona_run1']
+    model_runs=['sirivan_run1','waroona_run1','waroona_old']
     testing = True
     
     for mr in model_runs:
