@@ -312,14 +312,28 @@ def moving_pyrocb(model_run='sirivan_run1'):
                             [-32.882, 116.105, -32.86, 116.19],]+ # 0230
                             lin_space_transect([-32.88, 116.1, -32.86, 116.19],
                                                [-32.92, 116.1, -32.84, 116.17],13), # 0300 - 0830
-            'waroona_run1':[[]],}
+            # Run 1 starts later (8 hrs later!?) starts at 0030 UTC
+            'waroona_run1':[[-32.89, 116.15, -32.886, 116.19],]*20 + # up to 0040
+                           [[-32.888, 116.14, -32.886, 116.19], # 0110
+                            [-32.886, 116.13, -32.886, 116.19], # 0140
+                            [-32.886, 116.12, -32.886, 116.19], # 0210
+                            [-32.886, 116.11, -32.886, 116.19],]+ # 0240
+                            lin_space_transect([-32.886, 116.11, -32.886, 116.19],
+                                               [-32.881, 115.95, -32.885, 116.09],19) + # 0310 - 1210
+                            lin_space_transect([-32.879, 115.95, -32.885, 116.09],
+                                               [-32.872, 115.92, -32.885, 116.09],5), #1240 - 1440
+#                            lin_space_transect([-32.886, 116.11, -32.886, 116.195],
+#                                               [-32.885, 116.00, -32.885, 116.12],18) + # 0310 - 1140
+#                            lin_space_transect([-32.885, 115.99, -32.885, 116.20],
+#                                               [-32.88, 115.96, -32.885, 116.13],6), # 1210 - 1440
+           }
     
     transects = tran[model_run]
     #datetimes = fio.model_outputs[model_run]['filedates']
     ## read um output over extent [t, lev, lat, lon]
     cubes = fio.read_model_run(model_run, extent=extent, add_topog=True)
                                #add_z=True, add_winds=True, add_topog=True)
-    print(cubes)
+    #print("DEBUG:",cubes)
     w, = cubes.extract('upward_air_velocity')
     #u, = cubes.extract('u')
     qc, = cubes.extract('qc')
@@ -486,11 +500,11 @@ def pyrocb_model_run(model_run='waroona_run1', dtime=datetime(2016,1,5,15)):
 
 if __name__ == '__main__':
     
-    model_runs = ['sirivan_run1', 'waroona_run1','waroona_old']
+    model_runs = ['waroona_run1','waroona_old','sirivan_run1']
     testing=False
     
     ## New zoomed, moving pyrocb plotting
-    moving_pyrocb(model_run='waroona_old')
+    moving_pyrocb(model_run='waroona_run1')
     
     ### These are the first pyrocb plots I made (3 transects, not moving)
     #for mr in model_runs :
