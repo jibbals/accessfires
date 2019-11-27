@@ -287,7 +287,7 @@ if __name__ == '__main__':
 
     # Run a few tests:
     model_runs=['sirivan_run1','waroona_run1','waroona_old']
-    testing = True
+    testing = False
     
     for mr in model_runs:
         dtimes = fio.model_outputs[mr]['filedates']
