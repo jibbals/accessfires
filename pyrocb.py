@@ -266,9 +266,10 @@ def pyrocb(w, qc, z, wmean, topog, lat, lon,
     # -ve labelpad moves label closer to colourbar
     cb.set_label('m/s', labelpad=-3)
         
-def moving_pyrocb(model_run='sirivan_run1'):
+def moving_pyrocb(model_run='sirivan_run1',subset=True):
     """
     follow pyrocb with a transect showing vert motion and pot temp
+    set subset to false if running on full dataset (on NCI)
     """
     extentname=model_run.split('_')[0]
     extent = plotting._extents_[extentname]
@@ -327,7 +328,17 @@ def moving_pyrocb(model_run='sirivan_run1'):
 #                            lin_space_transect([-32.885, 115.99, -32.885, 116.20],
 #                                               [-32.88, 115.96, -32.885, 116.13],6), # 1210 - 1440
            }
-    
+    if not subset:
+        # subset has 2 outputs/hr, full dataset has 6
+        tran['waroona_run1'] = [[-32.89, 116.15, -32.886, 116.19],]*60 + # up to 0040
+                               [[-32.888, 116.14, -32.886, 116.19],]*3 + # 0110
+                               [[-32.886, 116.13, -32.886, 116.19],]*3 + # 0140
+                               [[-32.886, 116.12, -32.886, 116.19],]*3 + # 0210
+                               [[-32.886, 116.11, -32.886, 116.19],]*3 + # 0240
+                               lin_space_transect([-32.886, 116.11, -32.886, 116.19],
+                                                  [-32.881, 115.95, -32.885, 116.09],57) + # 0310 - 1210
+                               lin_space_transect([-32.879, 115.95, -32.885, 116.09],
+                                                  [-32.872, 115.92, -32.885, 116.09],15), #1240 - 1440
     transects = tran[model_run]
     #datetimes = fio.model_outputs[model_run]['filedates']
     ## read um output over extent [t, lev, lat, lon]
