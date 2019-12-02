@@ -41,13 +41,11 @@ def vert_motion_slices(qc,w,lh,lat,lon,
     
     # get plot extent
     extent = [lon[0],lon[-1],lat[0],lat[-1]]
-    if lon[0] > 130:
-        top_mlvl = w.shape[0]-5 # higher for sirivan (where i already cut off the top)
-    else:
-        top_mlvl = w.shape[0]-20
     plt.close()
     f=plt.figure(figsize=[11,10])
-    m_lvls = np.round(np.linspace(0,top_mlvl,16)).astype(int)
+    m_lvls = np.array([10, 20, 32,  40,  48,  56,  64,  72,  80,  88,  96,
+       104, 108, 112, 116, 120],np.int)
+    #m_lvls = np.round(np.linspace(0,120,16)).astype(int)
     for i in range(16):
         plt.subplot(4,4,i+1)
         
@@ -130,7 +128,7 @@ if __name__ == '__main__':
     
     testing=False
     
-    for mr in ['waroona_run1','waroona_old']: #['sirivan_run1','waroona_old', 'waroona_run1']:
+    for mr in ['waroona_old','waroona_run1']: #['sirivan_run1','waroona_old', 'waroona_run1']:
         hours = fio.model_outputs[mr]['filedates']
         if testing:
             hours = hours[:3] 

@@ -445,7 +445,7 @@ if __name__=='__main__':
     testing=True
     
     
-    #firepower_comparison(runs=['waroona_run1','waroona_old'], localtime=True)
+    firepower_comparison(runs=['waroona_run1','waroona_old'])
     
     firepower_comparison(runs=['sirivan_run1'])
     
