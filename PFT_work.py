@@ -118,9 +118,9 @@ def PFT_from_cubelist(cubes0, latlon=None, tskip=None, latskip=None, lonskip=Non
     zsfc, psfc, Tsfc = cubes.extract(['surface_altitude', 
                                       'surface_air_pressure', 
                                       'surface_temperature'])
-    print(zsfc.shape, psfc.shape, Tsfc.shape, has_time_dim, len(cubedtimes), latlon)
-    print(wwcube)
-    print(wwcube.coord('time'))
+    #print(zsfc.shape, psfc.shape, Tsfc.shape, has_time_dim, len(cubedtimes), latlon)
+    #print(wwcube)
+    #print(wwcube.coord('time'))
     zsfc = zsfc.data # m
     if len(zsfc.shape) == 0:
         zsfc = float(zsfc)
@@ -232,7 +232,7 @@ def PFT_from_cubelist(cubes0, latlon=None, tskip=None, latskip=None, lonskip=Non
     print("Info: time to produce PFT(%s): %.2f minutes"%(str(PFT.shape), (end-start)/60.0))
     return PFT
 
-def model_run_PFT_map(mr = 'waroona_run1', hour=datetime(2016,1,5,15)):
+def model_run_PFT_map(mr = 'waroona_run1', hour=datetime(2016,1,5,15), Hskip = 12):
     """
     Read model outputs and produce PFT maps for each available time step
     """
@@ -249,43 +249,36 @@ def model_run_PFT_map(mr = 'waroona_run1', hour=datetime(2016,1,5,15)):
                                add_theta=True)
     dtimes = utils.dates_from_iris(cubes.extract('u')[0])
     # Read PFT over time,lats,lons (somewhat deresolved..)
-    Hskip = 10
+    
     PFT = PFT_from_cubelist(cubes, latskip=Hskip, lonskip=Hskip)
     lats = cubes[0].coord('latitude').points[::Hskip]
     lons = cubes[0].coord('longitude').points[::Hskip]
     terrain = cubes.extract('surface_altitude',strict=True)[::Hskip,::Hskip]
-    #print(terrain)
     
-    vmin=0
-    vmax=10000
-    norm = colors.SymLogNorm(200,
-                             #vmin=vmin,vmax=vmax
-                             ) # linear up to 100, then logarithmic
+    levs = np.logspace(1,3.5,50) # 10 ~ 3000
     for i,dtime in enumerate(dtimes):
         #[print(np.shape(arr)) for arr in [lats,lons,PFT]]
-        cs = plt.contourf(lons,lats,PFT[i], 200, 
-                          norm=norm, 
-                          #vmin=vmin, vmax=vmax, 
-                          cmap="jet_r")
-        cb = plt.colorbar(cs, 
-                          #norm=norm, pad=.015, 
-                          format=ticker.ScalarFormatter(),
-                          )
+        cs = plt.contourf(lons,lats,PFT[i], levs, 
+                          norm=colors.LogNorm(),
+                          locator=ticker.LogLocator(),
+                          cmap="YlOrRd_r")
+        cb = plt.colorbar(pad=0.01)
+        cb.set_label('PFT [Gigawatts]')
+        cb.set_ticks([1e1, 1e2, 1e3, 3e3])
+        cb.ax.set_yticklabels(['10$^1$','10$^2$','10$^3$','3e3'])
         
-        ticks = [np.nanmin(PFT[i]), np.nanmax(PFT[i]),0,50,75,100,125,150,175,200,300,400,500,1000,5000,10000]
-        ticks.sort()
-        cb.set_ticks(ticks)
-        #cb.set_clim(0,10000)
         
         ## Add contour lines for terrain height
         cs2 = plt.contour(lons, lats, terrain.data, cmap='terrain', levels=np.arange(0,1001,50))
         plt.clabel(cs2, cs2.levels[0:2], fontsize=13, inline=1, fmt = '%4.0fm') # label lowest two levels
         
         plotting.map_add_locations_extent(extentname,hide_text=True)
+        
+        ## Add fire front?
+        
+        ## Title, save, close
         plt.title(dtime.strftime("PFT at %b %d %H:%M (UTC)"))
         fio.save_fig(mr,_sn_,dtime,plt)
-
-
 
 
 if __name__ == '__main__':
