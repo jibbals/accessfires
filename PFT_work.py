@@ -7,6 +7,11 @@ Created on Wed Oct  9 21:04:13 2019
 @author: jesse
 """
 
+import matplotlib
+# don't plot on screen, send straight to file
+# this is for lack of NCI display
+matplotlib.use('Agg',warn=False)
+
 import numpy as np
 from datetime import datetime
 import iris

@@ -515,7 +515,7 @@ if __name__ == '__main__':
     testing=False
     
     ## New zoomed, moving pyrocb plotting
-    moving_pyrocb(model_run='waroona_run1')
+    moving_pyrocb(model_run='waroona_run1',subset=False)
     
     ### These are the first pyrocb plots I made (3 transects, not moving)
     #for mr in model_runs :
