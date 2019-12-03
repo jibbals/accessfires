@@ -417,6 +417,7 @@ def moving_pyrocb(model_run='sirivan_run1',subset=True):
     
         plt.ylabel('height (m)')
         plt.xlabel('')
+        plt.title('vertical motion transect')
         
         ## plot potential temp
         plt.subplot(3,1,3)
@@ -426,6 +427,7 @@ def moving_pyrocb(model_run='sirivan_run1',subset=True):
                                 ztop=ztop)
         
         ## Plot title and vmotion colour bar
+        plt.title('potential temperature transect')
         stitle = ffdtimes[i].strftime("Vertical motion %Y %b %d %H:%M (UTC)")
         plt.suptitle(stitle)
         
@@ -515,7 +517,7 @@ if __name__ == '__main__':
     testing=False
     
     ## New zoomed, moving pyrocb plotting
-    moving_pyrocb(model_run='waroona_run1',subset=False)
+    moving_pyrocb(model_run='waroona_run1',subset=True)
     
     ### These are the first pyrocb plots I made (3 transects, not moving)
     #for mr in model_runs :
