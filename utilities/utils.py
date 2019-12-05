@@ -141,7 +141,8 @@ def dates_from_iris(timedim, remove_seconds=False):
     dt = np.array([d0 + timedelta(seconds=secs*secmult) for secs in tdim.points])
     dtm = dt
     if remove_seconds:
-        dtm = np.array([datetime(d.year,d.month,d.day,d.hour,d.minute) for d in dt])
+        for i,d in enumerate(dt):
+            dtm[i] = datetime(d.year,d.month,d.day,d.hour,d.minute+float(d.second>50))
     return dtm
 
 def lat_lon_index(lat,lon,lats,lons):
