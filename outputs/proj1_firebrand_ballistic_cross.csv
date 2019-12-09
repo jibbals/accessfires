@@ -1,0 +1,5 @@
+Time,Temperature,Relative humidity,Wind direction ground,Wind direction 500m,Wind direction 1000m,Wind direction 1500m,Wind direction 2000m,Wind speed ground,Wind speed 500m,Wind speed 1000m,Wind speed 1500m,Wind speed 2000m
+2013-10-17T13:00:00,25,10,270,345,375,270,240,25,35,45,65,15
+2013-10-17T14:00:00,25,10,270,345,375,270,240,25,35,45,65,15
+2013-10-17T15:00:00,25,10,270,345,375,270,240,25,35,45,65,15
+2013-10-17T16:00:00,25,10,270,345,375,270,240,25,35,45,65,15
