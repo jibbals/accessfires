@@ -13,6 +13,7 @@ from matplotlib import colors, ticker
 import numpy as np
 import matplotlib.pyplot as plt
 import warnings
+from datetime import datetime
 
 from utilities import utils, plotting, fio, constants
 
@@ -131,6 +132,9 @@ def weather_summary_model(model_version='waroona_oldold',
         extent = zoom_in
     if fdtimes is None:
         fdtimes = fio.model_outputs[model_version]['filedates']
+    hasfire = model_version in ['waroona_run1','waroona_old','sirivan_run1']
+    ff = None
+    FF = None
     
     # read one hour at a time, plot each available time slice
     for fdtime in fdtimes:
@@ -149,10 +153,8 @@ def weather_summary_model(model_version='waroona_oldold',
         height = w.coord('level_height').points
         dtimes = utils.dates_from_iris(u)
         
-        if model_version == 'waroona_oldold':
-            ff=None
-        else:
-            ff, = fio.read_fire(model_version, dtimes, extent=extent)
+        if hasfire:
+            ff, = fio.read_fire(model_version, dtimes, extent=extent)    
         
         # for each time slice create a weather summary plot
         for i,dtime in enumerate(dtimes):
@@ -178,7 +180,7 @@ def weather_summary_model(model_version='waroona_oldold',
 if __name__=='__main__':
     
     ## run for all of waroona_run2 datetimes
-    weather_summary_model(model_version='waroona_run2')
+    weather_summary_model(model_version='waroona_run2', fdtimes=[datetime(2016,1,5,16),])
     
     ## run zoomed in
     #weather_summary_model('sirivan_run1',zoom_in=plotting._extents_['sirivanz'])

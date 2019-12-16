@@ -375,9 +375,9 @@ def read_model_run(model_version, fdtime=None, subdtimes=None, extent=None,
             else:
                 allcubes.extend(cubelist)
         
-    elif model_version=='waroona_run1':
+    elif 'waroona_run' in model_version:
         for dtime in fdtimes:
-            slv,ro1,th1,th2 = read_waroona_run1(dtime)
+            slv,ro1,th1,th2 = read_waroona_run1(dtime, mv=model_version)
 
             # Remove specific humidity from slv, since we get the whole array from th1
             slv.remove(slv.extract('specific_humidity')[0])
@@ -640,7 +640,7 @@ def read_model_run(model_version, fdtime=None, subdtimes=None, extent=None,
     return allcubes
 
 
-def read_waroona_run1(dtime, constraints=None, extent=None):
+def read_waroona_run1(dtime, constraints=None, extent=None, mv='waroona_run1'):
     '''
         Read the converted waroona model output files
         returns list of 4 iris cube lists:
@@ -664,7 +664,7 @@ def read_waroona_run1(dtime, constraints=None, extent=None):
     '''
 
     dstamp=dtime.strftime('%Y%m%d%H')
-    ddir = model_outputs['waroona_run1']['path']
+    ddir = model_outputs[mv]['path']
 
     # If we just want a particular extent, subset to that extent using constraints
     if extent is not None:
