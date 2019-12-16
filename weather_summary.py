@@ -177,10 +177,15 @@ def weather_summary_model(model_version='waroona_oldold',
 
 if __name__=='__main__':
     
-    weather_summary_model('sirivan_run1',zoom_in=plotting._extents_['sirivanz'])
+    ## run for all of waroona_run2 datetimes
+    weather_summary_model(model_version='waroona_run2')
     
-    for mv in ['sirivan_run1','waroona_old','waroona_oldold','waroona_run1']:
-        weather_summary_model(mv)
+    ## run zoomed in
+    #weather_summary_model('sirivan_run1',zoom_in=plotting._extents_['sirivanz'])
+    
+    ## Run for a bunch of runs (may take a couple hours)
+    #for mv in ['sirivan_run1','waroona_old','waroona_oldold','waroona_run1']:
+    #    weather_summary_model(mv)
     
     print("weather_summary.py done")
 

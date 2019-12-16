@@ -36,22 +36,22 @@ _topog_sirivan_ = 'data/sirivan/umnsaa_pa2017021121.nc'
 _files_sirivan_ = sorted(glob('data/sirivan/umnsaa_pc*.nc'))
 
 model_outputs = {
-        ## Sirivan run around June (2019)
-        'sirivan_run1':{
-            'path':'data/sirivan_run1/',
-            'topog':'umnsaa_pa2017021121.nc',
-            'filedates':np.array([datetime(2017,2,11,21) + timedelta(hours=x) for x in range(24)]),
-            'run':'Run in June 2019?',
-            'origdir':'/short/en0/hxy548/cylc-run/au-aa860/share/cycle/20170211T2100Z/sirivan/0p3/ukv_os38/um',
-            'origfiredir':'/short/en0/hxy548/cylc-run/au-aa860/work/20170211T2100Z/sirivan_0p3_ukv_os38_um_fcst_000/',
-            },
-        ## Attemp to recreate 'old' run weather and pyrocb
+        ## Copy of waroona_run2 suite, with fire coupling turned off
+        'waroona_run2uc':{
+            'path':'data/waroona_run2uc/',
+            'topog':'umnsaa_2016010515_slv.nc',
+            'filedates':np.array([datetime(2016,1,5,15) + timedelta(hours=x) for x in range(24)]),
+            'run':'Run ~12 December 2019',
+            'origdir':'/short/en0/jwg574/cylc-run/au-aa799/share/cycle/20160105T1500Z/waroona/0p3/ukv_os38/um',
+            'origfiredir':''},
+        ## Run 1 was the first one I looked at, with east west rolls and no pyrocb
+        ## Attemp to recreate 'old' run weather and pyrocb, updated fire to use mean met (rather than instantaneous)
         'waroona_run2':{
             'path':'data/waroona_run2/',
-            'topog':'',
-            'filedates':None,
-            'run':'Run in September 2019',
-            'origdir':'/short/en0/hxy548/tmp/waroona/0p3/',
+            'topog':'umnsaa_2016010515_slv.nc',
+            'filedates':np.array([datetime(2016,1,5,15) + timedelta(hours=x) for x in range(24)]),
+            'run':'Run ~10 December 2019',
+            'origdir':'/short/en0/hxy548/cylc-run/au-aa799/share/cycle/20160105T1500Z/waroona/0p3/ukv_os38/um/',
             'origfiredir':''},
         ## Run 1 was the first one I looked at, with east west rolls and no pyrocb
         'waroona_run1':{
@@ -59,6 +59,9 @@ model_outputs = {
             'topog':'umnsaa_2016010515_slv.nc',
             'filedates':np.array([datetime(2016,1,5,15) + timedelta(hours=x) for x in range(24)]),
             'run':'Run in august 2019',
+            'path_firefront':'fire/firefront.CSIRO_24h.20160105T1500Z.nc',
+            'path_fireflux':'fire/sensible_heat.CSIRO_24h.20160105T1500Z.nc',
+            'path_firespeed':'fire/fire_speed.CSIRO_24h.20160105T1500Z.nc',
             'origdir':'/short/en0/hxy548/cylc-run/au-aa799/share/cycle/20160105T1500Z/waroona/0p3/ukv_os38/um/',
             'origfiredir':'/short/en0/hxy548/tmp/waroona/0p3/'},
         ## Old run had pyrocb but also lots of high clouds and hooked F160 bases
@@ -68,7 +71,22 @@ model_outputs = {
             'filedates':np.array([datetime(2016,1,5,15) + timedelta(hours=x) for x in range(18)]),
             'run':'Run in August 2018',
             'origdir':'/g/data1a/en0/mxp548/access-fire/waroona/run3/accessdata/',
+            'path_firefront':'fire/firefront.01.nc', # under the data directory
+            'path_fireflux':'fire/sensible_heat.01.nc',
+            'path_firespeed':'fire/fire_speed.01.nc',
             'origfiredir':'/short/en0/mxp548/cylc-run/au-aa714/work/20160105T1500Z/waroona_0p4_ukv_os38_um_fcst_000/'},
+        ## Sirivan run around June (2019)
+        'sirivan_run1':{
+            'path':'data/sirivan_run1/',
+            'topog':'umnsaa_pa2017021121.nc',
+            'filedates':np.array([datetime(2017,2,11,21) + timedelta(hours=x) for x in range(24)]),
+            'run':'Run in June 2019?',
+            'path_firefront':'fire/firefront.CSIRO_new.20170211T2100Z.nc',
+            'path_fireflux':'fire/sensible_heat.CSIRO_new.20170211T2100Z.nc',
+            'path_firespeed':'fire/fire_speed.CSIRO_new.20170211T2100Z.nc',
+            'origdir':'/short/en0/hxy548/cylc-run/au-aa860/share/cycle/20170211T2100Z/sirivan/0p3/ukv_os38/um',
+            'origfiredir':'/short/en0/hxy548/cylc-run/au-aa860/work/20170211T2100Z/sirivan_0p3_ukv_os38_um_fcst_000/',
+            },
         ## Old Old run has bad lat/lons...
         ## Note oldold run doesn't have QC at stage 5 resolution
         'waroona_oldold':{
@@ -79,6 +97,7 @@ model_outputs = {
             'origdir':'/g/data1/en0/rjf548/fires/waroona.2016010615.vanj'
             },
         }
+
 
 ###
 ## METHODS
@@ -225,20 +244,10 @@ def read_fire(model_run='waroona_run1',
     '''
     Read fire output cubes matching dtimes time dim
     '''
-    ddir        = model_outputs[model_run]['path']+'fire/'
-
-    if model_run == 'waroona_run1':
-        ffpath      = ddir+'firefront.CSIRO_24h.20160105T1500Z.nc'
-        fluxpath    = ddir+'sensible_heat.CSIRO_24h.20160105T1500Z.nc'
-        fspath      = ddir+'fire_speed.CSIRO_24h.20160105T1500Z.nc'
-    elif model_run == 'waroona_old':
-        ffpath      = ddir+'firefront.01.nc'
-        fluxpath    = ddir+'sensible_heat.01.nc'
-        fspath      = ddir+'fire_speed.01.nc'
-    elif model_run == 'sirivan_run1':
-        ffpath      = ddir+'firefront.CSIRO_new.20170211T2100Z.nc'
-        fluxpath    = ddir+'sensible_heat.CSIRO_new.20170211T2100Z.nc'
-        fspath      = ddir+'fire_speed.CSIRO_new.20170211T2100Z.nc'
+    ddir        = model_outputs[model_run]['path']
+    ffpath      = ddir+model_outputs[model_run]['path_firefront']
+    fluxpath    = ddir+model_outputs[model_run]['path_fireflux']
+    fspath      = ddir+model_outputs[model_run]['path_firespeed']
     
     if extent is not None:
         constraints = _constraints_from_extent_(extent,constraints)
