@@ -144,10 +144,9 @@ def pft_altitude_vs_pressure(model_run='waroona_run1', latlon=plotting._latlons_
 def fireplan(ff, fire_contour_map = 'autumn',
              show_cbar=True, cbar_XYWH= [0.2, 0.6, .2, .02],
              fig=None,subplot_row_col_n=None,
-             draw_gridlines=False,gridlines=None,
-             google=False):
+             draw_gridlines=False,gridlines=None):
     '''
-    show google map of extent, with fire front over time overplotted
+    show satellite map of extent, with fire front over time overplotted
 
     ARGUMENTS:
         ff: iris.cube.Cube with time, longitude, latitude dimensions
@@ -183,17 +182,11 @@ def fireplan(ff, fire_contour_map = 'autumn',
     ## PLOTTING
 
     # First plot google map
+    ## TODO: THIS PROCEDURE!!
+    fig, gax, gproj = plotting.satellite_extent(extent=extent, fig=fig,
+                                                subplot_row_col_n=subplot_row_col_n,
+                                                draw_gridlines=False)
     
-    if google:
-        fig, gax, gproj = plotting.map_google(extent=extent, zoom=12, fig=fig,
-                                              subplot_row_col_n=subplot_row_col_n,
-                                              draw_gridlines=False)
-    else:
-        fig, gax, gproj, _ = plotting.map_satellite(extent=extent, fig=fig,
-                                                    subplot_row_col_n=subplot_row_col_n,
-                                                    show_name=True,
-                                                    name_size=10)
-
     # add waroona and waroona fire if we're over there
     latlons = plotting._latlons_
     if extent[0]<latlons['waroona'][1]: 
@@ -442,32 +435,27 @@ def firepower_comparison(runs=['waroona_new1','waroona_old'], localtime=False):
 
 if __name__=='__main__':
     ### Run the stuff
-    testing=True
     
     
-    firepower_comparison(runs=['waroona_run1'])
-    firepower_comparison(runs=['waroona_old'])
+    ## create firepower time series
+    #firepower_comparison(runs=['waroona_run1'])
+    #firepower_comparison(runs=['waroona_old'])
     #firepower_comparison(runs=['waroona_run1','waroona_old'])
     
-    firepower_comparison(runs=['sirivan_run1'])
+    #firepower_comparison(runs=['sirivan_run1'])
     
-    if not testing:
-        # Add nice figure all on it's own:
+    for mr in ['sirivan_run1','waroona_run1','waroona_old','waroona_run2']:
+        # zoomed extent
+        extent = plotting._extents_[mr.split('_')[0]+'z'] 
         # read all the fire data
-        for mr in ['sirivan_run1','waroona_run1','waroona_old']:
-            #print("DEBUG: running ",mr)
-            extent = plotting._extents_[mr.split('_')[0]+'z'] # zoomed extent
-            ff, = fio.read_fire(model_run=mr, dtimes=None,
-                                extent=extent, firefront=True)
-            #print("DEBUG:", ff)
-            for google in [True,]:
-                
-                fireplan(ff, show_cbar=True, cbar_XYWH=[.2,.24,.2,.02],google=google)
-                fio.save_fig(mr,_sn_,'fire_outline%s'%(['','_google'][google]),plt,dpi=300)
-            
-            # Now run summary
-            fireplan_summary(model_run=mr)
+        ff, = fio.read_fire(model_run=mr, dtimes=None,
+                            extent=extent, firefront=True)
         
-        #fire_power_waroona()
+        # first plot just the fireplan on it's own
+        fireplan(ff, show_cbar=True, cbar_XYWH=[.2,.24,.2,.02])
+        fio.save_fig(mr,_sn_,'fire_outline.png',plt,dpi=300)
+        
+        # Now run summary figures
+        fireplan_summary(model_run=mr)
     
     
