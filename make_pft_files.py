@@ -13,19 +13,22 @@ import numpy as np
 
 import PFT_work
 import iris
-from utilities import fio
+from utilities import fio,plotting
 
 # deresolved horizontally (don't need high res)
-Hskip=5
+Hskip=10
 
-for mr in ['waroona_run1','waroona_old','sirivan_run1']:
-    mr='waroona_run1'
+for mr in ['waroona_old','sirivan_run1']:#,'waroona_run1']:
+    extentname=mr.split('_')[0]
+    extent=plotting._extents_[extentname]
     hours = fio.model_outputs[mr]['filedates']
     PFT_full=[]
     dtimes=[]
+    cubes=None
     for hour in hours:
+        del cubes
         # Read the cubes for one hour at a time
-        cubes = fio.read_model_run(mr, fdtime=hour,
+        cubes = fio.read_model_run(mr, fdtime=hour, extent=extent,
                                    add_z=True, add_RH=True,
                                    add_topog=True, add_winds=True,
                                    add_theta=True)

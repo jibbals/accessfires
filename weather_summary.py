@@ -117,7 +117,7 @@ def plot_weather_summary(U,V,W, height, lat, lon, extentname, Q=None, FF=None):
     fig.colorbar(cs, cax=cbar_ax, format=ticker.ScalarFormatter(), pad=0)
         
 
-def weather_summary_model(model_version='waroona_oldold',
+def weather_summary_model(model_version='waroona_run1',
                           fdtimes=None,
                           zoom_in=None):
     '''
@@ -132,7 +132,7 @@ def weather_summary_model(model_version='waroona_oldold',
         extent = zoom_in
     if fdtimes is None:
         fdtimes = fio.model_outputs[model_version]['filedates']
-    hasfire = model_version in ['waroona_run1','waroona_old','sirivan_run1']
+    hasfire = fio.model_outputs[model_version]['hasfire']
     ff = None
     FF = None
     
@@ -180,7 +180,7 @@ def weather_summary_model(model_version='waroona_oldold',
 if __name__=='__main__':
     
     ## run for all of waroona_run2 datetimes
-    weather_summary_model(model_version='waroona_run2', fdtimes=[datetime(2016,1,5,16),])
+    weather_summary_model(model_version='waroona_run2uc')
     
     ## run zoomed in
     #weather_summary_model('sirivan_run1',zoom_in=plotting._extents_['sirivanz'])
