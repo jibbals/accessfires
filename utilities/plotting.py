@@ -26,6 +26,8 @@ from cartopy.mpl.gridliner import LONGITUDE_FORMATTER, LATITUDE_FORMATTER
 import cartopy.io.img_tiles as cimgt
 from owslib.wmts import WebMapTileService
 import warnings
+# read tiff file
+from osgeo import gdal
 
 # local stuff
 from utilities import utils, constants
@@ -424,65 +426,95 @@ def map_contourf(extent, data, lat,lon, title="",
     plt.xticks([]); plt.yticks([])
     return cs, cb
 
+def map_tiff(locname='waroona', fig=None, subplot_row_col_n=None,
+             extent=None, show_grid=False, add_locations=False):
+    """
+    satellite image from gsky downloaded into data folder, 
+    used as background for figures
+    """
+    gdal.UseExceptions()
+    
+    path_to_tiff = "data/Waroona_Landsat_8_2015.tiff"
+    locationstrs = ['waroona','yarloop','wagerup']
+    
+    if locname=='sirivan':
+        path_to_tiff = "data/Sirivan_Landsat_8_2016.tiff"
+        locationstrs=['dunedoo','cassillis']
+    
+    # units are degrees latitude and longitude, so platecarree should work...
+    projection = ccrs.PlateCarree()
+    
+    # gdal dataset
+    ds = gdal.Open(path_to_tiff)
+    # ndarray of 3 channel raster (?) [3, 565, 1024]
+    data = ds.ReadAsArray()
+    # np.sum(data<0) # 9 are less than 0
+    data[data<0] = 0
+    # 3 dim array of red green blue values (I'm unsure on what scale)
+    R,G,B = data[0], data[1], data[2]
+    # set them to a float array from 0 to 1.0
+    scaled0 = np.array([R/np.max(R), G/np.max(G), B/np.max(B)])
+    # image is too dark
+    # gain=.3 and bias=.2 to increase contrast and brightness
+    scaled = scaled0*1.3 + 0.1
+    scaled[scaled>1] = 1.0
+    # geotransform for tiff coords (?)
+    gt = ds.GetGeoTransform()
+    # extent = lon0, lon1, lat0, lat1
+    fullextent = (gt[0], gt[0] + ds.RasterXSize * gt[1],
+                  gt[3] + ds.RasterYSize * gt[5], gt[3])
+    
+    ## Third: the figure
+    if fig is None:
+        fig = plt.figure(figsize=(13, 9))
+    #subplot_kw = dict(projection=projection)
+    
+    # create plot axes
+    if subplot_row_col_n is not None:
+        nrows, ncols, n = subplot_row_col_n
+        ax = fig.add_subplot(nrows, ncols, n, projection=projection)
+    else:
+        ax = fig.add_subplot(1,1,1, projection=projection)
+    
+    ax.imshow(scaled[:3, :, :].transpose((1, 2, 0)), 
+              extent=fullextent,
+              origin='upper')
+    
+    if extent is not None:
+        ax.set_extent(extent)
+        
+    if show_grid:
+        gl = ax.gridlines(crs=ccrs.PlateCarree(), draw_labels=True,
+                          linewidth=2, color='gray', alpha=0.35, linestyle='--')
+        gl.xlabels_top = False
+        gl.ylabels_left = False
+        #gl.xlines = False
+    if add_locations:
+        fireloc=_latlons_['fire_'+locname]
+        locations=[_latlons_[locstr] for locstr in locationstrs]
+        map_add_nice_text(ax, locations,
+                          [str.capitalize(locstr) for locstr in locationstrs],
+                          fontsizes=14)
+        map_add_nice_text(ax, [fireloc], texts=[''], markers=['*'], markercolors=['r'])
+        
+    return fig, ax, projection
+
+
 def map_satellite(extent = _extents_['waroona'], 
                   fig=None, subplot_row_col_n=None,
                   subplot_extent=None,
                   show_name=True, name_size=10):
     '''
-    use NASA GIBS: Global Imagery Browse Services, to get high res satellite image: 
-        https://wiki.earthdata.nasa.gov/display/GIBS/GIBS+Available+Imagery+Products#expand-SurfaceReflectance16Products
-    
+    Originally this used an API to pull some satellite imagery
+    this proved unworkable through various bom and nci firewalls
+    now this points to the tiff method
     '''
-    URL = 'https://gibs.earthdata.nasa.gov/wmts/epsg4326/best/wmts.cgi'
-    wmts = WebMapTileService(URL)
-    
-    layer = 'Landsat_WELD_CorrectedReflectance_TrueColor_Global_Annual'
-    
-    date_str = '2010-01-06' # landsat not available after 2010
-    
-    ## Plot setup
-    # plot projections (for coord ref transforms)
-    plot_CRS = ccrs.Mercator()
-    geodetic_CRS = ccrs.Geodetic()
-    
-    # where are we looking?
-    lon0, lon1, lat0, lat1 = extent
-    # transform to map corners
-    x0, y0 = plot_CRS.transform_point(lon0, lat0, geodetic_CRS)
-    x1, y1 = plot_CRS.transform_point(lon1, lat1, geodetic_CRS)
-    
-    if fig is None:
-        # keep aspect ratio based on lat lon corners
-        ysize = 8
-        xsize = ysize * (x1 - x0) / (y1 - y0)
-        fig = plt.figure(figsize=(xsize, ysize), dpi=100)
-
-    # create plot axes
-    if subplot_extent is not None:
-        ax = fig.add_axes(subplot_extent, projection=plot_CRS)
-    elif subplot_row_col_n is not None:
-        nrows,ncols,n= subplot_row_col_n
-        ax = fig.add_subplot(nrows,ncols,n, projection=plot_CRS)
-    else:
-        ax = fig.add_subplot(1,1,1, projection=plot_CRS)
+    locname='waroona'
+    if extent[0] > 130:
+        locname='sirivan'
         
-    ax.set_xlim((x0, x1))
-    ax.set_ylim((y0, y1))
-    
-    ## add map tile from web service
-    ax.add_wmts(wmts, layer, wmts_kwargs={'time': date_str})
-    
-    if show_name:
-        # add layer name
-        lat_bl = lat0 + 0.02*(lat1-lat0)
-        lon_bl = lon0 + 0.05*(lon1-lon0)
-        txt = ax.text(lon_bl, lat_bl, wmts[layer].title, 
-                      fontsize=name_size, color='wheat',
-                      transform=geodetic_CRS)
-        txt.set_path_effects([patheffects.withStroke(linewidth=5,
-                                                     foreground='black')])
-    
-    return fig, ax, plot_CRS, geodetic_CRS
+    return map_tiff(locname, fig=fig, subplot_row_col_n=subplot_row_col_n,
+                    extent=subplot_extent)
 
 def map_add_nice_text(ax, latlons, texts=None, markers=None, 
                       fontsizes=12, fontcolors='wheat', 
@@ -524,7 +556,7 @@ def map_add_nice_text(ax, latlons, texts=None, markers=None,
         text_effects = [patheffects.withStroke(linewidth=3, foreground=outlinecolor)]
         
         # Add the point to the map with patheffect
-        ax.plot(lon, lat, color=mcolor, linewidth=0, marker=marker, markersize=None,
+        ax.plot(lon, lat, color=mcolor, linewidth=0, marker=marker, markersize=msize,
                 transform=geodetic_CRS,
                 path_effects=marker_effects)
         
