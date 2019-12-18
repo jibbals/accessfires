@@ -358,8 +358,8 @@ if __name__=='__main__':
     ### Run the stuff
     
     ## Just create a fireplan figure:
-    mr='waroona_run1'
-    extent = plotting._extents_['waroonaz']  # zoomed waroona extent
+    mr='sirivan_run1'
+    extent = plotting._extents_['sirivanz']  # zoomed waroona extent
     # read all the fire data
     ff, = fio.read_fire(model_run=mr, dtimes=None,
                         extent=extent, firefront=True)
@@ -375,18 +375,18 @@ if __name__=='__main__':
     #firepower_comparison(runs=['sirivan_run1'])
     
     ## run fireplan and summary for all runs
-    for mr in ['waroona_run2','sirivan_run1','waroona_run1','waroona_old']:
-        # zoomed extent
-        extent = plotting._extents_[mr.split('_')[0]+'z'] 
-        # read all the fire data
-        ff, = fio.read_fire(model_run=mr, dtimes=None,
-                            extent=extent, firefront=True)
-        
-        # first plot just the fireplan on it's own
-        fireplan(ff, show_cbar=True, cbar_XYWH=[.2,.24,.2,.02])
-        fio.save_fig(mr,_sn_,'fire_outline.png',plt,dpi=300)
-        
-        # Now run summary figures
-        fireplan_summary(model_run=mr)
+    #for mr in ['waroona_run2','sirivan_run1','waroona_run1','waroona_old']:
+    #    # zoomed extent
+    #    extent = plotting._extents_[mr.split('_')[0]+'z'] 
+    #    # read all the fire data
+    #    ff, = fio.read_fire(model_run=mr, dtimes=None,
+    #                        extent=extent, firefront=True)
+    #    
+    #    # first plot just the fireplan on it's own
+    #    fireplan(ff, show_cbar=True, cbar_XYWH=[.2,.24,.2,.02])
+    #    fio.save_fig(mr,_sn_,'fire_outline.png',plt,dpi=300)
+    #    
+    #    # Now run summary figures
+    #    fireplan_summary(model_run=mr)
     
     
