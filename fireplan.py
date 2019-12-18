@@ -142,7 +142,7 @@ def pft_altitude_vs_pressure(model_run='waroona_run1', latlon=plotting._latlons_
     plt.ylabel('altitude [km]')
 
 def fireplan(ff, fire_contour_map = 'autumn',
-             show_cbar=True, cbar_XYWH= [0.2, 0.6, .2, .02],
+             show_cbar=True, cbar_XYWH= [0.65, 0.63, .2, .02],
              fig=None,subplot_row_col_n=None,
              draw_gridlines=False,gridlines=None):
     '''
@@ -155,7 +155,7 @@ def fireplan(ff, fire_contour_map = 'autumn',
         show_cbar: bool
             draw a little colour bar showing date range of contours?
         cbar_XYHW: 4-length list where to put cbar
-        fig,... arguments to plotting.map_google()
+        fig,... arguments to plotting.map_tiff()
     '''
     lon,lat = ff.coord('longitude').points, ff.coord('latitude').points
     _,nx,ny = ff.shape
@@ -181,29 +181,19 @@ def fireplan(ff, fire_contour_map = 'autumn',
 
     ## PLOTTING
 
-    # First plot google map
-    ## TODO: THIS PROCEDURE!!
-    fig, gax, gproj = plotting.satellite_extent(extent=extent, fig=fig,
-                                                subplot_row_col_n=subplot_row_col_n,
-                                                draw_gridlines=False)
-    
-    # add waroona and waroona fire if we're over there
-    latlons = plotting._latlons_
-    if extent[0]<latlons['waroona'][1]: 
-        plotting.map_add_nice_text(gax, 
-                                   latlons=[latlons['waroona'],latlons['fire_waroona']], 
-                                   texts=['Waroona',''],
-                                   fontcolors='wheat',
-                                   markers=['o','*'], 
-                                   markercolors=['grey','red'])
+    # First show satellite image and locations
+    locname='waroona'
+    if extent[0]>130: locname='sirivan'
+    fig, gax, gproj = plotting.map_tiff(locname=locname,
+                                        extent=extent, fig=fig,
+                                        subplot_row_col_n=subplot_row_col_n,
+                                        show_grid=False, add_locations=False)
+    if locname=='waroona':
+        plotting.map_add_nice_text(gax,[plotting._latlons_['waroona']],
+                                   texts=['Waroona'], fontsizes=14)
     else:
-        plotting.map_add_nice_text(gax,
-                                   latlons=[latlons['uarbry'],latlons['cassillis'],latlons['fire_sirivan']],
-                                   texts=['Uarbry','Cassillis',''],
-                                   fontcolors='wheat',
-                                   markers=['o','o','*'],
-                                   markercolors=['k','k','red'],
-                                   markersizes=4)
+        plotting.map_add_nice_text(gax,[plotting._latlons_['uarbry']],
+                                   texts=['Uarbry'], fontsizes=14)
     
     # plot contours at each hour
     utcstamp=[]
@@ -243,7 +233,7 @@ def fireplan(ff, fire_contour_map = 'autumn',
 
     return fig, gax, gproj
 
-def fireplan_summary(model_run='waroona_run1', google=False):
+def fireplan_summary(model_run='waroona_run1'):
     '''
     Show fire outline over time at waroona
     ARGUMENTS:
@@ -266,17 +256,12 @@ def fireplan_summary(model_run='waroona_run1', google=False):
 
     fireplan(FFront,
              fig=fig, subplot_row_col_n=[2,1,1],
-             show_cbar=True, cbar_XYWH=[.2,.64,.2,.02],
-             google=google)
+             show_cbar=True, cbar_XYWH=[.2,.64,.2,.02])
     
     # Hourly for the rest of the stuff
     ftimes = utils.dates_from_iris(FFront)
     hourinds = [(ft.minute==0) and (ft.second==0) for ft in ftimes]
     FFront, SHeat, FSpeed = FFront[hourinds], SHeat[hourinds], FSpeed[hourinds]
-
-    # plotting.map_add_locations(['fire_waroona_upwind'],text=['F160'],dx=-.001,dy=-.006, proj=ccrs.PlateCarree())
-    ## attribute fire power from main part of fire
-    #TODO
 
     ## subplot 2
     ax2 = plt.subplot(4,1,3)
@@ -305,72 +290,8 @@ def fireplan_summary(model_run='waroona_run1', google=False):
     
     fio.save_fig(model_run, _sn_, 'fire_spread', plt)
 
-def fire_power_waroona():
 
-    # Read fire output
-    extentname = 'waroonaz' # fire zoomed
-    #front_start=datetime(2016,1,6,1)
-    extent = plotting._extents_[extentname]
-
-    for model_run in ['waroona_run1','waroona_old']:
-        # read all the fire data
-        ff, sh = fio.read_fire(model_run=model_run, dtimes=None,
-                               extent=extent, firefront=True, sensibleheat=True)
-        lon,lat = ff.coord('longitude'), ff.coord('latitude')
-        # just read hourly for fireplan
-        ftimes = utils.dates_from_iris(ff)
-
-        ## First plot fire front contours over google map in a 211 subplot
-        fig = plt.figure(figsize=[8,8])
-
-        _, ax, gproj = fireplan(ff,
-                                fig=fig, subplot_row_col_n=[2,1,1],
-                                show_cbar=True, cbar_XYWH=[.2,.64,.2,.02])
-        
-        plotting.map_add_nice_text(ax,
-                                   latlons=[plotting._latlons_['fire_waroona_upwind']],
-                                   texts='PFT',)
-        #plotting.map_add_locations(['fire_waroona_upwind'], text=['PFT'],
-        #                           dx=-.001, dy=-.006, proj=ccrs.PlateCarree())
-        
-        plt.title('Hourly fire front contour')
-        ## ADD SUBSET RECTANGLE
-        #    ax.add_patch(patches.Rectangle(xy=botleft,
-        #                                   width=width,
-        #                                   height=width,
-        #                                   #facecolor=None,
-        #                                   fill=False,
-        #                                   edgecolor='red',
-        #                                   linewidth=2,
-        #                                   #linestyle='-',
-        #                                   alpha=0.9,
-        #                                   transform=cartopy.crs.PlateCarree()
-        #                                   ))
-
-        ax2 = plt.subplot(2,1,2)
-
-        firepower = firepower_from_cube(sh)
-        
-        # Plot firepower
-        plt.plot_date(ftimes,np.sum(firepower,axis=(1,2)), '-'+PFT[model_run]['color'], label='Fire power '+model_run)
-
-        # also PFT values:
-        for mr in ['waroona_run1','waroona_old']:
-            linestyle = PFT[mr]['style']+PFT[mr]['color']
-            run_x,run_y = PFT[mr]['time'],PFT[mr]['data']
-            plt.plot_date(run_x, run_y, linestyle, label='PFT '+mr)
-
-        plt.legend(loc='best')
-        # ylabel and units
-        plt.ylabel('Gigawatts')
-        # format ticks
-        #plt.xticks(hours[::4]) # just show one tick per 4 hours
-        ax2.xaxis.set_major_locator(mdates.HourLocator(interval=4)) # every 4 hours
-        ax2.xaxis.set_minor_locator(mdates.HourLocator())
-        ax2.xaxis.set_major_formatter(mdates.DateFormatter("%H:%M"))
-        fio.save_fig(model_run, _sn_, 'firepower.png',plt)
-
-def firepower_comparison(runs=['waroona_new1','waroona_old'], localtime=False):
+def firepower_comparison(runs=['waroona_new1','waroona_old','waroona_run2'], localtime=False):
     """
     Plot overlaid time series of two model runs fire power from integral of intensity
     """
@@ -436,6 +357,15 @@ def firepower_comparison(runs=['waroona_new1','waroona_old'], localtime=False):
 if __name__=='__main__':
     ### Run the stuff
     
+    ## Just create a fireplan figure:
+    mr='waroona_run1'
+    extent = plotting._extents_['waroonaz']  # zoomed waroona extent
+    # read all the fire data
+    ff, = fio.read_fire(model_run=mr, dtimes=None,
+                        extent=extent, firefront=True)
+    
+    # first plot just the fireplan on it's own
+    fireplan(ff, show_cbar=True)#, cbar_XYWH=[.2,.24,.2,.02])
     
     ## create firepower time series
     #firepower_comparison(runs=['waroona_run1'])
@@ -444,7 +374,8 @@ if __name__=='__main__':
     
     #firepower_comparison(runs=['sirivan_run1'])
     
-    for mr in ['sirivan_run1','waroona_run1','waroona_old','waroona_run2']:
+    ## run fireplan and summary for all runs
+    for mr in ['waroona_run2','sirivan_run1','waroona_run1','waroona_old']:
         # zoomed extent
         extent = plotting._extents_[mr.split('_')[0]+'z'] 
         # read all the fire data
