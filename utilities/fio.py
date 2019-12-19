@@ -306,9 +306,15 @@ def read_pft(model_run='waroona_run1',times=None, lats=None, lons=None):
         pft = pft.interpolate([('longitude',lons)],
                                 iris.analysis.Linear())
     
-    ptimes = utils.dates_from_iris(pft, remove_seconds=True)
     plats,plons = pft.coord('latitude').points, pft.coord('longitude').points
-    return pft.data, ptimes, plats, plons 
+    ptimes = utils.dates_from_iris(pft, remove_seconds=True)
+    pftd = pft.data
+    if times is not None:
+        tslice = np.array([utils.date_index(time, ptimes) for time in times])
+        ptimes = ptimes[tslice]
+        pftd = np.squeeze(pftd[tslice,:,:])
+        
+    return pftd, ptimes, plats, plons 
 
 def read_nc_iris(fpath, constraints=None, keepvars=None):
     '''
