@@ -230,6 +230,7 @@ def fireplan(ff, fire_contour_map = 'autumn',
                  path_effects=[patheffects.withStroke(linewidth=3, foreground="k")])
         # return focus to newly created plot
         plt.sca(gax)
+    plotting.scale_bar(gax, gproj, 10)
 
     return fig, gax, gproj
 
@@ -365,8 +366,8 @@ if __name__=='__main__':
                         extent=extent, firefront=True)
     
     # first plot just the fireplan on it's own
-    fireplan(ff, show_cbar=True)#, cbar_XYWH=[.2,.24,.2,.02])
-    
+    fig,ax,proj = fireplan(ff, show_cbar=True, cbar_XYWH=[.18,.24,.2,.02])
+    fio.save_fig('sirivan_run1', _sn_, 'fireplan.png', plt)
     ## create firepower time series
     #firepower_comparison(runs=['waroona_run1'])
     #firepower_comparison(runs=['waroona_old'])

@@ -289,17 +289,26 @@ def read_AWS_wagerup(UTC=True):
 
     return wagerup, wagerup_attrs
 
-def read_pft(model_run='waroona_run1', lats=None, lons=None):
+def read_pft(model_run='waroona_run1',times=None, lats=None, lons=None):
     '''
     read pft from file, interpolate to lats,lons if desired
     returns pft, pftlats, pftlons
     '''
     # load the single cube in PFT.nc
-    pft,=iris.load('data/%s/PFT.nc'%model_run)
+    pft0,=iris.load('data/%s/PFT.nc'%model_run)
+    
     # pft is [time, lats, lons]
+    pft = pft0
     if lats is not None:
-        pft.interpolate([('time',time.points)],
-                         iris.analysis.Linear())
+        pft = pft.interpolate([('latitude',lats)],
+                                iris.analysis.Linear())
+    if lons is not None:
+        pft = pft.interpolate([('longitude',lons)],
+                                iris.analysis.Linear())
+    
+    ptimes = utils.dates_from_iris(pft, remove_seconds=True)
+    plats,plons = pft.coord('latitude').points, pft.coord('longitude').points
+    return pft.data, ptimes, plats, plons 
 
 def read_nc_iris(fpath, constraints=None, keepvars=None):
     '''
