@@ -114,7 +114,7 @@ def date_from_gregorian(greg, d0=datetime(1970,1,1,0,0,0)):
         return np.array( [d0+timedelta(seconds=int(greg*3600)),])
     return np.array([d0+timedelta(seconds=int(hr*3600)) for hr in greg])
 
-def dates_from_iris(timedim, remove_seconds=False):
+def dates_from_iris(timedim, remove_seconds=True):
     '''
     input is coord('time') and grain
     or else input a cube with a 'time' dim

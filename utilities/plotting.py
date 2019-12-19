@@ -500,6 +500,35 @@ def map_tiff(locname='waroona', fig=None, subplot_row_col_n=None,
     return fig, ax, projection
 
 
+def map_quiver(u, v, lats, lons, nquivers=13, **quiver_kwargs):
+    """
+    """
+    # just want a fixed number of quivers
+    nlats, nlons = u.shape
+    latinds = np.round(np.linspace(0,nlats-1,nquivers)).astype(np.int)
+    loninds = np.round(np.linspace(0,nlons-1,nquivers)).astype(np.int)
+    u0 = u[latinds,:]
+    u0 = u0[:,loninds]
+    v0 = v[latinds,:]
+    v0 = v0[:,loninds]
+    
+    ## Default quiver scale:
+    if 'scale' not in quiver_kwargs:
+        quiver_kwargs['scale'] = 85
+        
+    ## Default quiver pivot:
+    if 'pivot' not in quiver_kwargs:
+        quiver_kwargs['pivot'] = 'middle'
+    
+    #s=np.sqrt(u0**2 + v0**2)
+    
+    ## colour the arrows
+    # map wind speed to colour map domain [0, 1]
+    #norm = col.Normalize()
+    #norm.autoscale(s)
+    #plt.get_cmap(_cmaps_['windspeed'])
+    plt.quiver(lons[loninds], lats[latinds], u0, v0, **quiver_kwargs)
+
 def map_satellite(extent = _extents_['waroona'], 
                   fig=None, subplot_row_col_n=None,
                   subplot_extent=None,
@@ -579,7 +608,7 @@ def map_topography(extent, topog,lat,lon,title="Topography", cbar=True):
     cmaptr=plt.cm.get_cmap("terrain")
     return map_contourf(extent, topog, lat, lon, 
                         title=title, clevs=clevs, cmap=cmaptr, 
-                        clabel="m", cbar=cbar)
+                        clabel="m", cbar=cbar, cbarform=tick.ScalarFormatter())
     
 
 def utm_from_lon(lon):

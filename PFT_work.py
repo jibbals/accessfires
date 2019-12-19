@@ -17,6 +17,8 @@ from datetime import datetime
 import iris
 from timeit import default_timer as timer
 from metpy.plots import SkewT
+import warnings
+import cartopy
 
 import matplotlib.pyplot as plt
 from matplotlib import colors, ticker
@@ -232,65 +234,90 @@ def PFT_from_cubelist(cubes0, latlon=None, tskip=None, latskip=None, lonskip=Non
     print("Info: time to produce PFT(%s): %.2f minutes"%(str(PFT.shape), (end-start)/60.0))
     return PFT
 
-def model_run_PFT_map(mr = 'waroona_run1', hour=datetime(2016,1,5,15), Hskip = 12):
+def PFT_map(PFT,plats,plons,colorbar=True, ):
     """
-    Read model outputs and produce PFT maps for each available time step
     """
+    cnorm = colors.SymLogNorm(1,vmin=0,vmax=1000)
+    levs = np.union1d([0],np.logspace(0,3,20))
     
-    plotting.init_plots()
-    extentname=mr.split("_")[0]
-    extent=plotting._extents_[extentname]
-    
-    # Read the cubes
-    cubes = fio.read_model_run(mr, fdtime=hour,
-                               extent=extent,
-                               add_z=True, add_RH=True,
-                               add_topog=True, add_winds=True,
-                               add_theta=True)
-    dtimes = utils.dates_from_iris(cubes.extract('u')[0])
-    # Read PFT over time,lats,lons (somewhat deresolved..)
-    
-    PFT = PFT_from_cubelist(cubes, latskip=Hskip, lonskip=Hskip)
-    lats = cubes[0].coord('latitude').points[::Hskip]
-    lons = cubes[0].coord('longitude').points[::Hskip]
-    terrain = cubes.extract('surface_altitude',strict=True)[::Hskip,::Hskip]
-    
-    levs = np.logspace(1,3.5,50) # 10 ~ 3000
-    for i,dtime in enumerate(dtimes):
-        #[print(np.shape(arr)) for arr in [lats,lons,PFT]]
-        cs = plt.contourf(lons,lats,PFT[i], levs, 
-                          norm=colors.LogNorm(),
-                          locator=ticker.LogLocator(),
-                          cmap="YlOrRd_r")
+    cs = plt.contourf(plons,plats,PFT, levs, 
+                      norm=cnorm,
+                      locator=ticker.LogLocator(),
+                      cmap="YlOrRd_r")
+    cb = None
+    if colorbar:
         cb = plt.colorbar(pad=0.01)
         cb.set_label('PFT [Gigawatts]')
-        cb.set_ticks([1e1, 1e2, 1e3, 3e3])
-        cb.ax.set_yticklabels(['10$^1$','10$^2$','10$^3$','3e3'])
+        cb.set_ticks([1e1, 1e2, 1e3])
+        cb.ax.set_yticklabels(['10$^1$','10$^2$','10$^3$'])
+        
+    return cs, cb
+    
+def model_run_PFT_summary(mr='waroona_run1', hour=datetime(2016,1,5,15)):
+    '''
+    Show PFT map, underneath topography overlaid with curly surface wind map
+    '''
+    extentname=mr.split('_')[0]
+    extent = plotting._extents_[extentname]
+    
+    cubes = fio.read_model_run(mr,[hour],extent=extent, 
+                               add_topog=True,add_winds=True)
+    u0,v0 = cubes.extract(['u','v'], strict=True)
+    dtimes = utils.dates_from_iris(u0,remove_seconds=True)
+    lats = u0.coord('latitude').points
+    lons = u0.coord('longitude').points
+    heights = u0.coord('level_height').points
+    surface = heights < 500
+    u=np.mean(u0[:,surface,:,:].data, axis=1)
+    v=np.mean(v0[:,surface,:,:].data, axis=1)
+    
+    terrain0 = cubes.extract('surface_altitude',strict=True)
+    terrain = terrain0.data
+    
+    ## Read PFT
+    pft, ptimes, plats, plons = fio.read_pft(mr, dtimes, lats, lons)
+    
+    ## Read fire front
+    ff, = fio.read_fire(mr, dtimes, extent=extent)
+    
+    
+    for i,dtime in enumerate(dtimes):
+        ## First subplot will be topography and locations
+        plt.subplot(2,1,1)
+        plotting.map_topography(extent, terrain, lats, lons, title='')
+        plotting.map_add_locations_extent(extentname,hide_text=False)
+        # add fire front
+        with warnings.catch_warnings():
+            # ignore warning when there are no fires:
+            warnings.simplefilter('ignore')
+            plt.contour(lons,lats,np.transpose(ff[i].data),np.array([0]), colors='red')
+        
+        # add scale
+        #plotting.scale_bar(plt.gca(), cartopy.crs.PlateCarree(),10)
         
         
-        ## Add contour lines for terrain height
-        cs2 = plt.contour(lons, lats, terrain.data, cmap='terrain', levels=np.arange(0,1001,50))
-        plt.clabel(cs2, cs2.levels[0:2], fontsize=13, inline=1, fmt = '%4.0fm') # label lowest two levels
-        
+        ## Second plot will be PFT map with 'surface' winds overlaid
+        plt.subplot(2,1,2)
+        PFT_map(pft[i],plats,plons)
+        # overlay winds
+        plotting.map_quiver(u[i].data,v[i].data,lats,lons, scale=140)
         plotting.map_add_locations_extent(extentname,hide_text=True)
-        
-        ## Add fire front?
-        
+        ## Turn off the tick values
+        plt.xticks([]); plt.yticks([])
         ## Title, save, close
-        plt.title(dtime.strftime("PFT at %b %d %H:%M (UTC)"))
+        plt.suptitle(dtime.strftime("PFT and mean winds below 500m at %b %d %H:%M (UTC)"))
         fio.save_fig(mr,_sn_,dtime,plt)
 
 
 if __name__ == '__main__':
-
-    # Run a few tests:
-    model_runs=['sirivan_run1','waroona_run1','waroona_old']
-    testing = False
     
-    for mr in model_runs:
-        dtimes = fio.model_outputs[mr]['filedates']
-        if testing:
-            dtimes = dtimes[0:2]
-        for dtime in dtimes:
-            model_run_PFT_map(mr=mr,hour=dtime)
+    ## test method
+    model_run_PFT_summary()
+    
+    run_everything=True
+    if run_everything:
+        for mr in ['sirivan_run1','waroona_run1','waroona_old']:
+            dtimes = fio.model_outputs[mr]['filedates']
+            for dtime in dtimes:
+                model_run_PFT_summary(mr=mr, hour=dtime)
     
