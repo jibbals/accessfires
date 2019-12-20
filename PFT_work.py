@@ -234,7 +234,7 @@ def PFT_from_cubelist(cubes0, latlon=None, tskip=None, latskip=None, lonskip=Non
     print("Info: time to produce PFT(%s): %.2f minutes"%(str(PFT.shape), (end-start)/60.0))
     return PFT
 
-def PFT_map(PFT,plats,plons,colorbar=True, ):
+def PFT_map(PFT,plats,plons,colorbar=True, lines=[100]):
     """
     """
     cnorm = colors.SymLogNorm(1,vmin=0,vmax=1000)
@@ -250,6 +250,12 @@ def PFT_map(PFT,plats,plons,colorbar=True, ):
         cb.set_label('PFT [Gigawatts]')
         cb.set_ticks([1e1, 1e2, 1e3])
         cb.ax.set_yticklabels(['10$^1$','10$^2$','10$^3$'])
+    
+    if lines is not None:
+        with warnings.catch_warnings():
+            # ignore warning when there are no fires:
+            warnings.simplefilter('ignore')
+            plt.contour(plons,plats,PFT,np.array(lines))
         
     return cs, cb
     
@@ -278,7 +284,9 @@ def model_run_PFT_summary(mr='waroona_run1', hour=datetime(2016,1,5,15)):
     pft, ptimes, plats, plons = fio.read_pft(mr, dtimes, lats, lons)
     
     ## Read fire front
-    ff, = fio.read_fire(mr, dtimes, extent=extent)
+    hasfires= mr in ['waroona_run1','waroona_old','waroona_run2','sirivan_run1']
+    if hasfires:
+        ff, = fio.read_fire(mr, dtimes, extent=extent)
     
     
     for i,dtime in enumerate(dtimes):
@@ -287,10 +295,11 @@ def model_run_PFT_summary(mr='waroona_run1', hour=datetime(2016,1,5,15)):
         plotting.map_topography(extent, terrain, lats, lons, title='')
         plotting.map_add_locations_extent(extentname,hide_text=False)
         # add fire front
-        with warnings.catch_warnings():
-            # ignore warning when there are no fires:
-            warnings.simplefilter('ignore')
-            plt.contour(lons,lats,np.transpose(ff[i].data),np.array([0]), colors='red')
+        if hasfires:
+            with warnings.catch_warnings():
+                # ignore warning when there are no fires:
+                warnings.simplefilter('ignore')
+                plt.contour(lons,lats,np.transpose(ff[i].data),np.array([0]), colors='red')
         
         # add scale
         #plotting.scale_bar(plt.gca(), cartopy.crs.PlateCarree(),10)
@@ -312,11 +321,11 @@ def model_run_PFT_summary(mr='waroona_run1', hour=datetime(2016,1,5,15)):
 if __name__ == '__main__':
     
     ## test method
-    model_run_PFT_summary()
+    #model_run_PFT_summary()
     
     run_everything=True
     if run_everything:
-        for mr in ['sirivan_run1','waroona_run1','waroona_old']:
+        for mr in ['waroona_run2','waroona_run2uc']:#['sirivan_run1','waroona_run1','waroona_old']:
             dtimes = fio.model_outputs[mr]['filedates']
             for dtime in dtimes:
                 model_run_PFT_summary(mr=mr, hour=dtime)

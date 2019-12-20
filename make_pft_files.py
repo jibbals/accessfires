@@ -16,9 +16,9 @@ import iris
 from utilities import fio,plotting
 
 # deresolved horizontally (don't need high res)
-Hskip=10
+Hskip=6
 
-for mr in ['waroona_old','sirivan_run1']:#,'waroona_run1']:
+for mr in ['waroona_run2','waroona_run2uc']:#['waroona_old','sirivan_run1']:#,'waroona_run1']:
     extentname=mr.split('_')[0]
     extent=plotting._extents_[extentname]
     hours = fio.model_outputs[mr]['filedates']
