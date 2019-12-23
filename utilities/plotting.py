@@ -427,6 +427,12 @@ def map_contourf(extent, data, lat,lon, title="",
     plt.xticks([]); plt.yticks([])
     return cs, cb
 
+def map_fire(ff,lats,lons):
+    """   """
+    # only plot if there is fire
+    if np.sum(ff<0) > 0:
+        plt.contour(lons,lats,np.transpose(ff),np.array([0]), colors='red')
+
 def map_tiff(locname='waroona', fig=None, subplot_row_col_n=None,
              extent=None, show_grid=False, add_locations=False):
     """
