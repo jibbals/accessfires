@@ -134,7 +134,7 @@ def left_right_slice(qc, u, w, z,
     
 
 def pyrocb(w, qc, z, wmean, topog, lat, lon,
-           transect1,transect2, transect3,
+           transect1, transect2, transect3,
            ff=None,
            wmeantitle='Average vertical motion',
            extentname=None,
@@ -182,7 +182,7 @@ def pyrocb(w, qc, z, wmean, topog, lat, lon,
     clevs_vertwind = np.union1d(np.union1d(2.0**np.arange(-2,6),
                                            -1*(2.0**np.arange(-2,6))),
                                 np.array([0]))
-    cs, _ = map_with_transect(wmean, lat, lon, ff=ff, 
+    cs, _ = map_with_transect(wmean, lat, lon, transect1, ff=ff, 
                               extralines=[transect2,transect3],
                               extracolors=['b','teal'],
                               clevs = clevs_vertwind, cbar=False, 
@@ -517,7 +517,10 @@ if __name__ == '__main__':
     testing=False
     
     ## New zoomed, moving pyrocb plotting
-    moving_pyrocb(model_run='waroona_run1',subset=True)
+    #moving_pyrocb(model_run='waroona_run1',subset=True)
+    
+    ## Run sample for waroona_run2
+    pyrocb_model_run('waroona_run2', dtime=datetime(2016,1,5,15))
     
     ### These are the first pyrocb plots I made (3 transects, not moving)
     #for mr in model_runs :
