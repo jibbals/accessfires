@@ -57,7 +57,8 @@ _extents_['waroonaz']    = [115.92, 116.19, -32.92,-32.83] # zoom in on fire
 
 _latlons_['waroona']    = -32.84, 115.93  # suburb centre: -32.8430, 115.8526
 _latlons_['yarloop']    = -32.96, 115.90  # suburb centre: -32.9534, 115.9124
-_latlons_['wagerup']    = -32.92, 115.91  # AWS at wagerup, 40 m asl
+_latlons_['wagerup']    = -32.92, 115.91  # wagerup
+_latlons_['AWS_wagerup']    = -32.92, 115.91  # AWS at wagerup, 40 m asl
 _latlons_['perth']      = -31.9505, 115.8605
 _latlons_['fire_waroona'] = -32.89, 116.17
 _latlons_['fire_waroona_upwind'] = -32.89 -0.004, 116.17+0.009 # ~ 1km from fire
