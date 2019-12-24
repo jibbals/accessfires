@@ -78,10 +78,7 @@ def map_with_transect(data,lat,lon, transect,
     
     # Add fire outline
     if ff is not None:
-        with warnings.catch_warnings():
-        # ignore warning when there are no fires:
-            warnings.simplefilter('ignore')
-            plt.contour(lon,lat,np.transpose(ff),np.array([0]), colors='red')
+        plotting.map_fire(ff,lat,lon)
     
     return cs,cb
 
@@ -266,7 +263,7 @@ def pyrocb(w, qc, z, wmean, topog, lat, lon,
     # -ve labelpad moves label closer to colourbar
     cb.set_label('m/s', labelpad=-3)
         
-def moving_pyrocb(model_run='sirivan_run1',subset=True):
+def moving_pyrocb(model_run='waroona_run2',subset=True):
     """
     follow pyrocb with a transect showing vert motion and pot temp
     set subset to false if running on full dataset (on NCI)
@@ -314,31 +311,25 @@ def moving_pyrocb(model_run='sirivan_run1',subset=True):
                             lin_space_transect([-32.88, 116.1, -32.86, 116.19],
                                                [-32.92, 116.1, -32.84, 116.17],13), # 0300 - 0830
             # Run 1 starts later (8 hrs later!?) starts at 0030 UTC
-            'waroona_run1':[[-32.89, 116.15, -32.886, 116.19],]*20 + # up to 0040
-                           [[-32.888, 116.14, -32.886, 116.19], # 0110
-                            [-32.886, 116.13, -32.886, 116.19], # 0140
-                            [-32.886, 116.12, -32.886, 116.19], # 0210
-                            [-32.886, 116.11, -32.886, 116.19],]+ # 0240
-                            lin_space_transect([-32.886, 116.11, -32.886, 116.19],
-                                               [-32.881, 115.95, -32.885, 116.09],19) + # 0310 - 1210
-                            lin_space_transect([-32.879, 115.95, -32.885, 116.09],
-                                               [-32.872, 115.92, -32.885, 116.09],5), #1240 - 1440
-#                            lin_space_transect([-32.886, 116.11, -32.886, 116.195],
-#                                               [-32.885, 116.00, -32.885, 116.12],18) + # 0310 - 1140
-#                            lin_space_transect([-32.885, 115.99, -32.885, 116.20],
-#                                               [-32.88, 115.96, -32.885, 116.13],6), # 1210 - 1440
+            'waroona_run1':[[-32.89, 116.15, -32.886, 116.19],]*60 + \
+                           [[-32.888, 116.14, -32.886, 116.19],]*3 + \
+                           [[-32.886, 116.13, -32.886, 116.19],]*3 + \
+                           [[-32.886, 116.12, -32.886, 116.19],]*3 + \
+                           [[-32.886, 116.11, -32.886, 116.19],]*3 + \
+                           lin_space_transect([-32.886, 116.11, -32.886, 116.19],
+                                              [-32.881, 115.95, -32.885, 116.09],57) + \
+                           lin_space_transect([-32.879, 115.95, -32.885, 116.09],
+                                              [-32.872, 115.92, -32.885, 116.09],15), #1240 - 1440
+            'waroona_run2':[[-32.89, 116.10, -32.886, 116.19],]*60 + \
+                           lin_space_transect([-32.89, 116.09, -32.886, 116.19],
+                                              [-32.872, 115.85, -32.885, 116.07],84),
            }
-    if not subset:
+    if subset:
         # subset has 2 outputs/hr, full dataset has 6
-        tran['waroona_run1'] = [[-32.89, 116.15, -32.886, 116.19],]*60 + \
-            [[-32.888, 116.14, -32.886, 116.19],]*3 + \
-            [[-32.886, 116.13, -32.886, 116.19],]*3 + \
-            [[-32.886, 116.12, -32.886, 116.19],]*3 + \
-            [[-32.886, 116.11, -32.886, 116.19],]*3 + \
-            lin_space_transect([-32.886, 116.11, -32.886, 116.19],
-                               [-32.881, 115.95, -32.885, 116.09],57) + \
-            lin_space_transect([-32.879, 115.95, -32.885, 116.09],
-                               [-32.872, 115.92, -32.885, 116.09],15) #1240 - 1440
+        tran['waroona_run1'] = tran['waroona_run1'][::3]
+        tran['waroona_run2'] = tran['waroona_run2'][::3]
+    tran['waroona_run2uc'] = tran['waroona_run2']
+        
     transects = tran[model_run]
     #datetimes = fio.model_outputs[model_run]['filedates']
     ## read um output over extent [t, lev, lat, lon]
@@ -357,7 +348,10 @@ def moving_pyrocb(model_run='sirivan_run1',subset=True):
 
     ## fire front
     ffdtimes = utils.dates_from_iris(w)
-    ff, = fio.read_fire(model_run=model_run, dtimes=ffdtimes, extent=extent, firefront=True)
+    hasfire = fio.model_outputs[model_run]['hasfire']
+    ff=None
+    if hasfire:
+        ff, = fio.read_fire(model_run=model_run, dtimes=ffdtimes, extent=extent, firefront=True)
     # add zth cube
     p, pmsl = cubes.extract(['air_pressure','air_pressure_at_sea_level'])
     Ta, = cubes.extract('air_temperature')
@@ -370,8 +364,9 @@ def moving_pyrocb(model_run='sirivan_run1',subset=True):
             warnings.simplefilter('ignore')
             wmean = w[i,25:48,:,:].collapsed('model_level_number', iris.analysis.MEAN)
         h0,h1 = wmean.coord('level_height').bounds[0]
-        
-        fire=ff[i].data.data
+        fire=None
+        if hasfire:
+            fire=ff[i].data.data
         qci = qc[i].data.data
         wi = w[i].data.data
         ## calc zth
@@ -517,10 +512,10 @@ if __name__ == '__main__':
     testing=False
     
     ## New zoomed, moving pyrocb plotting
-    #moving_pyrocb(model_run='waroona_run1',subset=True)
+    moving_pyrocb(model_run='waroona_run2uc',subset=True)
     
     ## Run sample for waroona_run2
-    pyrocb_model_run('waroona_run2', dtime=datetime(2016,1,5,15))
+    #pyrocb_model_run('waroona_run2', dtime=datetime(2016,1,5,15))
     
     ### These are the first pyrocb plots I made (3 transects, not moving)
     #for mr in model_runs :
