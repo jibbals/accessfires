@@ -24,8 +24,8 @@ __cloud_thresh__ = constants.cloud_threshold
 
 def plot_weather_summary(U,V,W, height, lat, lon, extentname, Q=None, FF=None):
     '''
-    Show horizontal slices of horizontal and vertical winds averaged between several vertical levels
-    TODO: Show clouds summed over several levels if they are available
+    Show horizontal slices of horizontal and vertical winds averaged between 
+    several vertical levels. Also shows clouds (Q) and fires (FF) with contour outline.
     
     INPUTS: 
         U,V,W: wind speed in lon, lat, vert dimension m/s [z,lat,lon]
@@ -121,6 +121,9 @@ def weather_summary_model(model_version='waroona_run1',
                           fdtimes=None,
                           zoom_in=None):
     '''
+    Read model run output hour by hour, running plot_weather_summary on each
+    time slice. Can subset to just show fdtimes, and can also zoom to specific 
+    lat lon box, which saves into the 'zoomed' subfolder
     '''
     # font sizes etc
     plotting.init_plots()
