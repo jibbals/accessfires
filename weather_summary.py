@@ -135,8 +135,6 @@ def weather_summary_model(model_version='waroona_run1',
         extent = zoom_in
     if fdtimes is None:
         fdtimes = fio.model_outputs[model_version]['filedates']
-    hasfire = fio.model_outputs[model_version]['hasfire']
-    ff = None
     FF = None
     
     # read one hour at a time, plot each available time slice
@@ -156,8 +154,7 @@ def weather_summary_model(model_version='waroona_run1',
         height = w.coord('level_height').points
         dtimes = utils.dates_from_iris(u)
         
-        if hasfire:
-            ff, = fio.read_fire(model_version, dtimes, extent=extent)    
+        ff, = fio.read_fire(model_version, dtimes, extent=extent)    
         
         # for each time slice create a weather summary plot
         for i,dtime in enumerate(dtimes):

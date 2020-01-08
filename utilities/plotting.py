@@ -433,11 +433,25 @@ def map_fire(ff,lats,lons):
     if np.sum(ff<0) > 0:
         plt.contour(lons,lats,np.transpose(ff),np.array([0]), colors='red')
 
-def map_tiff(locname='waroona', fig=None, subplot_row_col_n=None,
+def map_tiff(locname='waroona', fig=None, subplot_row_col_n=[1,1,1],
              extent=None, show_grid=False, add_locations=False):
     """
     satellite image from gsky downloaded into data folder, 
     used as background for figures
+    
+    ARGUMENTS:
+        locname: { 'waroona' | 'sirivan' }
+            which tiff are we using
+        fig: matplotlib pyplot figure (default=[1,1,1])
+            can add map to an already created figure object
+        subplot_row_col_n: [row,col,n] (optional)
+            subplot axes to create and add map to
+        extent: [lon0, lon1, lat0, lat1]
+            where is projection zoomed in to
+        show_grid: {True|False}
+            show lats and lons around map
+        add_locations: {True|False}
+            show nice text and markers for main points of interest
     """
     gdal.UseExceptions()
     
@@ -477,11 +491,8 @@ def map_tiff(locname='waroona', fig=None, subplot_row_col_n=None,
     #subplot_kw = dict(projection=projection)
     
     # create plot axes
-    if subplot_row_col_n is not None:
-        nrows, ncols, n = subplot_row_col_n
-        ax = fig.add_subplot(nrows, ncols, n, projection=projection)
-    else:
-        ax = fig.add_subplot(1,1,1, projection=projection)
+    nrows, ncols, n = subplot_row_col_n
+    ax = fig.add_subplot(nrows, ncols, n, projection=projection)
     
     ax.imshow(scaled[:3, :, :].transpose((1, 2, 0)), 
               extent=fullextent,

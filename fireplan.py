@@ -97,7 +97,7 @@ def pft_altitude_vs_pressure(model_run='waroona_run1', latlon=plotting._latlons_
                              mbar_to_watch=700, datetimes=[datetime(2016,1,5,15)]):
     """
     Retrieve altitudes around 800-600 mbar over a specific lat lon over time.
-    This is to calculate z_fc for the PFT calculation
+    This is to calculate z_fc for manual PFT calculation
     """
     ## First read the hourly z and
     extent = plotting._extents_[model_run.split('_')[0]]

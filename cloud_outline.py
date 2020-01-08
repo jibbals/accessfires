@@ -52,6 +52,7 @@ def clouds_2panel(topog,s,u,v,
         s,u,v: [z, lat, lon] wind speed, x-wind, y-wind (m/s)
         qc,th: [z,lat,lon] cloud content, potential temp (g/kg, K)
         z,lat,lon: dimensions for other inputs
+        ff: firefront 2d array (optional)
         extentname = { 'waroona' | 'sirivan' } choice of two fire locations
         transect = int from 1 to 6 for transect choice (see figures/transects.png)
         vectorskip reduces quiver density (may need to fiddle)
@@ -155,7 +156,10 @@ def cloud_outline_model(model_run = 'waroona_run1', dtime=datetime(2016,1,5,15))
     
     ## fire front
     # read 6 time steps:
-    ff, = fio.read_fire(model_run, dtimes=cubetimes, extent=extent, firefront=True)
+    hasfire=fio.model_outputs[model_run]['hasfire']
+    ff=None
+    if hasfire:
+        ff, = fio.read_fire(model_run, dtimes=cubetimes, extent=extent, firefront=True)
     
     # loop over available timesteps
     topogi = topog.data.data
@@ -165,7 +169,9 @@ def cloud_outline_model(model_run = 'waroona_run1', dtime=datetime(2016,1,5,15))
         stitle = dt.strftime("%Y %b %d %H:%M (UTC)")
         si, ui, vi, qci, thi, ffi = [s[i,0].data.data, u[i,0].data.data, 
                                         v[i,0].data.data, qc[i].data.data, 
-                                        theta[i].data.data, ff[i].data.data]
+                                        theta[i].data.data, None]
+        if hasfire:
+            ffi = ff[i].data.data
         # loop over transects
         for ii in range(6):
             transect = plotting._transects_['%s%d'%(extentname,ii+1)]

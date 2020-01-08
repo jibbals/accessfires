@@ -128,12 +128,12 @@ def _constraints_from_extent_(extent, constraints=None, tol = 0.0001):
         constraints = constr_lats & constr_lons
     return constraints
 
-def create_wind_profile_csv(mr='waroona_run1'):
+def create_wind_profile_csv(model_run='waroona_run1'):
     # waroona latlon = -32.84, 115.93
-    cubes = fio.read_model_run(mr,fdtime=None,
-                               extent=[-32.83,115.92,-32.85,115.94], # just want tiny area at bottom of escarp
-                               add_winds=True, add_z=True, add_topog=True,
-                               add_RH=True)
+    cubes = read_model_run(model_run,fdtime=None,
+                           extent=[-32.83,115.92,-32.85,115.94], # just want tiny area at bottom of escarp
+                           add_winds=True, add_z=True, add_topog=True,
+                           add_RH=True)
     
     x,y,wdir = cubes.extract(['u','v','wind_direction'])
     z, topog = cubes.extract(['z_th','surface_altitude'])
@@ -353,6 +353,11 @@ def read_fire(model_run='waroona_run1',
     '''
     Read fire output cubes matching dtimes time dim
     '''
+    ## If no fire exists for model run, return None
+    if not model_outputs[model_run]['hasfire']:
+        return [None] # needs to be iterable to match cubelist return type 
+    
+    ## otherwise read fire paths and return fire cubes
     ddir        = model_outputs[model_run]['path']
     ffpath      = ddir+model_outputs[model_run]['path_firefront']
     fluxpath    = ddir+model_outputs[model_run]['path_fireflux']
@@ -391,7 +396,6 @@ def read_fire(model_run='waroona_run1',
     if dtimes is not None:
         for i in range(len(cubelist)):
             cubelist[i] = subset_time_iris(cubelist[i], dtimes)
-
 
     return cubelist
 
