@@ -50,11 +50,14 @@ __NESTS__ = {'waroona_run1':{'centre':[-32.9, 116.1],
 ##############################################
 
 def outline_waroona():
+    """
+    Plot tiff image of waroona, within southern WA.
+        Also show zoomed in to fire area, and topography
+    """
     
     extentname='waroonas'
     extent = plotting._extents_[extentname]
     inner = plotting._extents_['waroona']
-    crs_platecarree=cartopy.crs.PlateCarree()
     
     plotting.init_plots()
     
@@ -64,26 +67,33 @@ def outline_waroona():
     topog = cube_topog.data.data
     
     # Google map image tiles view of synoptic map
-    fig,ax,proj=plotting.map_google(extent,
-                                    zoom=6,
-                                    subplot_row_col_n=[2,1,1],
-                                    gridlines=[np.arange(-51,-10,2),
-                                               np.arange(100,150,4)])
+    fig, ax, proj = plotting.map_tiff(locname='waroona',
+                                      extent=extent, #fig=fig,
+                                      subplot_row_col_n=[2,1,1],
+                                      show_grid=False, add_locations=True)
+    #    fig,ax,proj=plotting.map_google(extent,
+    #                                    zoom=6,
+    #                                    subplot_row_col_n=[2,1,1],
+    #                                    gridlines=[np.arange(-51,-10,2),
+    #                                               np.arange(100,150,4)])
+    # add coastline
+    ax.coastlines()
     plt.title("Waroona synoptic")
+    
     ## Add box around zoomed in area
-    xy = [(inner[0]+inner[1])/2.0, (inner[2]+inner[3])/2.0]
+    xy = [inner[0], inner[2]]
     width = inner[1]-inner[0]
     height = inner[3]-inner[2]
     ax.add_patch(patches.Rectangle(xy=xy,
-                                    width=width,
-                                    height=height,
-                                    #facecolor=None,
-                                    fill=False,
-                                    edgecolor='blue',
-                                    linewidth=2,
-                                    #linestyle='-',
-                                    alpha=0.6, 
-                                    transform=crs_platecarree))
+                                   width=width,
+                                   height=height,
+                                   #facecolor=None,
+                                   fill=False,
+                                   edgecolor='blue',
+                                   linewidth=2,
+                                   #linestyle='-',
+                                   alpha=0.6, 
+                                   transform=proj))
     ## add text?
     
     ## Add scale
@@ -91,12 +101,16 @@ def outline_waroona():
     plotting.scale_bar(ax,proj,100, location=scaleloc)
     
     ## Look at waroona and yarloop
-    _,ax2,gproj = plotting.map_google(inner, zoom=10, fig=fig,
-                                      subplot_row_col_n=[2,2,3], draw_gridlines=False)
+    #_,ax2,gproj = plotting.map_google(inner, zoom=10, fig=fig,
+    #                                  subplot_row_col_n=[2,2,3], draw_gridlines=False)
+    _, ax2, proj2 = plotting.map_tiff(locname='waroona',
+                                      extent=inner, fig=fig,
+                                      subplot_row_col_n=[2,2,3],
+                                      show_grid=False, add_locations=True)
     plt.title("Fire location")
     
     ## Add scale
-    plotting.scale_bar(ax2,proj,10, location=scaleloc)
+    plotting.scale_bar(ax2,proj2,10, location=scaleloc)
     
     ## Add contour plot showing topography
     plt.subplot(2,2,4)
@@ -107,27 +121,26 @@ def outline_waroona():
 
 def show_nests(model_run='waroona_run1', annotate_res=True, title=''):
     """
-    show nested grids on google map, resolution annotated
+    show nested grids on stock image of australia, resolution annotated
     """
     #f, ax, gproj = plotting.map_google(plotting._extents_['waroona'], zoom=11)
+    locname=model_run.split('_')[0]
     nest=__NESTS__[model_run]
-    
     
     # look at nests within wider view:
     aust = nest['wider_view']
-    # Request map from google
-    request = cimgt.GoogleTiles()
-    gproj=request.crs
-    # Use projection to set up plot
-    fig = plt.figure()
-    ax = fig.add_subplot(1, 1, 1, projection=gproj)
+    
+    # create figure and projection
+    fig, ax, proj = plotting.map_tiff(locname=locname,
+                                      extent=aust,
+                                      show_grid=True, 
+                                      add_locations=False)
     
     # Where are we looking
-    ax.set_extent(aust)
-    
-    # default interpolation ruins location names
-    zoom = 4
-    ax.add_image(request, zoom, interpolation='spline36') 
+    #ax.set_extent(aust)
+    # add coastline, stock img (tiff is currently just for zoomed in stuff)
+    ax.coastlines()
+    ax.stock_img()
     
     ## Show grid resolution maybe with annotations
     ## Add box around zoomed in area

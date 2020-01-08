@@ -48,7 +48,8 @@ def map_with_transect(data,lat,lon, transect,
                       extralines=[], extracolors=[],
                       **map_contourf_args):
     """
-    TODO: contourf of whatever, plus firefront, plus towns
+    plot contourf of whatever, plus firefront (optional).
+    Add transect lines on top of contourf.
     """
     extent=[lon[0],lon[-1],lat[0],lat[-1]]
     start,end = transect
@@ -348,10 +349,7 @@ def moving_pyrocb(model_run='waroona_run2',subset=True):
 
     ## fire front
     ffdtimes = utils.dates_from_iris(w)
-    hasfire = fio.model_outputs[model_run]['hasfire']
-    ff=None
-    if hasfire:
-        ff, = fio.read_fire(model_run=model_run, dtimes=ffdtimes, extent=extent, firefront=True)
+    ff, = fio.read_fire(model_run=model_run, dtimes=ffdtimes, extent=extent, firefront=True)
     # add zth cube
     p, pmsl = cubes.extract(['air_pressure','air_pressure_at_sea_level'])
     Ta, = cubes.extract('air_temperature')
@@ -365,7 +363,7 @@ def moving_pyrocb(model_run='waroona_run2',subset=True):
             wmean = w[i,25:48,:,:].collapsed('model_level_number', iris.analysis.MEAN)
         h0,h1 = wmean.coord('level_height').bounds[0]
         fire=None
-        if hasfire:
+        if ff is not None:
             fire=ff[i].data.data
         qci = qc[i].data.data
         wi = w[i].data.data
@@ -440,6 +438,10 @@ def moving_pyrocb(model_run='waroona_run2',subset=True):
     
 def pyrocb_model_run(model_run='waroona_run1', dtime=datetime(2016,1,5,15)):
     """
+    Try to show pyrocb using two figures:
+        1: left to right transect showing winds and potential temp
+        2: Three transects (forming somewhat of an asterix) of vertical winds
+    Makes figures for single hour defined by dtime input argument
     """
     ### First use datetime and extentname to read correct outputs:
     extentname=model_run.split('_')[0]
@@ -483,7 +485,9 @@ def pyrocb_model_run(model_run='waroona_run1', dtime=datetime(2016,1,5,15)):
         wi = w[i].data.data
         ui = u[i].data.data
         wmeani = wmean[i].data.data 
-        ffi = ff[i].data.data
+        ffi = None
+        if ff is not None:
+            ffi = ff[i].data.data
         
         ## First make the left to right figure
         left_right_slice(qci, ui, wi, zi, topogi, lat, lon, LR1)

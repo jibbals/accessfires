@@ -48,15 +48,17 @@ def show_transects():
         
         # read topog, fire
         topog = fio.read_topog(mr,extent=extent)
-        #print("debug:",topog)
         lat,lon = topog.coord('latitude').points, topog.coord('longitude').points
-        
         ff, = fio.read_fire(mr,extent=extent,
                             dtimes=[fio.model_outputs[mr]['filedates'][-1]])
-        #print("DEBUG:",ff)
+
         plotting.map_topography(extent,topog.data,lat,lon)
         plt.title("Transects")
-        plt.contour(lon,lat, np.transpose(ff[0].data),np.array([0]),colors='red')
+        ## show fire contour if model run has fire
+        if ff is not None:
+            plt.contour(lon,lat, np.transpose(ff[0].data),np.array([0]),colors='red')
+        
+        ## plot each transect 
         for transect in range(6):
             start,end = transects["%s%d"%(extentname,transect+1)]
             plt.plot([start[1],end[1]],[start[0],end[0], ], '--',
@@ -198,7 +200,9 @@ def outline_model_winds(model_run='sirivan_run1', hours=None, dpi=200):
         si, ui, vi, wi, qci, topogi, zthi, ffi = [s[i].data.data, u[i].data.data, 
                                                  v[i].data.data, w[i].data.data, 
                                                  qc[i].data.data, topog.data.data, 
-                                                 zth.data.data, ff[i].data.data]
+                                                 zth.data.data, None]
+        if ff is not None:
+            ffi=ff[i].data.data
 
         ## loop over different transects
         for ii in range(6):

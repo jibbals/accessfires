@@ -259,14 +259,14 @@ def PFT_map(PFT,plats,plons,colorbar=True, lines=[100]):
         
     return cs, cb
     
-def model_run_PFT_summary(mr='waroona_run1', hour=datetime(2016,1,5,15)):
+def model_run_PFT_summary(model_run='waroona_run1', hour=datetime(2016,1,5,15)):
     '''
     Show PFT map, underneath topography overlaid with curly surface wind map
     '''
-    extentname=mr.split('_')[0]
+    extentname=model_run.split('_')[0]
     extent = plotting._extents_[extentname]
     
-    cubes = fio.read_model_run(mr,[hour],extent=extent, 
+    cubes = fio.read_model_run(model_run,[hour],extent=extent, 
                                add_topog=True,add_winds=True)
     u0,v0 = cubes.extract(['u','v'], strict=True)
     dtimes = utils.dates_from_iris(u0,remove_seconds=True)
@@ -281,12 +281,10 @@ def model_run_PFT_summary(mr='waroona_run1', hour=datetime(2016,1,5,15)):
     terrain = terrain0.data
     
     ## Read PFT
-    pft, ptimes, plats, plons = fio.read_pft(mr, dtimes, lats, lons)
+    pft, ptimes, plats, plons = fio.read_pft(model_run, dtimes, lats, lons)
     
     ## Read fire front
-    hasfires= mr in ['waroona_run1','waroona_old','waroona_run2','sirivan_run1']
-    if hasfires:
-        ff, = fio.read_fire(mr, dtimes, extent=extent)
+    ff, = fio.read_fire(model_run, dtimes, extent=extent)
     
     
     for i,dtime in enumerate(dtimes):
@@ -295,7 +293,7 @@ def model_run_PFT_summary(mr='waroona_run1', hour=datetime(2016,1,5,15)):
         plotting.map_topography(extent, terrain, lats, lons, title='')
         plotting.map_add_locations_extent(extentname,hide_text=False)
         # add fire front
-        if hasfires:
+        if ff is not None:
             with warnings.catch_warnings():
                 # ignore warning when there are no fires:
                 warnings.simplefilter('ignore')
@@ -303,7 +301,6 @@ def model_run_PFT_summary(mr='waroona_run1', hour=datetime(2016,1,5,15)):
         
         # add scale
         #plotting.scale_bar(plt.gca(), cartopy.crs.PlateCarree(),10)
-        
         
         ## Second plot will be PFT map with 'surface' winds overlaid
         plt.subplot(2,1,2)
@@ -315,7 +312,7 @@ def model_run_PFT_summary(mr='waroona_run1', hour=datetime(2016,1,5,15)):
         plt.xticks([]); plt.yticks([])
         ## Title, save, close
         plt.suptitle(dtime.strftime("PFT and mean winds below 500m at %b %d %H:%M (UTC)"))
-        fio.save_fig(mr,_sn_,dtime,plt)
+        fio.save_fig(model_run,_sn_,dtime,plt)
 
 
 if __name__ == '__main__':
@@ -328,5 +325,5 @@ if __name__ == '__main__':
         for mr in ['waroona_run2','waroona_run2uc']:#['sirivan_run1','waroona_run1','waroona_old']:
             dtimes = fio.model_outputs[mr]['filedates']
             for dtime in dtimes:
-                model_run_PFT_summary(mr=mr, hour=dtime)
+                model_run_PFT_summary(model_run=mr, hour=dtime)
     

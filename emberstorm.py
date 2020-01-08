@@ -147,10 +147,12 @@ def make_plots_emberstorm(model_run='waroona_run1'):
             for transecti, transect in enumerate([plotting._transects_['emberstorm%d'%d] for d in range(1,4)]):
                 utcstamp = dtime.strftime("%b %H:%M (UTC)")
                 u,v,w = uvw[0][i], uvw[1][i], uvw[2][i]
-                
+                ffi=None
+                if ff is not None:
+                    ffi = ff[i].data
                 #print("DEBUG:",[np.shape(arr) for arr in [theta, u, v, w, z, topog, ff, lat, lon]])
                 emberstorm(theta[i].data,u.data,v.data,w.data,z.data,topog.data,
-                           lat,lon,ff=ff[i].data, transect=transect)
+                           lat,lon,ff=ffi, transect=transect)
                 
                 # Save figure into folder with numeric identifier
                 stitle="Emberstorm %s"%utcstamp
