@@ -43,8 +43,8 @@ model_outputs = {
             'filedates':np.array([datetime(2016,1,5,15) + timedelta(hours=x) for x in range(24)]),
             'hasfire':False,
             'run':'Run ~12 December 2019',
-            'origdir':'/short/en0/jwg574/cylc-run/au-aa799/share/cycle/20160105T1500Z/waroona/0p3/ukv_os38/um',
-            'origfiredir':''},
+            'origdir':'/short/en0/jwg574/cylc-run/au-aa799/share/cycle/20160105T1500Z/waroona/0p3/ukv_os38/um/',
+            'origfiredir':'/raijin/short/en0/jwg574/cylc-run/au-aa799/work/20160105T1500Z/'}, # waroona_0p3_ukv_os38_um_fcst_000 to 012
         ## Run 1 was the first one I looked at, with east west rolls and no pyrocb
         ## Attemp to recreate 'old' run weather and pyrocb, updated fire to use mean met (rather than instantaneous)
         'waroona_run2':{
