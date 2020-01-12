@@ -142,7 +142,16 @@ def dates_from_iris(timedim, remove_seconds=True):
     dtm = dt
     if remove_seconds:
         for i,d in enumerate(dt):
-            dtm[i] = datetime(d.year,d.month,d.day,d.hour,d.minute+int(d.second>30))
+            iday = d.day
+            ihour = d.hour
+            iminute = d.minute+int(d.second>30)
+            if iminute == 60:
+                ihour+=1
+                iminute=0
+            if ihour == 24:
+                iday+=1
+                ihour=0
+            dtm[i] = datetime(d.year,d.month, iday, ihour, iminute)
     return dtm
 
 def lat_lon_index(lat,lon,lats,lons):
