@@ -15,6 +15,7 @@ from matplotlib import colors, ticker
 
 import numpy as np
 import matplotlib.pyplot as plt
+from matplotlib.lines import Line2D
 import warnings
 from datetime import datetime
 from scipy.stats import gaussian_kde, cumfreq
@@ -230,6 +231,128 @@ def compare_winds(mr1='waroona_run2', mr2='waroona_run2uc', hour=datetime(2016,1
         plt.suptitle(date.strftime("%Y%m%d %H:%M(UTC)"))
         fio.save_fig(mr1, _sn_, date, plt, subdir='vertical')
     
+def compare_clouds(mr1='waroona_run2', mr2='waroona_run2uc', 
+                   hour=datetime(2016,1,5,15), cloud_threshold=constants.cloud_threshold):
+    """
+    Plot top-down view of cloud content within summed vertical bins
+        also show distributions
+    """
+    extentname = mr1.split('_')[0]
+    extent = plotting._extents_[extentname]
+    
+    ## Read a model run
+    cubes1 = fio.read_model_run(mr1, hour, extent=extent)
+    cubes2 = fio.read_model_run(mr2, hour, extent=extent)
+    
+    # pull out clouds
+    qc, = cubes1.extract(['qc'])
+    cqc, = cubes2.extract(['qc'])
+    dates = utils.dates_from_iris(qc)
+    height = qc.coord('level_height').points
+    lats = qc.coord('latitude').points
+    lons = qc.coord('longitude').points
+    ff1, = fio.read_fire(mr1,dtimes=dates,extent=extent,firefront=True)
+    ff2, = fio.read_fire(mr2,dtimes=dates,extent=extent,firefront=True)
+    
+    # density plot arguments
+    bandwidth=1
+    # x axis for qc-sum density
+    xs = np.linspace(0,.2,200)
+    
+    ## Colourmap setup for contourf plots
+    # log scale between 0 and 0.2
+    cmap=plotting._cmaps_['qc']
+    norm=colors.SymLogNorm(0.001, vmin=0,vmax=.2)
+    clevs=np.union1d(np.union1d(np.logspace(-3,-.699,30),0),0.2) 
+    
+    # make 4 vertical bins
+    row1 = (2000<=height) * (height<3000)
+    row2 = (3000<=height) * (height<5000)
+    row3 = (5000<=height) * (height<8000)
+    row4 = (8000<=height) * (height<15000)
+    titles = ['2km-3km','3km-5km','5km-8km','8km-15km']
+    
+    # loop over datetimes:
+    for di, date in enumerate(dates):
+        
+        qc1, qc2, qc3, qc4 = [np.sum(qc[di,row,:,:].data, axis=0) for row in [row1,row2,row3,row4]]
+        cqc1, cqc2, cqc3, cqc4 = [np.sum(cqc[di,row,:,:].data, axis=0) for row in [row1,row2,row3,row4]]
+        
+        # Plotting
+        plt.close()
+        fig, axes = plt.subplots(3,4,figsize=[12,11])
+        for i, (qci, cqci) in enumerate(zip([qc1, qc2, qc3, qc4],[cqc1, cqc2, cqc3, cqc4])):
+            ## Show contourf of cloud
+            plt.sca(axes[0,i])
+            
+            plotting.map_contourf(extent, qci, lats, lons, cmap=cmap, 
+                                  clabel="", norm=norm, cbar=False, clevs=clevs,
+                                  cbarform=None, extend='max')
+            
+            # overlaid with cloud thresh line
+            if np.max(qci)>cloud_threshold:
+                plt.contour(lons,lats, qci, np.array([cloud_threshold]),
+                            colors='teal', linewidths=2)
+            
+            # Add locations and fire
+            plotting.map_add_locations_extent(extentname, hide_text=True)
+            if ff1 is not None:
+                plotting.map_fire(ff1[di].data,lats,lons)
+            # Add ylabel on left most plot
+            if i==0: plt.ylabel(mr1)
+            # add title along top row
+            plt.title(titles[i])
+            
+            ## for comparison model also
+            plt.sca(axes[1,i])
+            img,_ = plotting.map_contourf(extent, cqci, lats, lons,
+                                          cmap=cmap, norm=norm, clabel="", 
+                                          clevs=clevs, cbar=False, extend='max',
+                                          cbarform=None)
+            
+            # overlaid with cloud thresh line
+            if np.max(cqci)>cloud_threshold:
+                plt.contour(lons, lats, cqci, np.array([cloud_threshold]),
+                            colors='teal', linewidths=2)
+            # add fire
+            if ff2 is not None:
+                plotting.map_fire(ff2[di].data,lats,lons)
+            # add label on leftmost
+            if i==0: plt.ylabel(mr2)
+            
+            ## add density plot
+            plt.sca(axes[2,i])
+            
+            # density function:
+            # only if non zero cloud content
+            flag=2
+            if not np.isclose(np.max(qci),0):
+                qcdens = gaussian_kde(qci.flatten(), bw_method=bandwidth)
+                plt.plot(xs,qcdens(xs),linewidth=2,color='k')
+                flag-=1
+            if not np.isclose(np.max(cqci),0):
+                cqcdens = gaussian_kde(cqci.flatten(), bw_method=bandwidth)
+                plt.plot(xs,cqcdens(xs),color='r', linestyle='--')
+                flag-=1
+            plt.yticks([],[])
+            if i==0: plt.ylabel('cloud density')
+            if i==3: 
+                # manually add legend
+                lines = [Line2D([0], [0], color='k', linewidth=2, linestyle='-'),
+                         Line2D([0], [0], color='r', linewidth=1, linestyle='--')]
+                labels = [mr1,mr2]
+                plt.legend(lines, labels)
+
+            
+        ## Add colourbar for column
+        cbar_ax = fig.add_axes([0.35, 0.37, 0.31, 0.01])# X Y Width Height
+        cbar=fig.colorbar(img, cax=cbar_ax, format=ticker.ScalarFormatter(), 
+                          pad=0, orientation='horizontal')
+        cbar.set_ticks([0,0.003,0.01,0.1,0.2])
+        cbar.set_ticklabels([0,0.003,0.01,0.1,0.2])
+        plt.suptitle(date.strftime("Cloud content %Y%m%d %H:%M(UTC)"),
+                     fontsize=20)
+        fio.save_fig(mr1, _sn_, date, plt, subdir='clouds')
 
 def compare_at_site(mr1='waroona_run2', mr2='waroona_run2uc', latlon = plotting._latlons_['AWS_wagerup']):
     """
@@ -244,5 +367,6 @@ if __name__=='__main__':
     
     #compare_winds()
     for fdate in fio.model_outputs['waroona_run2']['filedates']:
-        compare_winds(hour=fdate)
+        #compare_winds(hour=fdate)
+        compare_clouds(hour=fdate)
     print("run_comparison.py done")
