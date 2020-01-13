@@ -79,13 +79,10 @@ def linescan_vs_firefront(model_run='sirivan_run1',option='stamen'):
             ax2.set_extent(linescan_extent)
             ax2.add_image(stamen_terrain, 10) # 10 seems to be max zoom for resolution
             mproj = stamen_terrain.crs
-        elif option == 'google':
-            _,ax2,mproj = plotting.map_google(linescan_extent, fig=fig, zoom=12,
-                                              subplot_extent=subplot_extent2,
-                                              draw_gridlines=False)
         else:
-            _,ax2,mproj,dproj = plotting.map_satellite(linescan_extent, fig=fig,
-                                                       subplot_extent=subplot_extent2)
+            _,ax2,mproj = plotting.map_tiff('sirivan', fig=fig,
+                                                  extent=linescan_extent, 
+                                                  subplot_row_col_n=[2,1,1])
         plt.sca(ax2)
         # add firefront hourly up to current datetime indext
         # just read hourly

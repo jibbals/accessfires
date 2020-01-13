@@ -292,7 +292,7 @@ def fireplan_summary(model_run='waroona_run1'):
     fio.save_fig(model_run, _sn_, 'fire_spread', plt)
 
 
-def firepower_comparison(runs=['waroona_new1','waroona_old','waroona_run2'], localtime=False):
+def firepower_comparison(runs=['waroona_run1','waroona_old','waroona_run2'], localtime=False):
     """
     Plot overlaid time series of two model runs fire power from integral of intensity
     """
@@ -328,12 +328,10 @@ def firepower_comparison(runs=['waroona_new1','waroona_old','waroona_run2'], loc
         # also PFT values:
         linestyle = PFT[run]['style']+PFT[run]['color']
         # calculate using kevin's code
-        print("DEBUG: reading sirivan")
         cubes = fio.read_model_run(run, extent=pftextent,
                                    add_theta=True, add_winds=True, add_RH=True, 
                                    add_z=True, add_topog=True)
         
-        print("DEBUG:",cubes)
         utimes = utils.dates_from_iris(cubes.extract('u')[0])
         if localtime:
             utimes = np.array([ut + offset for ut in utimes ])
