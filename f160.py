@@ -177,7 +177,6 @@ def f160_hour(dtime=datetime(2016,1,6,7),
 
 if __name__ == '__main__':
     
-    testing=True
     
     topleft = [-32.75, 115.8] # random point away from the fire influence
     pyrocb1 = plotting._latlons_['pyrocb_waroona1']
@@ -188,9 +187,6 @@ if __name__ == '__main__':
     #checktimes = [ datetime(2016,1,5,15) ]
     old_times = fio.model_outputs['waroona_old']['filedates']
     run1_times = fio.model_outputs['waroona_run1']['filedates']
-    if testing:
-        old_times = fio.model_outputs['waroona_old']['filedates'][-5:]
-        run1_times = fio.model_outputs['waroona_run1']['filedates'][-5:]
     
     for mv, dtimes in zip(['waroona_run1','waroona_old'],[run1_times,old_times]):
         for dtime in dtimes:

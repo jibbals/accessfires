@@ -2,6 +2,7 @@
 """
 Created on Mon Aug 26 15:58:21 2019
     Create cloud summary plots
+    
 @author: jgreensl
 """
 
@@ -155,11 +156,8 @@ def cloud_outline_model(model_run = 'waroona_run1', dtime=datetime(2016,1,5,15))
     lat,lon = w.coord('latitude').points, w.coord('longitude').points
     
     ## fire front
-    # read 6 time steps:
-    hasfire=fio.model_outputs[model_run]['hasfire']
-    ff=None
-    if hasfire:
-        ff, = fio.read_fire(model_run, dtimes=cubetimes, extent=extent, firefront=True)
+    # read fire at matching time steps:
+    ff, = fio.read_fire(model_run, dtimes=cubetimes, extent=extent, firefront=True)
     
     # loop over available timesteps
     topogi = topog.data.data
@@ -167,10 +165,11 @@ def cloud_outline_model(model_run = 'waroona_run1', dtime=datetime(2016,1,5,15))
     for i,dt in enumerate(cubetimes):
         # datetime timestamp for title
         stitle = dt.strftime("%Y %b %d %H:%M (UTC)")
-        si, ui, vi, qci, thi, ffi = [s[i,0].data.data, u[i,0].data.data, 
-                                        v[i,0].data.data, qc[i].data.data, 
-                                        theta[i].data.data, None]
-        if hasfire:
+        si, ui, vi, qci, thi = [s[i,0].data.data, u[i,0].data.data, 
+                                v[i,0].data.data, qc[i].data.data, 
+                                theta[i].data.data]
+        ffi = None
+        if ff is not None:
             ffi = ff[i].data.data
         # loop over transects
         for ii in range(6):

@@ -2,6 +2,8 @@
 """
 Created on Mon Sep 30 11:47:15 2019
     Examine AWS dataset(s)
+    Currently only have Wagerup weather station data
+    Compare model run outputs interpolated to lat/lon point where AWS sits
 @author: jgreensl
 """
 
