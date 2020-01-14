@@ -88,7 +88,7 @@ def vert_motion_slices(qc,w,lh,lat,lon,
 
 def vert_motion_hour(dtime=datetime(2016,1,6,7), model_run='waroona_run1'):
     '''
-    create vert motion slices of an hours output from the old run in mika's folder
+    create vert motion slices of an hours output
     '''
     dpi=200
     extentname=model_run.split('_')[0]
@@ -126,12 +126,16 @@ if __name__ == '__main__':
     # set font sizes etc.
     plotting.init_plots()
     
-    testing=False
+    mr = 'waroona_run2'
+    hours = fio.model_outputs[mr]['filedates']
+    for hour in hours[0:3]:
+        vert_motion_hour(dtime=hour, model_run=mr)
+    print("INFO: vert_motion_slices done")
     
-    for mr in ['waroona_old','waroona_run1']: #['sirivan_run1','waroona_old', 'waroona_run1']:
-        hours = fio.model_outputs[mr]['filedates']
-        if testing:
-            hours = hours[:3] 
-        for dtime in hours:
-            vert_motion_hour(dtime, model_run=mr)
+    #for mr in ['waroona_old','waroona_run1']: #['sirivan_run1','waroona_old', 'waroona_run1']:
+    #    hours = fio.model_outputs[mr]['filedates']
+    #    if testing:
+    #        hours = hours[:3] 
+    #    for dtime in hours:
+    #        vert_motion_hour(dtime, model_run=mr)
     

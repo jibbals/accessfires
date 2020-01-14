@@ -41,7 +41,10 @@ model_outputs = {
             'path':'data/waroona_run2uc/',
             'topog':'umnsaa_2016010515_slv.nc',
             'filedates':np.array([datetime(2016,1,5,15) + timedelta(hours=x) for x in range(24)]),
-            'hasfire':False,
+            'hasfire':True,
+            'path_firefront':'fire/firefront.CSIRO_new_ncp.20160105T1500Z.nc',
+            'path_fireflux':'fire/sensible_heat.CSIRO_new_ncp.20160105T1500Z.nc',
+            'path_firespeed':'fire/fire_speed.CSIRO_new_ncp.20160105T1500Z.nc',
             'run':'Run ~12 December 2019',
             'origdir':'/short/en0/jwg574/cylc-run/au-aa799/share/cycle/20160105T1500Z/waroona/0p3/ukv_os38/um/',
             'origfiredir':'/raijin/short/en0/jwg574/cylc-run/au-aa799/work/20160105T1500Z/'}, # waroona_0p3_ukv_os38_um_fcst_000 to 012

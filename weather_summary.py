@@ -189,5 +189,5 @@ if __name__=='__main__':
     #for mv in ['sirivan_run1','waroona_old','waroona_oldold','waroona_run1']:
     #    weather_summary_model(mv)
     
-    print("weather_summary.py done")
+    print("INFO: weather_summary.py done")
 
