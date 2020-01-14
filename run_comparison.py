@@ -121,7 +121,9 @@ def compare_winds(mr1='waroona_run2', mr2='waroona_run2uc', hour=datetime(2016,1
             hcontours=np.linspace(0,hmaxthresh[hmax_index],20)
             
             # plot the filled contour for h-wind speeds
-            plotting.map_contourf(extent, si,lats,lons,cmap=hcmap,clabel="",clevs=hcontours,cbar=False,cbarform=None)
+            plotting.map_contourf(extent, si, lats, lons, cmap=hcmap,
+                                  clabel="", clevs=hcontours, cbar=False,
+                                  cbarform=None)
             # overlaid with quiver of wind dir
             plotting.map_quiver(ui,vi,lats,lons,nquivers=7)
             # Add locations and fire
@@ -135,7 +137,9 @@ def compare_winds(mr1='waroona_run2', mr2='waroona_run2uc', hour=datetime(2016,1
             
             ## for comparison model also
             plt.sca(axes[1,i])
-            img,_ = plotting.map_contourf(extent, csi, lats, lons,cmap=hcmap,clabel="",clevs=hcontours,cbar=False,cbarform=None)
+            img,_ = plotting.map_contourf(extent, csi, lats, lons, cmap=hcmap, 
+                                          clabel="", clevs=hcontours, 
+                                          cbar=False, cbarform=None)
             
             # overlaid with quiver of wind dir
             plotting.map_quiver(cui,cvi,lats,lons,nquivers=7)
@@ -305,10 +309,9 @@ def compare_clouds(mr1='waroona_run2', mr2='waroona_run2uc',
             
             ## for comparison model also
             plt.sca(axes[1,i])
-            img,_ = plotting.map_contourf(extent, cqci, lats, lons,
-                                          cmap=cmap, norm=norm, clabel="", 
-                                          clevs=clevs, cbar=False, extend='max',
-                                          cbarform=None)
+            img,_ = plotting.map_contourf(extent, cqci, lats, lons, cmap=cmap, 
+                                          norm=norm, clabel="", clevs=clevs, 
+                                          cbar=False, cbarform=None, extend='max')
             
             # overlaid with cloud thresh line
             if np.max(cqci)>cloud_threshold:
@@ -344,7 +347,7 @@ def compare_clouds(mr1='waroona_run2', mr2='waroona_run2uc',
                 plt.legend(lines, labels)
 
             
-        ## Add colourbar for column
+        ## Add colourbar
         cbar_ax = fig.add_axes([0.35, 0.37, 0.31, 0.01])# X Y Width Height
         cbar=fig.colorbar(img, cax=cbar_ax, format=ticker.ScalarFormatter(), 
                           pad=0, orientation='horizontal')
@@ -365,8 +368,10 @@ def compare_at_site(mr1='waroona_run2', mr2='waroona_run2uc', latlon = plotting.
 
 if __name__=='__main__':
     
-    #compare_winds()
-    for fdate in fio.model_outputs['waroona_run2']['filedates']:
-        #compare_winds(hour=fdate)
-        compare_clouds(hour=fdate)
+    
+    ## Lets loop over and compare run2 to run2uc
+    mr1,mr2 = ['waroona_run2','waroona_run2uc']
+    for fdate in fio.model_outputs[mr1]['filedates']:
+        compare_winds(mr1=mr1,mr2=mr2, hour=fdate)
+        compare_clouds(mr1=mr1,mr2=mr2, hour=fdate)
     print("run_comparison.py done")
