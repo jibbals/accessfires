@@ -358,7 +358,8 @@ def read_fire(model_run='waroona_run1',
     '''
     ## If no fire exists for model run, return None
     if not model_outputs[model_run]['hasfire']:
-        return [None] # needs to be iterable to match cubelist return type 
+        # needs to be iterable to match cubelist return type 
+        return [None]*np.sum([firefront,sensibleheat,firespeed]) 
     
     ## otherwise read fire paths and return fire cubes
     ddir        = model_outputs[model_run]['path']

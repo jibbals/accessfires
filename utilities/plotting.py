@@ -408,12 +408,12 @@ def map_draw_gridlines(ax, linewidth=1, color='black', alpha=0.5,
 
 def map_contourf(extent, data, lat,lon, title="",
                  cmap=None, clabel="", clevs=None, norm=None, 
-                 cbar=True, cbarform=None):
+                 cbar=True, cbarform=None, **contourfargs):
     '''
     Show topography map matching extents
     '''
     
-    cs = plt.contourf(lon,lat,data, levels=clevs, cmap=cmap,norm=norm)
+    cs = plt.contourf(lon,lat,data, levels=clevs, cmap=cmap,norm=norm, **contourfargs)
     cb = None
     
     # set x and y limits to match extent
