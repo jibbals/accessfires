@@ -160,6 +160,318 @@ def map_add_locations_extent(extentname, hide_text=False):
         map_add_locations(['wagerup'],[['AWS',''][hide_text]],
                           color='b', marker='*', dx=-.025,dy=.01)
 
+
+def map_add_locations(namelist, text=None, proj=None,
+                      marker='o', color='grey', markersize=None, 
+                      textcolor='k',
+                      dx=.025,dy=.015):
+    '''
+    input is list of names to be added to a map using the lat lons in _latlons_
+    '''
+    for i,name in enumerate(namelist):
+        y,x=_latlons_[name]
+        # maybe want special text
+        if text is not None:
+            name = text[i]
+        # dx,dy can be scalar or list
+        dxi,dyi = dx,dy
+        if isinstance(dx, (list,tuple,np.ndarray)):
+            dxi,dyi = dx[i], dy[i]
+
+        # Add marker and text
+        if proj is None:
+            plt.plot(x,y,  color=color, linewidth=0, 
+                     marker=marker, markersize=None)
+            plt.text(x+dxi, y+dyi, name, color=textcolor,
+                     horizontalalignment='right')
+        else:
+            plt.plot(x,y,  color=color, linewidth=0, 
+                     marker=marker, markersize=None, transform=proj)
+            plt.text(x+dxi, y+dyi, name, color=textcolor,
+                     horizontalalignment='right',
+                     transform=proj)
+
+
+def map_draw_gridlines(ax, linewidth=1, color='black', alpha=0.5, 
+                       linestyle='--', draw_labels=True,
+                       gridlines=None):
+    gl = ax.gridlines(linewidth=linewidth, color=color, alpha=alpha, 
+                      linestyle=linestyle, draw_labels=draw_labels)
+    if draw_labels:
+        gl.xlabels_top = gl.ylabels_right = False
+        gl.xformatter = LONGITUDE_FORMATTER
+        gl.yformatter = LATITUDE_FORMATTER
+    if gridlines is not None:
+        yrange,xrange=gridlines
+        gl.xlocator = matplotlib.ticker.FixedLocator(xrange)
+        gl.ylocator = matplotlib.ticker.FixedLocator(yrange)
+
+def map_contourf(extent, data, lat,lon, title="",
+                 cmap=None, clabel="", clevs=None, norm=None, 
+                 cbar=True, cbarform=None, **contourfargs):
+    '''
+    Show topography map matching extents
+    '''
+    
+    cs = plt.contourf(lon,lat,data, levels=clevs, cmap=cmap,norm=norm, **contourfargs)
+    cb = None
+    
+    # set x and y limits to match extent
+    xlims = extent[0:2] # East to West
+    ylims = extent[2:] # South to North
+    plt.ylim(ylims); plt.xlim(xlims)
+    if cbar:
+        cb=plt.colorbar(label=clabel, format=cbarform, pad=0.01)
+    plt.title(title)
+    ## Turn off the tick values
+    plt.xticks([]); plt.yticks([])
+    return cs, cb
+
+def map_fire(ff,lats,lons):
+    """   """
+    # only plot if there is fire
+    if np.sum(ff<0) > 0:
+        plt.contour(lons,lats,np.transpose(ff),np.array([0]), colors='red')
+
+def map_tiff(locname='waroona', fig=None, subplot_row_col_n=[1,1,1],
+             extent=None, show_grid=False, add_locations=False):
+    """
+    satellite image from gsky downloaded into data folder, 
+    used as background for figures
+    
+    ARGUMENTS:
+        locname: { 'waroona' | 'sirivan' }
+            which tiff are we using
+        fig: matplotlib pyplot figure (default=[1,1,1])
+            can add map to an already created figure object
+        subplot_row_col_n: [row,col,n] (optional)
+            subplot axes to create and add map to
+        extent: [lon0, lon1, lat0, lat1]
+            where is projection zoomed in to
+        show_grid: {True|False}
+            show lats and lons around map
+        add_locations: {True|False}
+            show nice text and markers for main points of interest
+    """
+    gdal.UseExceptions()
+    
+    path_to_tiff = "data/Waroona_Landsat_8_2015.tiff"
+    locationstrs = ['waroona','yarloop','wagerup']
+    
+    if locname=='sirivan':
+        path_to_tiff = "data/Sirivan_Landsat_8_2016.tiff"
+        locationstrs=['dunedoo','cassillis']
+    
+    # units are degrees latitude and longitude, so platecarree should work...
+    projection = ccrs.PlateCarree()
+    
+    # gdal dataset
+    ds = gdal.Open(path_to_tiff)
+    # ndarray of 3 channel raster (?) [3, 565, 1024]
+    data = ds.ReadAsArray()
+    # np.sum(data<0) # 9 are less than 0
+    data[data<0] = 0
+    # 3 dim array of red green blue values (I'm unsure on what scale)
+    R,G,B = data[0], data[1], data[2]
+    # set them to a float array from 0 to 1.0
+    scaled0 = np.array([R/np.max(R), G/np.max(G), B/np.max(B)])
+    # image is too dark
+    # gain=.3 and bias=.2 to increase contrast and brightness
+    scaled = scaled0*1.3 + 0.1
+    scaled[scaled>1] = 1.0
+    # geotransform for tiff coords (?)
+    gt = ds.GetGeoTransform()
+    # extent = lon0, lon1, lat0, lat1
+    fullextent = (gt[0], gt[0] + ds.RasterXSize * gt[1],
+                  gt[3] + ds.RasterYSize * gt[5], gt[3])
+    
+    ## Third: the figure
+    if fig is None:
+        fig = plt.figure(figsize=(13, 9))
+    #subplot_kw = dict(projection=projection)
+    
+    # create plot axes
+    nrows, ncols, n = subplot_row_col_n
+    ax = fig.add_subplot(nrows, ncols, n, projection=projection)
+    
+    ax.imshow(scaled[:3, :, :].transpose((1, 2, 0)), 
+              extent=fullextent,
+              origin='upper')
+    
+    if extent is not None:
+        ax.set_extent(extent)
+        
+    if show_grid:
+        gl = ax.gridlines(crs=ccrs.PlateCarree(), draw_labels=True,
+                          linewidth=2, color='gray', alpha=0.35, linestyle='--')
+        gl.xlabels_top = False
+        gl.ylabels_left = False
+        #gl.xlines = False
+    if add_locations:
+        fireloc=_latlons_['fire_'+locname]
+        locations=[_latlons_[locstr] for locstr in locationstrs]
+        map_add_nice_text(ax, locations,
+                          [str.capitalize(locstr) for locstr in locationstrs],
+                          fontsizes=14)
+        map_add_nice_text(ax, [fireloc], texts=[''], markers=['*'], markercolors=['r'])
+        
+    return fig, ax, projection
+
+
+def map_quiver(u, v, lats, lons, nquivers=13, **quiver_kwargs):
+    """
+    wrapper for nice quiver overlay on a lat/lon map
+    """
+    # just want a fixed number of quivers
+    nlats, nlons = u.shape
+    latinds = np.round(np.linspace(0,nlats-1,nquivers)).astype(np.int)
+    loninds = np.round(np.linspace(0,nlons-1,nquivers)).astype(np.int)
+    u0 = u[latinds,:]
+    u0 = u0[:,loninds]
+    v0 = v[latinds,:]
+    v0 = v0[:,loninds]
+    
+    ## Default quiver scale:
+    if 'scale' not in quiver_kwargs:
+        quiver_kwargs['scale'] = 85
+        
+    ## Default quiver pivot:
+    if 'pivot' not in quiver_kwargs:
+        quiver_kwargs['pivot'] = 'middle'
+    
+    #s=np.sqrt(u0**2 + v0**2)
+    
+    ## colour the arrows
+    # map wind speed to colour map domain [0, 1]
+    #norm = col.Normalize()
+    #norm.autoscale(s)
+    #plt.get_cmap(_cmaps_['windspeed'])
+    plt.quiver(lons[loninds], lats[latinds], u0, v0, **quiver_kwargs)
+
+def map_satellite(extent = _extents_['waroona'], 
+                  fig=None, subplot_row_col_n=None,
+                  subplot_extent=None,
+                  show_name=True, name_size=10):
+    '''
+    Originally this used an API to pull some satellite imagery
+    this proved unworkable through various bom and nci firewalls
+    now this points to the tiff method
+    '''
+    locname='waroona'
+    if extent[0] > 130:
+        locname='sirivan'
+        
+    return map_tiff(locname, fig=fig, subplot_row_col_n=subplot_row_col_n,
+                    extent=subplot_extent)
+
+def map_add_nice_text(ax, latlons, texts=None, markers=None, 
+                      fontsizes=12, fontcolors='wheat', 
+                      markercolors='grey', markersizes=None,
+                      outlinecolors='k'):
+    '''
+    ARGUMENTS:
+        ax: plot axis
+        latlons: iterable of (lat, lon) pairs
+        texts: iterable of strings, optional
+        markers: iterable of characters, optional
+    '''
+    ## Adding to a map using latlons can use the geodetic transform
+    geodetic_CRS = ccrs.Geodetic()
+    
+    # Make everything iterable
+    if texts is None:
+        texts = ''*len(latlons)
+    if markers is None:
+        markers = 'o'*len(latlons)
+    if isinstance(fontsizes, (int,float)):
+        fontsizes = [fontsizes]*len(latlons)
+    if (markersizes is None) or (isinstance(markersizes, (int,float))):
+        markersizes = [markersizes]*len(latlons)
+    if isinstance(fontcolors, str):
+        fontcolors = [fontcolors]*len(latlons)
+    if isinstance(markercolors, str):
+        markercolors = [markercolors]*len(latlons)
+    if isinstance(outlinecolors, str):
+        outlinecolors = [outlinecolors]*len(latlons)
+
+    
+    
+    # add points from arguments:
+    for (lat, lon), text, marker, mcolor, msize, fcolor, fsize, outlinecolor in zip(latlons, texts, markers, markercolors, markersizes, fontcolors, fontsizes, outlinecolors):
+        
+        # outline for text/markers
+        marker_effects=[patheffects.Stroke(linewidth=5, foreground=outlinecolor), patheffects.Normal()]
+        text_effects = [patheffects.withStroke(linewidth=3, foreground=outlinecolor)]
+        
+        # Add the point to the map with patheffect
+        ax.plot(lon, lat, color=mcolor, linewidth=0, marker=marker, markersize=msize,
+                transform=geodetic_CRS,
+                path_effects=marker_effects)
+        
+        if len(text)>0:
+            # Add text to map
+            txt = ax.text(lon, lat, text, fontsize=fsize, color=fcolor,
+                          transform=geodetic_CRS)
+            # Add background (outline)
+            txt.set_path_effects(text_effects)
+    
+def map_topography(extent, topog,lat,lon,title="Topography", cbar=True):
+    '''
+    Show topography map matching extents
+    '''
+    # push blue water part of scale a bit lower
+    clevs = np.linspace(-150,550,50,endpoint=True)
+    # sir ivan fire is at higher altitudes
+    if extent[0] > 140:
+        clevs = np.linspace(100,800,50,endpoint=True)
+    cmaptr=plt.cm.get_cmap("terrain")
+    return map_contourf(extent, topog, lat, lon, 
+                        title=title, clevs=clevs, cmap=cmaptr, 
+                        clabel="m", cbar=cbar, cbarform=tick.ScalarFormatter())
+
+def scale_bar(ax, proj, length, location=(0.5, 0.05), linewidth=3,
+              units='km', m_per_unit=1000):
+    """
+    http://stackoverflow.com/a/35705477/1072212
+    ax is the axes to draw the scalebar on.
+    proj is the projection the axes are in
+    location is center of the scalebar in axis coordinates ie. 0.5 is the middle of the plot
+    length is the length of the scalebar in km.
+    linewidth is the thickness of the scalebar.
+    units is the name of the unit
+    m_per_unit is the number of meters in a unit
+    """
+    # find lat/lon center to find best UTM zone
+    x0, x1, y0, y1 = ax.get_extent(proj.as_geodetic())
+    #x0, x1, y0, y1 = ax.get_extent(proj)
+    # Projection in metres
+    utm = cartopy.crs.UTM(utm_from_lon((x0+x1)/2))
+    # Get the extent of the plotted area in coordinates in metres
+    x0, x1, y0, y1 = ax.get_extent(utm)
+    # Turn the specified scalebar location into coordinates in metres
+    sbcx, sbcy = x0 + (x1 - x0) * location[0], y0 + (y1 - y0) * location[1]
+    # Generate the x coordinate for the ends of the scalebar
+    bar_xs = [sbcx - length * m_per_unit/2, sbcx + length * m_per_unit/2]
+    # buffer for scalebar
+    buffer = [patheffects.withStroke(linewidth=5, foreground="w")]
+    # Plot the scalebar with buffer
+    ax.plot(bar_xs, [sbcy, sbcy], transform=utm, color='k',
+        linewidth=linewidth, path_effects=buffer)
+    # buffer for text
+    buffer = [patheffects.withStroke(linewidth=3, foreground="w")]
+    # Plot the scalebar label
+    t0 = ax.text(sbcx, sbcy, str(length) + ' ' + units, transform=utm,
+        horizontalalignment='center', verticalalignment='bottom',
+        path_effects=buffer, zorder=2)
+    left = x0+(x1-x0)*0.05
+    # Plot the N arrow
+    #t1 = ax.text(left, sbcy, u'\u25B2\nN', transform=utm,
+    #    horizontalalignment='center', verticalalignment='bottom',
+    #    path_effects=buffer, zorder=2)
+    # Plot the scalebar without buffer, in case covered by text buffer
+    ax.plot(bar_xs, [sbcy, sbcy], transform=utm, color='k',
+        linewidth=linewidth, zorder=3)
+
 def transect(data, z, lat, lon, start, end, npoints=100, 
              topog=None, latt=None, lont=None, ztop=4000,
              title="", ax=None, colorbar=True,
@@ -325,309 +637,7 @@ def transect_ticks_labels(start,end):
   xticks = (0.0,0.5,1.0)
   fmt = '{:.1f}S {:.1f}E'
   xlabels = (fmt.format(-lat1,lon1),fmt.format(-0.5*(lat1+lat2),0.5*(lon1+lon2)),fmt.format(-lat2,lon2))
-  return xticks,xlabels
-
-
-def map_add_locations(namelist, text=None, proj=None,
-                      marker='o', color='grey', markersize=None, 
-                      textcolor='k',
-                      dx=.025,dy=.015):
-    '''
-    input is list of names to be added to a map using the lat lons in _latlons_
-    '''
-    for i,name in enumerate(namelist):
-        y,x=_latlons_[name]
-        # maybe want special text
-        if text is not None:
-            name = text[i]
-        # dx,dy can be scalar or list
-        dxi,dyi = dx,dy
-        if isinstance(dx, (list,tuple,np.ndarray)):
-            dxi,dyi = dx[i], dy[i]
-
-        # Add marker and text
-        if proj is None:
-            plt.plot(x,y,  color=color, linewidth=0, 
-                     marker=marker, markersize=None)
-            plt.text(x+dxi, y+dyi, name, color=textcolor,
-                     horizontalalignment='right')
-        else:
-            plt.plot(x,y,  color=color, linewidth=0, 
-                     marker=marker, markersize=None, transform=proj)
-            plt.text(x+dxi, y+dyi, name, color=textcolor,
-                     horizontalalignment='right',
-                     transform=proj)
-        
-
-
-def map_google(extent,zoom=10,fig=None,subplot_row_col_n=None, 
-               subplot_extent=None, draw_gridlines=True,gridlines=None):
-    '''
-    Draw a map with google image tiles over given EWSN extent
-    if this will be part of a larger figure, subplot_row_col_n=[3,3,4] will put it there
-    to define where gridlines go, put gridlines = [lats,lons] 
-    return figure, axis, projection
-    '''
-    # Request map from google
-    request = cimgt.GoogleTiles()
-    gproj=request.crs
-    # Use projection to set up plot
-    if fig is None:
-        fig = plt.figure()
-    
-    if subplot_extent is not None:
-        ax = fig.add_axes(subplot_extent, projection=gproj)
-    elif subplot_row_col_n is not None:
-        nrows,ncols,n= subplot_row_col_n
-        ax = fig.add_subplot(nrows,ncols,n, projection=gproj)
-    else:
-        ax = fig.add_subplot(1,1,1, projection=gproj)
-
-    if draw_gridlines:
-        map_draw_gridlines(ax, gridlines=gridlines)
-
-    # Where are we looking
-    ax.set_extent(extent)
-    # default interpolation ruins location names
-    ax.add_image(request, zoom, interpolation='spline36') 
-    return fig, ax, gproj
-
-def map_draw_gridlines(ax, linewidth=1, color='black', alpha=0.5, 
-                       linestyle='--', draw_labels=True,
-                       gridlines=None):
-    gl = ax.gridlines(linewidth=linewidth, color=color, alpha=alpha, 
-                      linestyle=linestyle, draw_labels=draw_labels)
-    if draw_labels:
-        gl.xlabels_top = gl.ylabels_right = False
-        gl.xformatter = LONGITUDE_FORMATTER
-        gl.yformatter = LATITUDE_FORMATTER
-    if gridlines is not None:
-        yrange,xrange=gridlines
-        gl.xlocator = matplotlib.ticker.FixedLocator(xrange)
-        gl.ylocator = matplotlib.ticker.FixedLocator(yrange)
-
-def map_contourf(extent, data, lat,lon, title="",
-                 cmap=None, clabel="", clevs=None, norm=None, 
-                 cbar=True, cbarform=None, **contourfargs):
-    '''
-    Show topography map matching extents
-    '''
-    
-    cs = plt.contourf(lon,lat,data, levels=clevs, cmap=cmap,norm=norm, **contourfargs)
-    cb = None
-    
-    # set x and y limits to match extent
-    xlims = extent[0:2] # East to West
-    ylims = extent[2:] # South to North
-    plt.ylim(ylims); plt.xlim(xlims)
-    if cbar:
-        cb=plt.colorbar(label=clabel, format=cbarform, pad=0.01)
-    plt.title(title)
-    ## Turn off the tick values
-    plt.xticks([]); plt.yticks([])
-    return cs, cb
-
-def map_fire(ff,lats,lons):
-    """   """
-    # only plot if there is fire
-    if np.sum(ff<0) > 0:
-        plt.contour(lons,lats,np.transpose(ff),np.array([0]), colors='red')
-
-def map_tiff(locname='waroona', fig=None, subplot_row_col_n=[1,1,1],
-             extent=None, show_grid=False, add_locations=False):
-    """
-    satellite image from gsky downloaded into data folder, 
-    used as background for figures
-    
-    ARGUMENTS:
-        locname: { 'waroona' | 'sirivan' }
-            which tiff are we using
-        fig: matplotlib pyplot figure (default=[1,1,1])
-            can add map to an already created figure object
-        subplot_row_col_n: [row,col,n] (optional)
-            subplot axes to create and add map to
-        extent: [lon0, lon1, lat0, lat1]
-            where is projection zoomed in to
-        show_grid: {True|False}
-            show lats and lons around map
-        add_locations: {True|False}
-            show nice text and markers for main points of interest
-    """
-    gdal.UseExceptions()
-    
-    path_to_tiff = "data/Waroona_Landsat_8_2015.tiff"
-    locationstrs = ['waroona','yarloop','wagerup']
-    
-    if locname=='sirivan':
-        path_to_tiff = "data/Sirivan_Landsat_8_2016.tiff"
-        locationstrs=['dunedoo','cassillis']
-    
-    # units are degrees latitude and longitude, so platecarree should work...
-    projection = ccrs.PlateCarree()
-    
-    # gdal dataset
-    ds = gdal.Open(path_to_tiff)
-    # ndarray of 3 channel raster (?) [3, 565, 1024]
-    data = ds.ReadAsArray()
-    # np.sum(data<0) # 9 are less than 0
-    data[data<0] = 0
-    # 3 dim array of red green blue values (I'm unsure on what scale)
-    R,G,B = data[0], data[1], data[2]
-    # set them to a float array from 0 to 1.0
-    scaled0 = np.array([R/np.max(R), G/np.max(G), B/np.max(B)])
-    # image is too dark
-    # gain=.3 and bias=.2 to increase contrast and brightness
-    scaled = scaled0*1.3 + 0.1
-    scaled[scaled>1] = 1.0
-    # geotransform for tiff coords (?)
-    gt = ds.GetGeoTransform()
-    # extent = lon0, lon1, lat0, lat1
-    fullextent = (gt[0], gt[0] + ds.RasterXSize * gt[1],
-                  gt[3] + ds.RasterYSize * gt[5], gt[3])
-    
-    ## Third: the figure
-    if fig is None:
-        fig = plt.figure(figsize=(13, 9))
-    #subplot_kw = dict(projection=projection)
-    
-    # create plot axes
-    nrows, ncols, n = subplot_row_col_n
-    ax = fig.add_subplot(nrows, ncols, n, projection=projection)
-    
-    ax.imshow(scaled[:3, :, :].transpose((1, 2, 0)), 
-              extent=fullextent,
-              origin='upper')
-    
-    if extent is not None:
-        ax.set_extent(extent)
-        
-    if show_grid:
-        gl = ax.gridlines(crs=ccrs.PlateCarree(), draw_labels=True,
-                          linewidth=2, color='gray', alpha=0.35, linestyle='--')
-        gl.xlabels_top = False
-        gl.ylabels_left = False
-        #gl.xlines = False
-    if add_locations:
-        fireloc=_latlons_['fire_'+locname]
-        locations=[_latlons_[locstr] for locstr in locationstrs]
-        map_add_nice_text(ax, locations,
-                          [str.capitalize(locstr) for locstr in locationstrs],
-                          fontsizes=14)
-        map_add_nice_text(ax, [fireloc], texts=[''], markers=['*'], markercolors=['r'])
-        
-    return fig, ax, projection
-
-
-def map_quiver(u, v, lats, lons, nquivers=13, **quiver_kwargs):
-    """
-    """
-    # just want a fixed number of quivers
-    nlats, nlons = u.shape
-    latinds = np.round(np.linspace(0,nlats-1,nquivers)).astype(np.int)
-    loninds = np.round(np.linspace(0,nlons-1,nquivers)).astype(np.int)
-    u0 = u[latinds,:]
-    u0 = u0[:,loninds]
-    v0 = v[latinds,:]
-    v0 = v0[:,loninds]
-    
-    ## Default quiver scale:
-    if 'scale' not in quiver_kwargs:
-        quiver_kwargs['scale'] = 85
-        
-    ## Default quiver pivot:
-    if 'pivot' not in quiver_kwargs:
-        quiver_kwargs['pivot'] = 'middle'
-    
-    #s=np.sqrt(u0**2 + v0**2)
-    
-    ## colour the arrows
-    # map wind speed to colour map domain [0, 1]
-    #norm = col.Normalize()
-    #norm.autoscale(s)
-    #plt.get_cmap(_cmaps_['windspeed'])
-    plt.quiver(lons[loninds], lats[latinds], u0, v0, **quiver_kwargs)
-
-def map_satellite(extent = _extents_['waroona'], 
-                  fig=None, subplot_row_col_n=None,
-                  subplot_extent=None,
-                  show_name=True, name_size=10):
-    '''
-    Originally this used an API to pull some satellite imagery
-    this proved unworkable through various bom and nci firewalls
-    now this points to the tiff method
-    '''
-    locname='waroona'
-    if extent[0] > 130:
-        locname='sirivan'
-        
-    return map_tiff(locname, fig=fig, subplot_row_col_n=subplot_row_col_n,
-                    extent=subplot_extent)
-
-def map_add_nice_text(ax, latlons, texts=None, markers=None, 
-                      fontsizes=12, fontcolors='wheat', 
-                      markercolors='grey', markersizes=None,
-                      outlinecolors='k'):
-    '''
-    ARGUMENTS:
-        ax: plot axis
-        latlons: iterable of (lat, lon) pairs
-        texts: iterable of strings, optional
-        markers: iterable of characters, optional
-    '''
-    ## Adding to a map using latlons can use the geodetic transform
-    geodetic_CRS = ccrs.Geodetic()
-    
-    # Make everything iterable
-    if texts is None:
-        texts = ''*len(latlons)
-    if markers is None:
-        markers = 'o'*len(latlons)
-    if isinstance(fontsizes, (int,float)):
-        fontsizes = [fontsizes]*len(latlons)
-    if (markersizes is None) or (isinstance(markersizes, (int,float))):
-        markersizes = [markersizes]*len(latlons)
-    if isinstance(fontcolors, str):
-        fontcolors = [fontcolors]*len(latlons)
-    if isinstance(markercolors, str):
-        markercolors = [markercolors]*len(latlons)
-    if isinstance(outlinecolors, str):
-        outlinecolors = [outlinecolors]*len(latlons)
-
-    
-    
-    # add points from arguments:
-    for (lat, lon), text, marker, mcolor, msize, fcolor, fsize, outlinecolor in zip(latlons, texts, markers, markercolors, markersizes, fontcolors, fontsizes, outlinecolors):
-        
-        # outline for text/markers
-        marker_effects=[patheffects.Stroke(linewidth=5, foreground=outlinecolor), patheffects.Normal()]
-        text_effects = [patheffects.withStroke(linewidth=3, foreground=outlinecolor)]
-        
-        # Add the point to the map with patheffect
-        ax.plot(lon, lat, color=mcolor, linewidth=0, marker=marker, markersize=msize,
-                transform=geodetic_CRS,
-                path_effects=marker_effects)
-        
-        if len(text)>0:
-            # Add text to map
-            txt = ax.text(lon, lat, text, fontsize=fsize, color=fcolor,
-                          transform=geodetic_CRS)
-            # Add background (outline)
-            txt.set_path_effects(text_effects)
-    
-def map_topography(extent, topog,lat,lon,title="Topography", cbar=True):
-    '''
-    Show topography map matching extents
-    '''
-    # push blue water part of scale a bit lower
-    clevs = np.linspace(-150,550,50,endpoint=True)
-    # sir ivan fire is at higher altitudes
-    if extent[0] > 140:
-        clevs = np.linspace(100,800,50,endpoint=True)
-    cmaptr=plt.cm.get_cmap("terrain")
-    return map_contourf(extent, topog, lat, lon, 
-                        title=title, clevs=clevs, cmap=cmaptr, 
-                        clabel="m", cbar=cbar, cbarform=tick.ScalarFormatter())
-    
+  return xticks,xlabels    
 
 def utm_from_lon(lon):
     """
@@ -641,45 +651,4 @@ def utm_from_lon(lon):
     """
     return np.floor( ( lon + 180 ) / 6) + 1
 
-def scale_bar(ax, proj, length, location=(0.5, 0.05), linewidth=3,
-              units='km', m_per_unit=1000):
-    """
-    http://stackoverflow.com/a/35705477/1072212
-    ax is the axes to draw the scalebar on.
-    proj is the projection the axes are in
-    location is center of the scalebar in axis coordinates ie. 0.5 is the middle of the plot
-    length is the length of the scalebar in km.
-    linewidth is the thickness of the scalebar.
-    units is the name of the unit
-    m_per_unit is the number of meters in a unit
-    """
-    # find lat/lon center to find best UTM zone
-    x0, x1, y0, y1 = ax.get_extent(proj.as_geodetic())
-    #x0, x1, y0, y1 = ax.get_extent(proj)
-    # Projection in metres
-    utm = cartopy.crs.UTM(utm_from_lon((x0+x1)/2))
-    # Get the extent of the plotted area in coordinates in metres
-    x0, x1, y0, y1 = ax.get_extent(utm)
-    # Turn the specified scalebar location into coordinates in metres
-    sbcx, sbcy = x0 + (x1 - x0) * location[0], y0 + (y1 - y0) * location[1]
-    # Generate the x coordinate for the ends of the scalebar
-    bar_xs = [sbcx - length * m_per_unit/2, sbcx + length * m_per_unit/2]
-    # buffer for scalebar
-    buffer = [patheffects.withStroke(linewidth=5, foreground="w")]
-    # Plot the scalebar with buffer
-    ax.plot(bar_xs, [sbcy, sbcy], transform=utm, color='k',
-        linewidth=linewidth, path_effects=buffer)
-    # buffer for text
-    buffer = [patheffects.withStroke(linewidth=3, foreground="w")]
-    # Plot the scalebar label
-    t0 = ax.text(sbcx, sbcy, str(length) + ' ' + units, transform=utm,
-        horizontalalignment='center', verticalalignment='bottom',
-        path_effects=buffer, zorder=2)
-    left = x0+(x1-x0)*0.05
-    # Plot the N arrow
-    #t1 = ax.text(left, sbcy, u'\u25B2\nN', transform=utm,
-    #    horizontalalignment='center', verticalalignment='bottom',
-    #    path_effects=buffer, zorder=2)
-    # Plot the scalebar without buffer, in case covered by text buffer
-    ax.plot(bar_xs, [sbcy, sbcy], transform=utm, color='k',
-        linewidth=linewidth, zorder=3)
+

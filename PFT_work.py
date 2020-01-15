@@ -236,6 +236,7 @@ def PFT_from_cubelist(cubes0, latlon=None, tskip=None, latskip=None, lonskip=Non
 
 def PFT_map(PFT,plats,plons,colorbar=True, lines=[100]):
     """
+    Plot top-down map of PFT with contour and optional colour bar
     """
     cnorm = colors.SymLogNorm(1,vmin=0,vmax=1000)
     levs = np.union1d([0],np.logspace(0,3,20))

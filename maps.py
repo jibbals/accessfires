@@ -71,11 +71,7 @@ def outline_waroona():
                                       extent=extent, #fig=fig,
                                       subplot_row_col_n=[2,1,1],
                                       show_grid=False, add_locations=True)
-    #    fig,ax,proj=plotting.map_google(extent,
-    #                                    zoom=6,
-    #                                    subplot_row_col_n=[2,1,1],
-    #                                    gridlines=[np.arange(-51,-10,2),
-    #                                               np.arange(100,150,4)])
+    
     # add coastline
     ax.coastlines()
     plt.title("Waroona synoptic")
@@ -101,8 +97,6 @@ def outline_waroona():
     plotting.scale_bar(ax,proj,100, location=scaleloc)
     
     ## Look at waroona and yarloop
-    #_,ax2,gproj = plotting.map_google(inner, zoom=10, fig=fig,
-    #                                  subplot_row_col_n=[2,2,3], draw_gridlines=False)
     _, ax2, proj2 = plotting.map_tiff(locname='waroona',
                                       extent=inner, fig=fig,
                                       subplot_row_col_n=[2,2,3],
@@ -117,7 +111,6 @@ def outline_waroona():
     plotting.map_topography(inner, topog, latt, lont)
     
     fio.save_fig_to_path("figures/waroona_outline.png",plt,dpi=300)
-
 
 def show_nests(model_run='waroona_run1', annotate_res=True, title=''):
     """
@@ -136,8 +129,6 @@ def show_nests(model_run='waroona_run1', annotate_res=True, title=''):
                                       show_grid=True, 
                                       add_locations=False)
     
-    # Where are we looking
-    #ax.set_extent(aust)
     # add coastline, stock img (tiff is currently just for zoomed in stuff)
     ax.coastlines()
     ax.stock_img()
