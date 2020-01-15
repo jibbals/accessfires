@@ -29,9 +29,11 @@ import cartopy.crs as ccrs
 import cartopy.feature as cfeature
 import cartopy
 
+ff, = fio.read_fire('waroona_run2', extent=plotting._extents_['waroonaz'])
+print(ff[-1])
 
-
-
+cs=plt.contourf(ff[-1].data.T)
+plt.colorbar(cs)
 
 #####
 ## Attempt a widget

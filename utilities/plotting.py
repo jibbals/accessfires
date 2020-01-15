@@ -164,7 +164,7 @@ def transect(data, z, lat, lon, start, end, npoints=100,
              topog=None, latt=None, lont=None, ztop=4000,
              title="", ax=None, colorbar=True,
              cmap=None, norm=None, cbarform=None,
-             contours=None,lines=None):
+             contours=None,lines=None, ff=None):
     '''
     Draw cross section
         data is 3d
@@ -212,6 +212,24 @@ def transect(data, z, lat, lon, start, end, npoints=100,
     if topog is not None:
         plt.fill_between(xaxis,slicetopog,interpolate=True,facecolor='black')
     
+    # put it red where the fire is burnt
+    if ff is not None:
+        ffslice = utils.cross_section(ff, lat, lon, start, end, 
+                                      npoints=npoints)
+        
+        # 0.003 is pretty near the fire front
+        if not np.all(ffslice>=0.003):
+            ffslice[ffslice>=0.003] = np.NaN
+            plt.fill_between(xaxis, ffslice, interpolate=False, facecolor='orange')
+        # 0 is the front
+        if not np.all(ffslice>=0.0005):
+            ffslice[ffslice>=0.0005] = np.NaN
+            plt.fill_between(xaxis, ffslice, interpolate=False, facecolor='red')
+        # -ve is behind the front
+        if not np.all(ffslice>=0):
+            ffslice[ffslice>0]=np.NaN
+            plt.fill_between(xaxis, ffslice, interpolate=False, facecolor='purple')
+    
     if ztop != None:
         plt.ylim(0,ztop)
     
@@ -222,7 +240,7 @@ def transect(data, z, lat, lon, start, end, npoints=100,
     return slicedata, slicex, slicez
 
 def transect_s(s, z, lat, lon, start, end, npoints=100, 
-               topog=None, latt=None, lont=None, ztop=4000,
+               topog=None, ff=None, latt=None, lont=None, ztop=4000,
                title="Wind speed (m/s)", ax=None, colorbar=True,
                cmap=_cmaps_['windspeed'], norm=None, cbarform=None,
                contours=np.arange(0,25,2.5),lines=np.arange(0,25,2.5)):
@@ -240,13 +258,13 @@ def transect_s(s, z, lat, lon, start, end, npoints=100,
     
     # call transect using some defaults for potential temperature
     return transect(s,z,lat,lon,start,end,npoints=npoints,
-                    topog=topog, latt=latt, lont=lont, ztop=ztop,
+                    topog=topog, ff=ff, latt=latt, lont=lont, ztop=ztop,
                     title=title, ax=ax, colorbar=colorbar,
                     cmap=cmap, norm=norm, cbarform=cbarform,
                     contours=contours,lines=lines)
 
 def transect_theta(theta, z, lat, lon, start, end, npoints=100, 
-                   topog=None, latt=None, lont=None, ztop=4000,
+                   topog=None, ff=None, latt=None, lont=None, ztop=4000,
                    title="$T_{\\theta}$ (K)", ax=None, colorbar=True,
                    cmap=_cmaps_['th'], norm=col.SymLogNorm(300),
                    cbarform=tick.ScalarFormatter(),
@@ -263,13 +281,13 @@ def transect_theta(theta, z, lat, lon, start, end, npoints=100,
     '''
     # call transect using some defaults for potential temperature
     return transect(theta,z,lat,lon,start,end,npoints=npoints,
-                    topog=topog, latt=latt, lont=lont, ztop=ztop,
+                    topog=topog, ff=ff, latt=latt, lont=lont, ztop=ztop,
                     title=title, ax=ax, colorbar=colorbar,
                     cmap=cmap, norm=norm, cbarform=cbarform,
                     contours=contours,lines=lines)
 
 def transect_w(w, z, lat, lon, start, end, npoints=100, 
-               topog=None, latt=None, lont=None, ztop=4000,
+               topog=None, ff=None, latt=None, lont=None, ztop=4000,
                title="Vertical motion (m/s)", ax=None, colorbar=True,
                cmap=_cmaps_['verticalvelocity'] , norm=col.SymLogNorm(0.25), 
                cbarform=tick.ScalarFormatter(),
@@ -288,13 +306,13 @@ def transect_w(w, z, lat, lon, start, end, npoints=100,
     #        cmap.set_over('k')
     # call transect using some defaults for vertical velocity w
     return transect(w, z,lat,lon,start,end,npoints=npoints,
-                    topog=topog, latt=latt, lont=lont, ztop=ztop,
+                    topog=topog, ff=ff, latt=latt, lont=lont, ztop=ztop,
                     title=title, ax=ax, colorbar=colorbar,
                     cmap=cmap, norm=norm, cbarform=cbarform,
                     contours=contours,lines=lines)
 
 def transect_qc(qc, z, lat, lon, start, end, npoints=100, 
-               topog=None, latt=None, lont=None, ztop=4000,
+               topog=None, ff=None, latt=None, lont=None, ztop=4000,
                title="Water and ice (g/kg air)", ax=None, colorbar=True,
                cmap=_cmaps_['qc'] , norm=col.SymLogNorm(0.02), cbarform=tick.ScalarFormatter(),
                contours=np.arange(0.0,0.4,0.01),
@@ -310,7 +328,7 @@ def transect_qc(qc, z, lat, lon, start, end, npoints=100,
     
     # call transect using some defaults for vertical velocity w
     return transect(qc, z,lat,lon,start,end,npoints=npoints,
-                    topog=topog, latt=latt, lont=lont, ztop=ztop,
+                    topog=topog, ff=ff, latt=latt, lont=lont, ztop=ztop,
                     title=title, ax=ax, colorbar=colorbar,
                     cmap=cmap, norm=norm, cbarform=cbarform,
                     contours=contours,lines=lines)

@@ -91,8 +91,8 @@ def emberstorm(theta, u, v, w, z, topog,
     # horizontal points
     npoints = 100
     plt.sca(axes[1])
-    plotting.transect_theta(theta,z,lat,lon,start,end,npoints=npoints,topog=topog,
-                            ztop=ztop,
+    plotting.transect_theta(theta,z,lat,lon,start,end,npoints=npoints,
+                            topog=topog, ff=ff, ztop=ztop,
                             cmap='gist_rainbow',
                             contours=np.arange(290,330.1,0.5),
                             lines=np.arange(290,331,2))
