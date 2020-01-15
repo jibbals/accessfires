@@ -340,7 +340,7 @@ if __name__=='__main__':
     d0,dN = datetime(2016,1,4,10), datetime(2016,1,7,10)
     summary_wagerup(d0,dN,UTC=False)
     
-    for mr in ['waroona_run1','waroona_old']:
+    for mr in ['waroona_run2','waroona_run1','waroona_old']:
         for UTC in [False]:
             compare_site_to_model(AWS='wagerup',
                                   model_run=mr,

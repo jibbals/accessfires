@@ -164,4 +164,4 @@ if __name__ == '__main__':
     
     print("INFO: testing cloud_outline.py")
     
-    [ make_plots_emberstorm(mr) for mr in ['waroona_run1','waroona_old'] ]
+    [ make_plots_emberstorm(mr) for mr in ['waroona_run2','waroona_run1','waroona_old'] ]
