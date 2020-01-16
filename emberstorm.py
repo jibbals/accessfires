@@ -33,7 +33,7 @@ def emberstorm(theta, u, v, w, z, topog,
                ff=None,
                nquivers=15,
                quiverscale=60,
-               ztop=1000,
+               ztop=700,
                transect=plotting._transects_['emberstorm1']):
     '''
     311: contours map, overset with surface wind vectors and transect line
@@ -59,11 +59,7 @@ def emberstorm(theta, u, v, w, z, topog,
     
     # Add fire front contour
     if ff is not None:
-        with warnings.catch_warnings():
-            # ignore warning when there are no fires:
-            warnings.simplefilter('ignore')
-            plt.contour(lon,lat,np.transpose(ff),np.array([0]), 
-                        colors='red')
+        plotting.map_fire(ff.T,lat,lon)
     
     start, end = transect
     # start to end x=[lon0,lon1], y=[lat0, lat1]
@@ -72,50 +68,48 @@ def emberstorm(theta, u, v, w, z, topog,
              marker='>', markersize=7, markerfacecolor='white')
     
     # add nearby towns
-    plotting.map_add_locations(['waroona'],text=['Waroona'], textcolor='k', 
-                               marker='o', color='grey', markersize=4)
-    plotting.map_add_locations(['fire_waroona'],text=[''], 
+    plotting.map_add_locations(['waroona'], text=['Waroona'], color='grey',
+                               marker='o', markersize=4)
+    plotting.map_add_locations(['fire_waroona'], text=[''], 
                                marker='*', color='r')
 
     # Quiver, reduce arrow density
-    vsu = len(lon)//nquivers
-    vsv = len(lat)//nquivers
-    skip = (slice(None,None,vsv),slice(None,None,vsu))
-    
-    # wind vectors quiver
-    plt.quiver(lon[skip[1]],lat[skip[0]],u[0][skip],v[0][skip], 
-               scale=quiverscale, pivot='middle')
+    plotting.map_quiver(u[0],v[0],lat,lon,nquivers=nquivers,
+                        scale=quiverscale, pivot='middle')
     
     ## Subplot 2, transect of potential temp
     # only looking up to 1km
     # horizontal points
     npoints = 100
     plt.sca(axes[1])
-    plotting.transect_theta(theta,z,lat,lon,start,end,npoints=npoints,
+    plotting.transect_theta(theta, z, lat, lon, start, end, npoints=npoints,
                             topog=topog, ff=ff, ztop=ztop,
-                            cmap='gist_rainbow',
-                            contours=np.arange(290,330.1,0.5),
-                            lines=np.arange(290,331,2))
+                            contours=np.arange(290,320.1,0.5),
+                            lines=None, #np.arange(290,321,2), 
+                            linestyles='dashed')
     
+    ## Next plot
     plt.sca(axes[2])
-    
-    _,xslice,zslice = plotting.transect_w(w,z,lat,lon,start,end,npoints=npoints,topog=topog,
+    _,xslice,zslice = plotting.transect_w(w,z,lat,lon,start,end,
+                                          npoints=npoints,topog=topog, ff=ff,
                                           ztop=ztop)
     # add horizontal winds
     uslice = utils.cross_section(u,lat,lon,start,end,npoints=npoints)
-    vslice = utils.cross_section(v,lat,lon,start,end,npoints=npoints)
+    #vslice = utils.cross_section(v,lat,lon,start,end,npoints=npoints)
+    wslice = utils.cross_section(w,lat,lon,start,end,npoints=npoints)
     
-    #vskip = slice(None,None,np.shape(z)[0]//14) # just leave around 14 vertical 
-    #print("DEBUG: horizontal slice shapes",np.shape(uslice),np.shape(vslice), np.shape(xslice), np.shape(zslice))
-    # want twice as many quivers (vertically) for this very zoomed in slice
-    nz,_ = np.shape(uslice)
-    skip = (slice(None,None,nz//(nquivers*2)),slice(None,None,npoints//nquivers))
-    plt.quiver(xslice[skip], zslice[skip], uslice[skip], vslice[skip], 
-               scale=quiverscale*4, alpha = 0.5, pivot='middle')
+    # lets cut away the upper levels before making our quiver
+    ztopirows, ztopicols = np.where(zslice < ztop) # index rows and columns
+    ztopi = np.max(ztopirows) # highest index with height below ztop
+    
+    plotting.map_quiver(uslice[:ztopi+4,:], wslice[:ztopi+4,:], 
+                        zslice[:ztopi+4,0], xslice[0], 
+                        nquivers=nquivers, scale=quiverscale*4,
+                        alpha=0.5, pivot='middle')
     
     return fig, axes
     
-def make_plots_emberstorm(model_run='waroona_run1'):
+def make_plots_emberstorm(model_run='waroona_run1', hours=None):
     """
     run emberstorm plotting method on model output read by my iris fio scripts
     """
@@ -126,6 +120,8 @@ def make_plots_emberstorm(model_run='waroona_run1'):
     lon = topog.coord('longitude').points
     # Read model run
     umdtimes = fio.model_outputs[model_run]['filedates']
+    if hours is not None:
+        umdtimes=hours
     # read one model file at a time
     for umdtime in umdtimes:
         cubelist = fio.read_model_run(model_run, 
@@ -149,10 +145,10 @@ def make_plots_emberstorm(model_run='waroona_run1'):
                 u,v,w = uvw[0][i], uvw[1][i], uvw[2][i]
                 ffi=None
                 if ff is not None:
-                    ffi = ff[i].data
+                    ffi = ff[i].data.T # fire needs to be transposed...
                 #print("DEBUG:",[np.shape(arr) for arr in [theta, u, v, w, z, topog, ff, lat, lon]])
                 emberstorm(theta[i].data,u.data,v.data,w.data,z.data,topog.data,
-                           lat,lon,ff=ffi, transect=transect)
+                           lat, lon, ff=ffi, transect=transect)
                 
                 # Save figure into folder with numeric identifier
                 stitle="Emberstorm %s"%utcstamp
@@ -161,7 +157,7 @@ def make_plots_emberstorm(model_run='waroona_run1'):
                              plt=plt, subdir='transect%d'%transecti)
 
 if __name__ == '__main__':
-    
-    print("INFO: testing cloud_outline.py")
-    
-    [ make_plots_emberstorm(mr) for mr in ['waroona_run1','waroona_old'] ]
+        
+    mr = 'waroona_run2'
+    hours=fio.model_outputs[mr]['filedates'][-4:]
+    make_plots_emberstorm(mr, hours=hours)

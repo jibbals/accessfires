@@ -3,6 +3,7 @@
 """
 Created on Mon Aug 26 20:45:05 2019
     Winds outline script
+        Transect views of horizontal and vertical winds
 @author: jesse
 """
 
@@ -175,6 +176,9 @@ def wind_outline(s,u,v,w,
     return plt
 
 def outline_model_winds(model_run='sirivan_run1', hours=None, dpi=200):
+    """
+    Run wind_outline for one output file from a chosen 'model_run'
+    """
     
     extentname=model_run.split('_')[0]
     extent=plotting._extents_[extentname]
@@ -223,12 +227,10 @@ def outline_model_winds(model_run='sirivan_run1', hours=None, dpi=200):
 
 
 if __name__ == '__main__':
-    Testing = False
-    allmr = ['sirivan_run1', 'waroona_old', 'waroona_run1']
-    for mr in ['waroona_run1','waroona_old']:
+    
+    allmr = fio.model_outputs.keys()
+    for mr in allmr:
         hours = fio.model_outputs[mr]['filedates']
-        if Testing:
-            hours=hours[:2]
         for hour in hours:
             print("info: wind_outline", mr, hour)
             outline_model_winds(mr, hours=[hour])

@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 """
 Created on Tue Aug 27 11:09:54 2019
-    Zoom in on ember storm over waroona fire
+    Zoom in on pyrocb
     Plot:
-        311: mean vert windspeed between 500m and 1500m (?)
+        311: top-down view with transect[s] plotted as lines
         312: vert motion transect along emberstorm
         313: vert motion transect along emberstormx (roughly perp to emberstorm)
 
