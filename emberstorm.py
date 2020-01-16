@@ -158,11 +158,13 @@ def make_plots_emberstorm(model_run='waroona_run1', hours=None):
                 # Save figure into folder with numeric identifier
                 stitle="Emberstorm %s"%utcstamp
                 plt.suptitle(stitle)
+                distance=utils.distance_between_points(transect[0],transect[1])
+                plt.xlabel("%.1fkm transect"%(distance/1e3))
                 fio.save_fig(model_run=model_run, script_name=_sn_, pname=dtime, 
                              plt=plt, subdir='transect%d'%transecti)
 
 if __name__ == '__main__':
     plotting.init_plots()
     mr = 'waroona_run2'
-    hours=fio.model_outputs[mr]['filedates'][-6:]
+    hours=fio.model_outputs[mr]['filedates']#[-6:] # can just do last 6 hours
     make_plots_emberstorm(mr, hours=hours)

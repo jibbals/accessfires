@@ -17,6 +17,23 @@ import iris
 # more print statements for testing
 __VERBOSE__=False
 
+def distance_between_points(latlon0,latlon1):
+    """
+    return distance between lat0,lon0 and lat1,lon1
+    
+    calculated using haversine formula, shortest path on a great-circle
+     - see https://www.movable-type.co.uk/scripts/latlong.html
+    """
+    R = 6371e3 # metres (earth radius)
+    lat0, lon0 = latlon0
+    lat1, lon1 = latlon1
+    latr0 = np.deg2rad(lat0)
+    latr1 = np.deg2rad(lat1)
+    dlatr = np.deg2rad(lat1-lat0)
+    dlonr = np.deg2rad(lon1-lon0)
+    a = np.sin(dlatr/2.0)**2 + np.cos(latr0)*np.cos(latr1)*(np.sin(dlonr/2.0)**2)
+    c = 2*np.arctan2(np.sqrt(a),np.sqrt(1-a))
+    return R*c
 
 def cross_section(data,lats,lons,start,end,npoints=None):
   '''
