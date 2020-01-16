@@ -9,14 +9,13 @@ Created on Fri Dec 20 15:45:40 2019
 """
 
 import matplotlib
-#matplotlib.use("Agg",warn=False)
+matplotlib.use("Agg",warn=False)
 
 from matplotlib import colors, ticker
 
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.lines import Line2D
-import warnings
 from datetime import datetime
 from scipy.stats import gaussian_kde, cumfreq
 
@@ -241,6 +240,17 @@ def compare_clouds(mr1='waroona_run2', mr2='waroona_run2uc',
     Plot top-down view of cloud content within summed vertical bins
         also show distributions
     """
+    # x axis for qc-max density
+    colormax=0.4
+    xs = np.linspace(0,colormax,200)
+    ## Colourmap setup for contourf plots
+    # linear between 0 and 0.01
+    # log between 0.01 and 0.3
+    logmax=np.log(colormax)/np.log(10)-0.01
+    cmap=plotting._cmaps_['qc']
+    norm=colors.SymLogNorm(0.01, vmin=0,vmax=colormax)
+    clevs=np.union1d(np.union1d(np.logspace(-2,logmax,30),0),colormax) 
+    
     extentname = mr1.split('_')[0]
     extent = plotting._extents_[extentname]
     
@@ -258,16 +268,8 @@ def compare_clouds(mr1='waroona_run2', mr2='waroona_run2uc',
     ff1, = fio.read_fire(mr1,dtimes=dates,extent=extent,firefront=True)
     ff2, = fio.read_fire(mr2,dtimes=dates,extent=extent,firefront=True)
     
-    # density plot arguments
+    # density plot bandwidth
     bandwidth=1
-    # x axis for qc-sum density
-    xs = np.linspace(0,.2,200)
-    
-    ## Colourmap setup for contourf plots
-    # log scale between 0 and 0.2
-    cmap=plotting._cmaps_['qc']
-    norm=colors.SymLogNorm(0.001, vmin=0,vmax=.2)
-    clevs=np.union1d(np.union1d(np.logspace(-3,-.699,30),0),0.2) 
     
     # make 4 vertical bins
     row1 = (2000<=height) * (height<3000)

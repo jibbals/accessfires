@@ -329,7 +329,20 @@ def map_quiver(u, v, lats, lons, nquivers=13, **quiver_kwargs):
     u0 = u0[:,loninds]
     v0 = v[latinds,:]
     v0 = v0[:,loninds]
-    
+    # subset lats and lons
+    if len(np.shape(lats))==1:
+        sublats=lats[latinds]
+        sublons=lons[loninds]
+    # maybe we want to use 2D lats/lons
+    elif len(np.shape(lats))==2:
+        sublats=lats[latinds,:]
+        sublats=sublats[:,loninds]
+        sublons = lons[latinds,:]
+        sublons = sublons[:,loninds]
+    else:
+        print("ERROR: Why are the lats 3 dimensional?")
+        assert False
+        
     ## Default quiver scale:
     if 'scale' not in quiver_kwargs:
         quiver_kwargs['scale'] = 85
@@ -338,7 +351,7 @@ def map_quiver(u, v, lats, lons, nquivers=13, **quiver_kwargs):
     if 'pivot' not in quiver_kwargs:
         quiver_kwargs['pivot'] = 'middle'
     
-    plt.quiver(lons[loninds], lats[latinds], u0, v0, **quiver_kwargs)
+    plt.quiver(sublons, sublats, u0, v0, **quiver_kwargs)
 
 def map_satellite(extent = _extents_['waroona'], 
                   fig=None, subplot_row_col_n=None,
@@ -480,6 +493,12 @@ def transect(data, z, lat, lon, start, end, npoints=100,
     ## Default contourfargs
     if 'extend' not in contourfargs:
         contourfargs['extend'] = 'max'
+    
+    ## Check that z includes topography
+    if np.any(z[0]<topog):
+        print("ERROR:",np.mean(z[0]), np.min(z[0]), "(mean,lowest z) is lower than topog", np.mean(topog), np.min(topog))
+        print("ERROR:", "Try adding topog to each level of z")
+        assert False
         
     # Potential temperature
     slicedata  = utils.cross_section(data,lat,lon,start,end,npoints=npoints)
@@ -518,7 +537,7 @@ def transect(data, z, lat, lon, start, end, npoints=100,
     
     # make sure land is obvious
     if topog is not None:
-        plt.fill_between(xaxis,slicetopog,interpolate=True,facecolor='black')
+        plt.fill_between(xaxis,slicetopog,interpolate=True,facecolor='darkgrey')
     
     # put it red where the fire is burnt
     if ff is not None:
@@ -526,21 +545,26 @@ def transect(data, z, lat, lon, start, end, npoints=100,
                                       npoints=npoints)
         burnt = np.copy(slicetopog)
         interp=False
+        # 0.005 is close enough?
+        if not np.all(ffslice>=0.005):
+            burnt[ffslice>=0.005] = np.NaN
+            plt.fill_between(xaxis, burnt, interpolate=interp, 
+                             facecolor='yellow', zorder=1)
         # 0.003 is pretty near the fire front
         if not np.all(ffslice>=0.003):
             burnt[ffslice>=0.003] = np.NaN
             plt.fill_between(xaxis, burnt, interpolate=interp, 
-                             facecolor='orange', zorder=1)
+                             facecolor='orange', zorder=2)
         # 0 is the front
-        if not np.all(ffslice>=0.0005):
-            burnt[ffslice>=0.0005] = np.NaN
+        if not np.all(ffslice>=0.001):
+            burnt[ffslice>=0.001] = np.NaN
             plt.fill_between(xaxis, burnt, interpolate=interp, 
-                             facecolor='red', zorder=2)
+                             facecolor='red', zorder=3)
         # -ve is behind the front
         if not np.all(ffslice>=0):
             burnt[ffslice>0]=np.NaN
             plt.fill_between(xaxis, burnt, interpolate=interp, 
-                             facecolor='purple', zorder=3)
+                             facecolor='saddlebrown', zorder=4)
     
     if ztop != None:
         plt.ylim(0,ztop)

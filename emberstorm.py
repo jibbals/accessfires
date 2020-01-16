@@ -75,18 +75,22 @@ def emberstorm(theta, u, v, w, z, topog,
 
     # Quiver, reduce arrow density
     plotting.map_quiver(u[0],v[0],lat,lon,nquivers=nquivers,
-                        scale=quiverscale, pivot='middle')
+                        pivot='middle', scale=quiverscale)
     
     ## Subplot 2, transect of potential temp
     # only looking up to 1km
     # horizontal points
     npoints = 100
     plt.sca(axes[1])
-    plotting.transect_theta(theta, z, lat, lon, start, end, npoints=npoints,
-                            topog=topog, ff=ff, ztop=ztop,
-                            contours=np.arange(290,320.1,0.5),
-                            lines=None, #np.arange(290,321,2), 
-                            linestyles='dashed')
+    trets = plotting.transect_theta(theta, z, lat, lon, start, end, npoints=npoints,
+                                    topog=topog, ff=ff, ztop=ztop,
+                                    contours=np.arange(290,320.1,0.5),
+                                    lines=None, #np.arange(290,321,2), 
+                                    linestyles='dashed')
+    # add faint lines for visibility
+    thetaslice,xslice,zslice=trets
+    plt.contour(xslice,zslice,thetaslice,np.arange(290,320.1,1),colors='k',
+                alpha=0.5, linestyles='dashed', linewidths=0.5)
     
     ## Next plot
     plt.sca(axes[2])
@@ -102,9 +106,10 @@ def emberstorm(theta, u, v, w, z, topog,
     ztopirows, ztopicols = np.where(zslice < ztop) # index rows and columns
     ztopi = np.max(ztopirows) # highest index with height below ztop
     
+    # quiver east-west and vertical winds
     plotting.map_quiver(uslice[:ztopi+4,:], wslice[:ztopi+4,:], 
-                        zslice[:ztopi+4,0], xslice[0], 
-                        nquivers=nquivers, scale=quiverscale*4,
+                        zslice[:ztopi+4,:], xslice[:ztopi+4,:], 
+                        nquivers=nquivers, scale=quiverscale*3,
                         alpha=0.5, pivot='middle')
     
     return fig, axes
@@ -157,7 +162,7 @@ def make_plots_emberstorm(model_run='waroona_run1', hours=None):
                              plt=plt, subdir='transect%d'%transecti)
 
 if __name__ == '__main__':
-        
+    plotting.init_plots()
     mr = 'waroona_run2'
-    hours=fio.model_outputs[mr]['filedates'][-4:]
+    hours=fio.model_outputs[mr]['filedates'][-6:]
     make_plots_emberstorm(mr, hours=hours)
