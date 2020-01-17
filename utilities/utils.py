@@ -90,16 +90,6 @@ def cross_section(data,lats,lons,start,end,npoints=None):
   
   return np.squeeze(slicedata)
 
-def nearest_date_index(date, dates, allowed_seconds=120):
-    """
-    Return date index that is within allowewd_seconds of date
-    """
-    # Need to use total seconds, close negative time deltas have -1 day + ~80k seconds
-    secs_diff = np.abs([ tdelta.total_seconds() for tdelta in (np.array(dates) - date)])
-    ind = np.argmin(secs_diff)
-    assert secs_diff[ind] <= allowed_seconds, "%s not within %d seconds of %s ... %s. \n "%(date.strftime("%Y%m%d-%H:%M"), allowed_seconds, dates[0].strftime("%Y%m%d-%H:%M"), dates[-1].strftime("%Y%m%d-%H:%M")) + str(dates[:])
-    return ind
-    
 
 def date_index(date,dates, dn=None, ignore_hours=False):
     new_date=date
@@ -171,6 +161,27 @@ def dates_from_iris(timedim, remove_seconds=True):
             dtm[i] = datetime(d.year,d.month, iday, ihour, iminute)
     return dtm
 
+def firepower_from_cube(shcube):
+    """
+    calculate and return firepower over time in GWatts
+    
+    Inputs
+    ======
+        shcube: sensible heat flux in Watts/m2
+    """
+    
+    lon,lat = shcube.coord('longitude'), shcube.coord('latitude')
+    ### get areas in m2
+    # Add boundaries to grid
+    if lat.bounds is None:
+        lat.guess_bounds()
+    if lon.bounds is None:
+        lon.guess_bounds()
+    grid_areas = iris.analysis.cartography.area_weights(shcube)
+
+    firepower = shcube.data.data * grid_areas # W/m2 * m2
+    return firepower/1e9 # Watts to Gigawatts
+
 def lat_lon_index(lat,lon,lats,lons):
     ''' lat,lon index from lats,lons    '''
     with np.errstate(invalid='ignore'):
@@ -178,6 +189,15 @@ def lat_lon_index(lat,lon,lats,lons):
         lonind=(np.abs(lons-lon)).argmin()
     return latind,lonind
 
+def nearest_date_index(date, dates, allowed_seconds=120):
+    """
+    Return date index that is within allowewd_seconds of date
+    """
+    # Need to use total seconds, close negative time deltas have -1 day + ~80k seconds
+    secs_diff = np.abs([ tdelta.total_seconds() for tdelta in (np.array(dates) - date)])
+    ind = np.argmin(secs_diff)
+    assert secs_diff[ind] <= allowed_seconds, "%s not within %d seconds of %s ... %s. \n "%(date.strftime("%Y%m%d-%H:%M"), allowed_seconds, dates[0].strftime("%Y%m%d-%H:%M"), dates[-1].strftime("%Y%m%d-%H:%M")) + str(dates[:])
+    return ind
 
 def relative_humidity_from_specific(qair, temp, press = 1013.25):
     '''

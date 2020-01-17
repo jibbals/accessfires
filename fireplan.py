@@ -6,140 +6,24 @@ Created on Thu Sep 19 16:28:18 2019
 @author: jesse
 """
 
+
 import matplotlib
+matplotlib.use('Agg',warn=False)
 import matplotlib.pyplot as plt
-import matplotlib.dates as mdates
-from matplotlib import patheffects
-from matplotlib import ticker, colors, patches
+from matplotlib import patheffects, colors
 import numpy as np
-from datetime import datetime, timedelta
+
 import iris
 
 from cartopy import crs as ccrs
 
-import PFT_work
 from utilities import plotting, utils, fio
 
 ###
 ## GLOBALS
 ###
 _sn_ = 'fireplan'
-PFT = {'waroona_run1':{'data':np.array([56.5, 42.1, 34.6, 332.6, 53.2]), # manually calculated PFT
-                       'units':'Gigawatts',
-                       'time':np.array([datetime(2016,1,5,15,10),
-                                        datetime(2016,1,6,5,10),
-                                        datetime(2016,1,6,6,10),
-                                        datetime(2016,1,6,8,10),
-                                        datetime(2016,1,6,12,10)]), # calculated at these times in UTC
-                       'latlon':plotting._latlons_['fire_waroona_upwind'], # ~ 1km from fire
-                       'latlon_stamp':'fire_waroona_upwind',
-                       'style':'--',
-                       'color':'k',
-                       },
-       'waroona_old':{'data':np.array([61.4, 67.9, 176.4, 145.7]), # manually calculated PFT
-                      'units':'Gigawatts',
-                      'time':np.array([datetime(2016,1,5,15),
-                                       datetime(2016,1,6,5,1),
-                                       datetime(2016,1,6,6),
-                                       datetime(2016,1,6,8,1),]), # calculated at these times in UTC
-                      'latlon':plotting._latlons_['fire_waroona_upwind'], # ~ 1km from fire
-                      'latlon_stamp':'fire_waroona_upwind',
-                      'style':'--',
-                      'color':'g',
-                       },
-       'sirivan_run1':{'data':None, # manually calculated PFT
-                       'units':'Gigawatts',
-                       'time':None, # calculated at these times in UTC
-                       'latlon':plotting._latlons_['fire_sirivan_upwind'], # ~ 1km from fire
-                       'latlon_stamp':'fire_sirivan_upwind',
-                       'style':'--',
-                       'color':'k',
-                       },
-      }
 
-## Calculations for PFT:
-
-## 201601060600OLD: q_ML=8.5, th_ML=34, z_fc=680mbar=3.5km, dth=6, U=8m/s :: PFT = .3*3.5**2*6*8 = 176.4 GW
-## 201601060800OLD: q_ML=8, th_ML=35, z_fc=685mbar=3.4km, dth=4, U=10.5 :: PFT = .3*3.4**2*4*10.5 = 145.7 GW
-
-## 201601060810RUN1: q_ML=8, th_ML=35.5, z_fc=690mbar=3.33km, dth=2, U=8 :: PFT = .3*3.33**2*2*8 = 53.2 GW
-
-## 201601051500OLD: q_ML=8  , th_ML=35C, star_SP=(10  , 55C), z_fc=690mbar=3.24km, dth=1.5, U=13m/s ::: PFT = .3*3.24**2*1.5*13 = 61.4GW
-## 201601060501OLD: q_ML=9  , th_ML=34C, star_SP=(11  , 54C), z_fc=710mbar=3.07km, dth=4.0, U= 6m/s ::: PFT = .3*3.07**2*4*6 = 67.9GW
-## 201601051510NEW: q_ML=8  , th_ML=35C, star_SP=(10  , 55C), z_fc=710mbar=3.07km, dth=2.0, U=10m/s ::: PFT = .3*3.07**2*2*10 = 56.5GW
-
-## 201601061210NEW: q_ML=7.2, th_ML=35.5, z_fc = 695mbar=4km, dth=4.5, U=15.4m/s ::: PFt = .3*4**2*4.5*15.4 = 332.6GW
-
-
-
-def firepower_from_cube(shcube):
-    """
-    calculate and return firepower over time in GWatts
-    
-    Inputs
-    ======
-        shcube: sensible heat flux in Watts/m2
-    """
-    
-    lon,lat = shcube.coord('longitude'), shcube.coord('latitude')
-    ### get areas in m2
-    # Add boundaries to grid
-    if lat.bounds is None:
-        lat.guess_bounds()
-    if lon.bounds is None:
-        lon.guess_bounds()
-    grid_areas = iris.analysis.cartography.area_weights(shcube)
-
-    firepower = shcube.data.data * grid_areas # W/m2 * m2
-    return firepower/1e9 # Watts to Gigawatts
-
-def pft_altitude_vs_pressure(model_run='waroona_run1', latlon=plotting._latlons_['fire_waroona_upwind'],
-                             mbar_to_watch=700, datetimes=[datetime(2016,1,5,15)]):
-    """
-    Retrieve altitudes around 800-600 mbar over a specific lat lon over time.
-    This is to calculate z_fc for manual PFT calculation
-    """
-    ## First read the hourly z and
-    extent = plotting._extents_[model_run.split('_')[0]]
-    cubes = fio.read_model_run(model_run, fdtime=datetimes, extent=extent, add_topog=False,add_z=True)
-    z,p = cubes.extract(['z_th','air_pressure'])
-    p.convert_units('mbar')
-    z.convert_units('km')
-    cubetimes=utils.dates_from_iris(p)
-    dstamp = cubetimes[0].strftime("%b %d %H:%M(UTC)")
-
-    # pull out latlon that we are watching:
-    lat,lon = latlon
-    z0 = z.interpolate([('longitude',lon),('latitude',lat)],
-                           iris.analysis.Linear())
-    p0 = p.interpolate([('longitude',lon),('latitude',lat)],
-                           iris.analysis.Linear())
-    nt,nz = p0.shape
-
-    z0,p0 = z0.data.data, p0.data.data
-
-    pind = np.zeros(nt,dtype=np.int)
-    # where is p0 closest to our watched pressure?
-    for i in range(nt):
-        pind[i] = np.argmin(np.abs(p0[i] - mbar_to_watch))
-    # plot example scatter and z_fc grab
-
-    plt.subplot(2,1,1)
-    plt.scatter(p0[0], z0)
-    plt.xlim([1000,500])
-    plt.ylim([0,7])
-    plt.xlabel('pressure [mbar]')
-    plt.ylabel('altitude [km]')
-    plt.plot([mbar_to_watch,mbar_to_watch],[0, z0[pind[0]]], color='red')
-    plt.plot([1000, mbar_to_watch],[z0[pind[0]], z0[pind[0]]], color='red', label='closest to %d mbar'%mbar_to_watch)
-    plt.legend(loc='best')
-    plt.title('EG finding z$_{fc}$ at %s'%dstamp )
-
-
-    plt.subplot(2,1,2)
-    plt.plot_date(cubetimes,z0[pind])
-    plt.title("z$_{fc}$",y=0.73)
-    plt.ylabel('altitude [km]')
 
 def fireplan(ff, fire_contour_map = 'autumn',
              show_cbar=True, cbar_XYWH= [0.65, 0.63, .2, .02],
@@ -290,67 +174,6 @@ def fireplan_summary(model_run='waroona_run1'):
     plt.yticks([],[])
     
     fio.save_fig(model_run, _sn_, 'fire_spread', plt)
-
-
-def firepower_comparison(runs=['waroona_run1','waroona_old','waroona_run2'], localtime=False):
-    """
-    Plot overlaid time series of two model runs fire power from integral of intensity
-    """
-    lat,lon = PFT[runs[0]]['latlon']
-    fpextent = plotting._extents_[runs[0].split('_')[0]+'z']
-    pftextent = [lon-.01, lon+.01, lat-.01, lat+.01]
-    offset = timedelta(hours=8)
-    if lon > 130:
-        offset = timedelta(hours=10)
-    plt.figure(figsize=[10,5]) # time series
-    
-    labels = runs
-    #labels = ['new','orig'] # just for poster
-    
-    for i,run in enumerate(runs):
-        # read all the fire data
-        sh, = fio.read_fire(model_run=run, dtimes=None,
-                            extent=fpextent, firefront=False, sensibleheat=True)
-        
-        ftimes = utils.dates_from_iris(sh)
-        if localtime:
-            ftimes = np.array([ft + offset for ft in ftimes ])
-        firepower = np.sum(firepower_from_cube(sh), axis=(1,2)) # over time
-        
-        # remove zeros:
-        prefire = np.isclose(np.cumsum(firepower), 0)
-        firepower[prefire] = np.NaN
-        
-        # Plot firepower
-        plt.plot_date(ftimes, firepower, '-'+PFT[run]['color'], \
-                      label=labels[i])
-        
-        # also PFT values:
-        linestyle = PFT[run]['style']+PFT[run]['color']
-        # calculate using kevin's code
-        cubes = fio.read_model_run(run, extent=pftextent,
-                                   add_theta=True, add_winds=True, add_RH=True, 
-                                   add_z=True, add_topog=True)
-        
-        utimes = utils.dates_from_iris(cubes.extract('u')[0])
-        if localtime:
-            utimes = np.array([ut + offset for ut in utimes ])
-        
-        pft = PFT_work.PFT_from_cubelist(cubes,latlon=[lat,lon])
-        plt.plot_date(utimes, pft, linestyle, label='PFT '+labels[i])
-    
-    # fix up labels, axes
-    plt.legend(loc='best')
-    # ylabel and units
-    plt.ylabel('Gigawatts')
-    plt.title('Firepower')
-    # format ticks
-    #plt.xticks(hours[::4]) # just show one tick per 4 hours
-    ax = plt.gca()
-    ax.xaxis.set_major_locator(mdates.HourLocator(interval=4)) # every 4 hours
-    ax.xaxis.set_minor_locator(mdates.HourLocator())
-    ax.xaxis.set_major_formatter(mdates.DateFormatter("%H:%M"))
-    fio.save_fig(run, _sn_, 'firepower_comparison.png',plt)
     
 
 if __name__=='__main__':
@@ -366,12 +189,6 @@ if __name__=='__main__':
     # first plot just the fireplan on it's own
     fig,ax,proj = fireplan(ff, show_cbar=True, cbar_XYWH=[.18,.24,.2,.02])
     fio.save_fig('sirivan_run1', _sn_, 'fireplan.png', plt)
-    ## create firepower time series
-    #firepower_comparison(runs=['waroona_run1'])
-    #firepower_comparison(runs=['waroona_old'])
-    #firepower_comparison(runs=['waroona_run1','waroona_old'])
-    
-    #firepower_comparison(runs=['sirivan_run1'])
     
     ## run fireplan and summary for all runs
     #for mr in ['waroona_run2','sirivan_run1','waroona_run1','waroona_old']:
