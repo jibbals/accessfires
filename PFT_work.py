@@ -457,10 +457,7 @@ def model_run_PFT_summary(model_run='waroona_run1', hour=datetime(2016,1,5,15)):
         plotting.map_add_locations_extent(extentname,hide_text=False)
         # add fire front
         if ff is not None:
-            with warnings.catch_warnings():
-                # ignore warning when there are no fires:
-                warnings.simplefilter('ignore')
-                plt.contour(lons,lats,np.transpose(ff[i].data),np.array([0]), colors='red')
+            plotting.map_fire(ff[i].data,lats,lons)
         
         # add scale
         #plotting.scale_bar(plt.gca(), cartopy.crs.PlateCarree(),10)
@@ -483,8 +480,12 @@ if __name__ == '__main__':
     ## test method
     #model_run_PFT_summary()
     
-    firepower_comparison(runs=['waroona_old','waroona_run1'])
+    ## Compare firepower/PFT for some runs
+    #firepower_comparison(runs=['waroona_old','waroona_run1'])
     
+    ## Summary figure for PFT at a site for one output hour
+    dtimes = fio.model_outputs['waroona_old']['filedates']
+    model_run_PFT_summary(model_run='waroona_old', hour=dtimes[0])
     
     #run_everything=True
     #if run_everything:
