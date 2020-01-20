@@ -128,7 +128,7 @@ if __name__ == '__main__':
     
     mr = 'waroona_run2'
     hours = fio.model_outputs[mr]['filedates']
-    for hour in hours[0:3]:
+    for hour in hours:
         vert_motion_hour(dtime=hour, model_run=mr)
     print("INFO: vert_motion_slices done")
     

@@ -402,8 +402,10 @@ def PFT_map(PFT,plats,plons,colorbar=True, lines=[100]):
     """
     cnorm = colors.SymLogNorm(1,vmin=0,vmax=1000)
     levs = np.union1d([0],np.logspace(0,3,20))
-    
-    cs = plt.contourf(plons,plats,PFT, levs, 
+    # remove negatives before plotting log scale (or else warnings apear)
+    PFT_pos = np.copy(PFT)
+    PFT_pos[PFT_pos<=0] = np.NaN
+    cs = plt.contourf(plons,plats,PFT_pos, levs, 
                       norm=cnorm,
                       locator=ticker.LogLocator(),
                       cmap="YlOrRd_r")
@@ -477,20 +479,15 @@ def model_run_PFT_summary(model_run='waroona_run1', hour=datetime(2016,1,5,15)):
 
 if __name__ == '__main__':
     
-    ## test method
-    #model_run_PFT_summary()
-    
     ## Compare firepower/PFT for some runs
     #firepower_comparison(runs=['waroona_old','waroona_run1'])
     
     ## Summary figure for PFT at a site for one output hour
-    dtimes = fio.model_outputs['waroona_old']['filedates']
-    model_run_PFT_summary(model_run='waroona_old', hour=dtimes[0])
+    #dtimes = fio.model_outputs['waroona_old']['filedates']
+    #model_run_PFT_summary(model_run='waroona_old', hour=dtimes[0])
     
-    #run_everything=True
-    #if run_everything:
-    #    for mr in ['waroona_run2','waroona_run2uc']:#['sirivan_run1','waroona_run1','waroona_old']:
-    #        dtimes = fio.model_outputs[mr]['filedates']
-    #        for dtime in dtimes:
-    #            model_run_PFT_summary(model_run=mr, hour=dtime)
+    for mr in ['waroona_run2','waroona_run2uc','waroona_run1','waroona_old']:
+        dtimes = fio.model_outputs[mr]['filedates']
+        for dtime in dtimes:
+            model_run_PFT_summary(model_run=mr, hour=dtime)
     

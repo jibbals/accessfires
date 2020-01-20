@@ -241,7 +241,7 @@ def compare_clouds(mr1='waroona_run2', mr2='waroona_run2uc',
         also show distributions
     """
     # x axis for qc-max density
-    colormax=0.4
+    colormax=0.5
     xs = np.linspace(0,colormax,200)
     ## Colourmap setup for contourf plots
     # linear between 0 and 0.01
@@ -350,12 +350,12 @@ def compare_clouds(mr1='waroona_run2', mr2='waroona_run2uc',
 
             
         ## Add colourbar
-        cbar_ax = fig.add_axes([0.35, 0.37, 0.31, 0.01])# X Y Width Height
+        cbar_ax = fig.add_axes([0.35, 0.367, 0.31, 0.01])# X Y Width Height
         cbar=fig.colorbar(img, cax=cbar_ax, format=ticker.ScalarFormatter(), 
                           pad=0, orientation='horizontal')
-        cbar.set_ticks([0,0.003,0.01,0.1,0.2])
-        cbar.set_ticklabels([0,0.003,0.01,0.1,0.2])
-        plt.suptitle(date.strftime("Cloud content %Y%m%d %H:%M(UTC)"),
+        cbar.set_ticks([0,0.01,0.05,0.1,0.2,0.4])
+        cbar.set_ticklabels([0,0.01,0.05,0.1,0.2,0.4])
+        plt.suptitle(date.strftime("Max cloud content:  %Y%m%d %H:%M(UTC)"),
                      fontsize=20)
         fio.save_fig(mr1, _sn_, date, plt, subdir='clouds')
 
