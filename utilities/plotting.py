@@ -98,10 +98,6 @@ _transects_['waroona4'] = [-32.92   , __x0__], [-32.82   , __x1__]
 _transects_['waroona5'] = [-32.96   , __x0__], [-32.85   , __x1__] 
 _transects_['waroona6'] = [-32.87   , __x0__], [-32.89   , __x1__]
 
-_transects_['emberstorm1'] = [-32.87, __x0__+.07], [-32.87, __x0__+.2] # emberstorm 
-_transects_['emberstorm2'] = [-32.86, __x0__+.03], [-32.86, __x0__+.15] # north of emberstorm
-_transects_['emberstorm3'] = [-32.88, __x0__], [-32.88, __x0__+.17] # south of emberstorm
-
 # looking at sir ivan
 #_extents_['sirivan']    = [149.2, 150.4, -32.4, -31.6]
 _transects_['sirivan1'] = [-32.05, 149.4  ], [-32.0  , 150.3 ]

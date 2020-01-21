@@ -23,6 +23,12 @@ from utilities import plotting, utils, fio
 ###
 _sn_ = 'emberstorm'
 
+# transects for emberstorm plots: [lat0,lon0, lat1,lon1]
+x0,x1 = 115.07, 115.2
+y0=-32.87
+_transects_ = [ [[y,x0],[y,x1]] for y in [y0, y0+0.006, y0-0.006, y0+0.015, 
+                                      y0-0.015, y0+0.03, y0-0.03] ]
+
 ###
 ## METHODS
 ###
@@ -31,10 +37,12 @@ _sn_ = 'emberstorm'
 def emberstorm(theta, u, v, w, z, topog,
                lat, lon,
                ff=None,
+               wmap=None,
                nquivers=15,
                quiverscale=60,
                ztop=700,
-               transect=plotting._transects_['emberstorm1']):
+               transect=_transects_[0],
+               shadows=None):
     '''
     311: contours map, overset with surface wind vectors and transect line
     312: potential temperature (theta) cross section
@@ -46,6 +54,9 @@ def emberstorm(theta, u, v, w, z, topog,
         topog: array[lat,lon] - surface altitude over lat, lon dim
         lat,lon: 1d arrays
         ff: array[lat,lon] - fire front
+        wmap: array[lat,lon] - optional additional vertical motion map to be put on top of topography
+        transect: [lat0,lon0],[lat1,lon1] - for transect that will be shown
+        shadows: [transects] - faint transects to add to topography (for style)
     '''
     extent = [lon[0],lon[-1],lat[0],lat[-1]]
     
@@ -54,8 +65,6 @@ def emberstorm(theta, u, v, w, z, topog,
     plt.sca(axes[0])
     ## First plot, topography
     cs,cb = plotting.map_topography(extent,topog,lat,lon,title="")
-    # set colorbar ticks to scalars..
-    #tick.ScalarFormatter()
     
     # Add fire front contour
     if ff is not None:
@@ -67,6 +76,11 @@ def emberstorm(theta, u, v, w, z, topog,
              linewidth=2, 
              marker='>', markersize=7, markerfacecolor='white')
     
+    # Add faint dashed lines where other transects will be 
+    if shadows is not None:
+        for shade0,shade1 in shadows:
+            plt.plot(shade0, shade1, '--b', alpha=0.6)
+    
     # add nearby towns
     plotting.map_add_locations(['waroona'], text=['Waroona'], color='grey',
                                marker='o', markersize=4)
@@ -74,9 +88,20 @@ def emberstorm(theta, u, v, w, z, topog,
                                marker='*', color='r')
 
     # Quiver, reduce arrow density
-    plotting.map_quiver(u[0],v[0],lat,lon,nquivers=nquivers,
+    plotting.map_quiver(u[0],v[0],lat,lon,nquivers=nquivers, alpha=0.7,
                         pivot='middle', scale=quiverscale)
     
+    # Finally add some faint pink or green hatching based on vertical wind motion
+    if wmap is not None:
+        plt.contourf(lon,lat,wmap,levels=[-2,0,2], colors=['aquamarine','k','pink'],
+                     hatches=['.',None,'.'])
+        plt.contour(lon,lat,wmap, levels=[-5,-2,-1,0,1,2,5], 
+                    colors=['aquamarine']*3+['k']+['pink']*3)
+    # cut down to desired extent
+    plt.ylim(extent[2:]); plt.xlim(extent[0:2])
+    
+    ## Turn off the tick values
+    plt.xticks([]); plt.yticks([])
     ## Subplot 2, transect of potential temp
     # only looking up to 1km
     # horizontal points
@@ -145,26 +170,39 @@ def make_plots_emberstorm(model_run='waroona_run1', hours=None):
         z, = cubelist.extract(['z_th']) # z has no time dim
         # for each time slice pull out potential temp, winds
         for i,dtime in enumerate(dtimes):
-            for transecti, transect in enumerate([plotting._transects_['emberstorm%d'%d] for d in range(1,4)]):
+            for transecti, transect in enumerate(_transects_):
+                # other transects that will be plotted
+                shadows = [tran for trani, tran in enumerate(_transects_) if trani!=transecti]
+                # current time
                 utcstamp = dtime.strftime("%b %H:%M (UTC)")
+                # winds
                 u,v,w = uvw[0][i], uvw[1][i], uvw[2][i]
+                # fire
                 ffi=None
                 if ff is not None:
                     ffi = ff[i].data.T # fire needs to be transposed...
                 #print("DEBUG:",[np.shape(arr) for arr in [theta, u, v, w, z, topog, ff, lat, lon]])
+                # extra vert map at ~ 300m altitude
+                levh  = w.coord('level_height').points
+                levhind = np.sum(levh<300)
                 emberstorm(theta[i].data,u.data,v.data,w.data,z.data,topog.data,
-                           lat, lon, ff=ffi, transect=transect)
+                           lat, lon, ff=ffi, wmap=w[levhind].data, 
+                           transect=transect, shadows=shadows)
                 
                 # Save figure into folder with numeric identifier
                 stitle="Emberstorm %s"%utcstamp
                 plt.suptitle(stitle)
                 distance=utils.distance_between_points(transect[0],transect[1])
-                plt.xlabel("%.1fkm transect"%(distance/1e3))
+                plt.xlabel("%.3fE - %.1fkm - %.3fE, at %.3fS]"%(transect[0][1], 
+                           distance/1e3, transect[1][1], -1*transect[0][0]))
                 fio.save_fig(model_run=model_run, script_name=_sn_, pname=dtime, 
                              plt=plt, subdir='transect%d'%transecti)
 
 if __name__ == '__main__':
     plotting.init_plots()
     mr = 'waroona_run2'
-    hours=fio.model_outputs[mr]['filedates']#[-6:] # can just do last 6 hours
-    make_plots_emberstorm(mr, hours=hours)
+    
+    hours=fio.model_outputs[mr]['filedates']
+    testhours = [hours[0]]
+    
+    make_plots_emberstorm(mr, hours=testhours)
