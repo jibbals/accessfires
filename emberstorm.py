@@ -12,7 +12,6 @@ matplotlib.use('Agg',warn=False)
 # plotting stuff
 import matplotlib.pyplot as plt
 import numpy as np
-
 import warnings
 
 # local modules
@@ -24,10 +23,10 @@ from utilities import plotting, utils, fio
 _sn_ = 'emberstorm'
 
 # transects for emberstorm plots: [lat0,lon0, lat1,lon1]
-x0,x1 = 115.07, 115.2
+x0,x1 = 115.87, 116.02
 y0=-32.87
-_transects_ = [ [[y,x0],[y,x1]] for y in [y0, y0+0.006, y0-0.006, y0+0.015, 
-                                      y0-0.015, y0+0.03, y0-0.03] ]
+yspread = np.array([0, .008, -.008, .02, -.02, .032,-.032])
+_transects_ = [ [[y,x0],[y,x1]] for y in y0+yspread ]
 
 ###
 ## METHODS
@@ -38,6 +37,7 @@ def emberstorm(theta, u, v, w, z, topog,
                lat, lon,
                ff=None,
                wmap=None,
+               wmap_height=None,
                nquivers=15,
                quiverscale=60,
                ztop=700,
@@ -64,13 +64,14 @@ def emberstorm(theta, u, v, w, z, topog,
     fig, axes = plt.subplots(3,1)
     plt.sca(axes[0])
     ## First plot, topography
-    cs,cb = plotting.map_topography(extent,topog,lat,lon,title="")
+    cs,cb = plotting.map_topography(extent,topog,lat,lon,title="Overview")
     
     # Add fire front contour
     if ff is not None:
         plotting.map_fire(ff.T,lat,lon)
     
     start, end = transect
+    
     # start to end x=[lon0,lon1], y=[lat0, lat1]
     plt.plot([start[1],end[1]],[start[0],end[0], ], '--k', 
              linewidth=2, 
@@ -78,8 +79,9 @@ def emberstorm(theta, u, v, w, z, topog,
     
     # Add faint dashed lines where other transects will be 
     if shadows is not None:
-        for shade0,shade1 in shadows:
-            plt.plot(shade0, shade1, '--b', alpha=0.6)
+        for sstart,send in shadows:
+            plt.plot([sstart[1],send[1]],[sstart[0],send[0], ], '--b', 
+                     alpha=0.4, linewidth=1, marker='>', markersize=2)
     
     # add nearby towns
     plotting.map_add_locations(['waroona'], text=['Waroona'], color='grey',
@@ -93,10 +95,22 @@ def emberstorm(theta, u, v, w, z, topog,
     
     # Finally add some faint pink or green hatching based on vertical wind motion
     if wmap is not None:
-        plt.contourf(lon,lat,wmap,levels=[-2,0,2], colors=['aquamarine','k','pink'],
-                     hatches=['.',None,'.'])
-        plt.contour(lon,lat,wmap, levels=[-5,-2,-1,0,1,2,5], 
-                    colors=['aquamarine']*3+['k']+['pink']*3)
+        with warnings.catch_warnings():
+            # ignore warning when there are no contours to plot:
+            warnings.simplefilter('ignore')
+            plt.contour(lon, lat, wmap, levels=[-3,-1], 
+                        linestyles=['solid','dashed'],
+                        colors=('aquamarine',))
+            plt.contour(lon, lat, wmap, levels=[1,3], 
+                        linestyles=['dashed','solid'],
+                        colors=('pink',))
+            #plt.contour(lon,lat,wmap, levels=[-2.1,2.1],
+            #            alpha=0.5,
+            #            colors=['aquamarine','pink'])
+            axes[0].annotate('vertical motion at %dm altitude'%wmap_height, 
+                xy=[0.01,-.04], xycoords='axes fraction', fontsize=8)
+            #axes[0].clabel(cs1, cs1.levels, inline=True, fmt="%.0fm/s", fontsize=6)
+    
     # cut down to desired extent
     plt.ylim(extent[2:]); plt.xlim(extent[0:2])
     
@@ -112,10 +126,15 @@ def emberstorm(theta, u, v, w, z, topog,
                                     contours=np.arange(290,320.1,0.5),
                                     lines=None, #np.arange(290,321,2), 
                                     linestyles='dashed')
-    # add faint lines for visibility
+    # add faint lines for clarity
     thetaslice,xslice,zslice=trets
     plt.contour(xslice,zslice,thetaslice,np.arange(290,320.1,1),colors='k',
                 alpha=0.5, linestyles='dashed', linewidths=0.5)
+    if wmap_height is not None:
+        axes[1].annotate('', xy=(xslice[0,0],wmap_height), 
+            xytext=(xslice[0,5], wmap_height),
+            arrowprops=dict(facecolor='grey', arrowstyle='wedge,tail_width=0.5', alpha=0.5),
+            fontsize=8)
     
     ## Next plot
     plt.sca(axes[2])
@@ -185,24 +204,25 @@ def make_plots_emberstorm(model_run='waroona_run1', hours=None):
                 # extra vert map at ~ 300m altitude
                 levh  = w.coord('level_height').points
                 levhind = np.sum(levh<300)
-                emberstorm(theta[i].data,u.data,v.data,w.data,z.data,topog.data,
-                           lat, lon, ff=ffi, wmap=w[levhind].data, 
+                emberstorm(theta[i].data, u.data, v.data, w.data, z.data,
+                           topog.data, lat, lon, ff=ffi, 
+                           wmap=w[levhind].data, wmap_height=300,
                            transect=transect, shadows=shadows)
                 
                 # Save figure into folder with numeric identifier
                 stitle="Emberstorm %s"%utcstamp
                 plt.suptitle(stitle)
                 distance=utils.distance_between_points(transect[0],transect[1])
-                plt.xlabel("%.3fE - %.1fkm - %.3fE, at %.3fS]"%(transect[0][1], 
-                           distance/1e3, transect[1][1], -1*transect[0][0]))
+                plt.xlabel("%.3fE - %.3fE = %.1fkm (at %.3fS)"%(transect[0][1], 
+                           transect[1][1], distance/1e3, -1*transect[0][0]))
                 fio.save_fig(model_run=model_run, script_name=_sn_, pname=dtime, 
                              plt=plt, subdir='transect%d'%transecti)
 
 if __name__ == '__main__':
     plotting.init_plots()
-    mr = 'waroona_run2'
+    mr = 'waroona_run1'
     
     hours=fio.model_outputs[mr]['filedates']
-    testhours = [hours[0]]
+    testhours = hours[:3]
     
     make_plots_emberstorm(mr, hours=testhours)

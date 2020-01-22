@@ -109,13 +109,13 @@ _transects_['sirivan6'] = [-31.7 , 149.5  ], [-32.1  , 150.3 ]
 
 
 def init_plots():
-    matplotlib.rcParams['font.size'] = 15.0
+    matplotlib.rcParams['font.size'] = 14.0
     matplotlib.rcParams["text.usetex"]      = False     # I forget what this is for, maybe allows latex labels?
     matplotlib.rcParams["legend.numpoints"] = 1         # one point for marker legends
     matplotlib.rcParams["figure.figsize"]   = (9, 7)    # Default figure size
-    matplotlib.rcParams["axes.titlesize"]   = 19        # title font size
-    matplotlib.rcParams["figure.titlesize"] = 21        # figure suptitle size
-    matplotlib.rcParams["axes.labelsize"]   = 15        #
+    matplotlib.rcParams["axes.titlesize"]   = 17        # title font size
+    matplotlib.rcParams["figure.titlesize"] = 20        # figure suptitle size
+    matplotlib.rcParams["axes.labelsize"]   = 14        #
     matplotlib.rcParams["xtick.labelsize"]  = 11        #
     matplotlib.rcParams["ytick.labelsize"]  = 11        #
     matplotlib.rcParams['image.cmap'] = 'plasma'        # Colormap default
