@@ -81,10 +81,10 @@ def emberstorm(theta, u, v, w, z, topog,
     if shadows is not None:
         for sstart,send in shadows:
             plt.plot([sstart[1],send[1]],[sstart[0],send[0], ], '--b', 
-                     alpha=0.4, linewidth=1, marker='>', markersize=2)
+                     alpha=0.3, linewidth=1, marker='>', markersize=2)
     
     # add nearby towns
-    plotting.map_add_locations(['waroona'], text=['Waroona'], color='grey',
+    plotting.map_add_locations(['waroona'], text=[''], color='grey',
                                marker='o', markersize=4)
     plotting.map_add_locations(['fire_waroona'], text=[''], 
                                marker='*', color='r')
@@ -98,8 +98,8 @@ def emberstorm(theta, u, v, w, z, topog,
         with warnings.catch_warnings():
             # ignore warning when there are no contours to plot:
             warnings.simplefilter('ignore')
-            plt.contour(lon, lat, wmap, levels=[-3,-1], 
-                        linestyles=['solid','dashed'],
+            plt.contour(lon, lat, -1*wmap, levels=[1,3], 
+                        linestyles=['dashed','solid'],
                         colors=('aquamarine',))
             plt.contour(lon, lat, wmap, levels=[1,3], 
                         linestyles=['dashed','solid'],
@@ -108,8 +108,9 @@ def emberstorm(theta, u, v, w, z, topog,
             #            alpha=0.5,
             #            colors=['aquamarine','pink'])
             axes[0].annotate('vertical motion at %dm altitude'%wmap_height, 
-                xy=[0.01,-.04], xycoords='axes fraction', fontsize=8)
-            #axes[0].clabel(cs1, cs1.levels, inline=True, fmt="%.0fm/s", fontsize=6)
+                xy=[0.01,-.05], xycoords='axes fraction', fontsize=8)
+            axes[0].annotate('dashed is 1m/s, solid is 3m/s', 
+                xy=[0.01,-.11], xycoords='axes fraction', fontsize=8)
     
     # cut down to desired extent
     plt.ylim(extent[2:]); plt.xlim(extent[0:2])
@@ -223,6 +224,6 @@ if __name__ == '__main__':
     mr = 'waroona_run1'
     
     hours=fio.model_outputs[mr]['filedates']
-    testhours = hours[:3]
+    testhours = [hours[0]]
     
     make_plots_emberstorm(mr, hours=testhours)
