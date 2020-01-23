@@ -38,7 +38,7 @@ def emberstorm(theta, u, v, w, z, topog,
                ff=None,
                wmap=None,
                wmap_height=None,
-               nquivers=15,
+               nquivers=14,
                quiverscale=60,
                ztop=700,
                transect=_transects_[0],
@@ -74,14 +74,15 @@ def emberstorm(theta, u, v, w, z, topog,
     
     # start to end x=[lon0,lon1], y=[lat0, lat1]
     plt.plot([start[1],end[1]],[start[0],end[0], ], '--k', 
-             linewidth=2, 
-             marker='>', markersize=7, markerfacecolor='white')
+             linewidth=2,) 
+             #marker='>', markersize=7, markerfacecolor='white')
     
     # Add faint dashed lines where other transects will be 
     if shadows is not None:
         for sstart,send in shadows:
             plt.plot([sstart[1],send[1]],[sstart[0],send[0], ], '--b', 
-                     alpha=0.3, linewidth=1, marker='>', markersize=2)
+                     alpha=0.25, linewidth=1,)
+                     #marker='>', markersize=2)
     
     # add nearby towns
     plotting.map_add_locations(['waroona'], text=[''], color='grey',
@@ -90,7 +91,7 @@ def emberstorm(theta, u, v, w, z, topog,
                                marker='*', color='r')
 
     # Quiver, reduce arrow density
-    plotting.map_quiver(u[0],v[0],lat,lon,nquivers=nquivers, alpha=0.7,
+    plotting.map_quiver(u[0],v[0],lat,lon,nquivers=nquivers, alpha=0.5,
                         pivot='middle', scale=quiverscale)
     
     # Finally add some faint pink or green hatching based on vertical wind motion
@@ -159,7 +160,7 @@ def emberstorm(theta, u, v, w, z, topog,
     
     return fig, axes
     
-def make_plots_emberstorm(model_run='waroona_run1', hours=None):
+def make_plots_emberstorm(model_run='waroona_run1', hours=None, wmap_height=300):
     """
     run emberstorm plotting method on model output read by my iris fio scripts
     """
@@ -194,7 +195,7 @@ def make_plots_emberstorm(model_run='waroona_run1', hours=None):
                 # other transects that will be plotted
                 shadows = [tran for trani, tran in enumerate(_transects_) if trani!=transecti]
                 # current time
-                utcstamp = dtime.strftime("%b %H:%M (UTC)")
+                utcstamp = dtime.strftime("%b %d %H:%M (UTC)")
                 # winds
                 u,v,w = uvw[0][i], uvw[1][i], uvw[2][i]
                 # fire
@@ -204,10 +205,10 @@ def make_plots_emberstorm(model_run='waroona_run1', hours=None):
                 #print("DEBUG:",[np.shape(arr) for arr in [theta, u, v, w, z, topog, ff, lat, lon]])
                 # extra vert map at ~ 300m altitude
                 levh  = w.coord('level_height').points
-                levhind = np.sum(levh<300)
+                levhind = np.sum(levh<wmap_height)
                 emberstorm(theta[i].data, u.data, v.data, w.data, z.data,
                            topog.data, lat, lon, ff=ffi, 
-                           wmap=w[levhind].data, wmap_height=300,
+                           wmap=w[levhind].data, wmap_height=wmap_height,
                            transect=transect, shadows=shadows)
                 
                 # Save figure into folder with numeric identifier
