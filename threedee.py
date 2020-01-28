@@ -66,7 +66,7 @@ lev = np.arange(len(qc0[:,0,0]))
 qc0_xyz = np.moveaxis(np.moveaxis(qc0,0,2),0,1)
 th0_xyz = np.moveaxis(np.moveaxis(th0,0,2),0,1)
 topog_xy = topog.data.data.T
-ff0_xy = ff[0].data.data.T
+ff0_xy = ff[0].data.data
 
 print("cloud min, max, sum>min:",np.min(qc0_xyz), np.max(qc0_xyz), np.sum(qc0_xyz>0.01))
 print("Theta min, max, sum>min:",np.min(th0_xyz), np.max(th0_xyz), np.sum(th0_xyz>0.01))
@@ -99,6 +99,14 @@ fire_line = go.Contour(#z=topog_xy,
                        #   size=2)
                        )
 
+## topography with fire as colour
+topog_fire = go.Surface(z=topog_xy,
+                   x=X[:,:,0],
+                   y=Y[:,:,0],
+                   colorscale='Hot',
+                   surfacecolor=ff0_xy,
+                   showscale=False, # remove colour bar
+                   )
 
 ## Clouds
 cloud_iso = go.Isosurface(x=X.flatten(),
@@ -116,7 +124,7 @@ fig0 = go.Figure(data=topog_surf)
 show(fig0,renderer='browser')
 
 # fire
-figf = go.Figure(data=fire_line)
+figf = go.Figure(data=topog_fire)
 show(figf,renderer='browser')
 
 # clouds
@@ -124,7 +132,7 @@ fig1= go.Figure(data=cloud_iso)
 show(fig1,renderer='browser')
 
 # combined?
-fig2 = go.Figure(data=[topog_surf,cloud_iso])
+fig2 = go.Figure(data=[topog_fire,cloud_iso])
 show(fig2,renderer='browser')
 
 ## Potential temperature

@@ -13,6 +13,7 @@ matplotlib.use('Agg',warn=False)
 import matplotlib.pyplot as plt
 import numpy as np
 import warnings
+from datetime import datetime
 
 # local modules
 from utilities import plotting, utils, fio
@@ -66,23 +67,32 @@ def emberstorm(theta, u, v, w, z, topog,
     ## First plot, topography
     cs,cb = plotting.map_topography(extent,topog,lat,lon,title="Overview")
     
+    start, end = transect
+    
     # Add fire front contour
+    ff_lead_frac=None
     if ff is not None:
         plotting.map_fire(ff.T,lat,lon)
-    
-    start, end = transect
+        # west most burnt bit is fire front lead
+        # grab first index from left to right along burnt longitudes
+        if np.sum(ff<=0) > 0:
+            #print("debug:", ff.shape, len(lat), len(lon), np.sum(ff<=0,axis=0).shape)
+            ff_lead = np.where(np.sum(ff<=0, axis=0)>0)[0][0]
+            print("debug: fire front most western point is ", lon[ff_lead])
+            print("debug: %.2f%% of the way along the transect"%(100*(start[1]-lon[ff_lead])/(start[1] - end[1])))
+            ff_lead_frac=(start[1]-lon[ff_lead])/(start[1] - end[1])
     
     # start to end x=[lon0,lon1], y=[lat0, lat1]
     plt.plot([start[1],end[1]],[start[0],end[0], ], '--k', 
              linewidth=2,) 
              #marker='>', markersize=7, markerfacecolor='white')
     
-    # Add faint dashed lines where other transects will be 
+    # Add markers where other transects will be 
     if shadows is not None:
         for sstart,send in shadows:
-            plt.plot([sstart[1],send[1]],[sstart[0],send[0], ], '--b', 
-                     alpha=0.25, linewidth=1,)
-                     #marker='>', markersize=2)
+            plt.plot([sstart[1],send[1]],[sstart[0],send[0], ], 
+                     color='b', alpha=0.4, linestyle='None',
+                     marker='>', markersize=2)
     
     # add nearby towns
     plotting.map_add_locations(['waroona'], text=[''], color='grey',
@@ -158,6 +168,15 @@ def emberstorm(theta, u, v, w, z, topog,
                         nquivers=nquivers, scale=quiverscale*3,
                         alpha=0.5, pivot='middle')
     
+    if ff_lead_frac is not None:
+            if ff_lead_frac > 1: ff_lead_frac=1
+            if ff_lead_frac < 0: ff_lead_frac=0
+            for ax in [axes[1],axes[2]]:
+                ax.annotate('', xy=[ff_lead_frac,0.0],
+                    xytext=(ff_lead_frac,0.09),
+                    arrowprops=dict(facecolor='red', arrowstyle='wedge,tail_width=0.5', alpha=0.5),
+                    xycoords='axes fraction', fontsize=8, color='red')
+    
     return fig, axes
     
 def make_plots_emberstorm(model_run='waroona_run1', hours=None, wmap_height=300):
@@ -222,9 +241,9 @@ def make_plots_emberstorm(model_run='waroona_run1', hours=None, wmap_height=300)
 
 if __name__ == '__main__':
     plotting.init_plots()
-    mr = 'waroona_run1'
+    mr = 'waroona_run2'
     
     hours=fio.model_outputs[mr]['filedates']
-    testhours = [hours[0]]
+    testhours = [datetime(2016,1,6,13)]
     
     make_plots_emberstorm(mr, hours=testhours)
