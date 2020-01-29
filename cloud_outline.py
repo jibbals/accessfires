@@ -114,7 +114,7 @@ def clouds_2panel(topog,s,u,v,
                                                       npoints=100,
                                                       lines=None,
                                                       ztop=ztop)
-    plt.title("Vertical motion (m/s)")
+    plt.title("Potential temperature (K)")
     
     qcslice = utils.cross_section(qc,lat,lon,start,end, npoints=100)
     with warnings.catch_warnings():
@@ -134,7 +134,7 @@ def clouds_2panel(topog,s,u,v,
     plt.xticks(xticks[0::2],xlabels[0::2]) 
 
 
-def cloud_outline_model(model_run = 'waroona_run1', dtime=datetime(2016,1,5,15)):
+def cloud_outline_model(model_run = 'waroona_run1', dtime=datetime(2016,1,5,15), transects=None):
     '''
     make an hours worth of clouds_2panel plots starting at argument dtime
     Read model run, send good bits to be plotted over our 6 transects
@@ -159,6 +159,10 @@ def cloud_outline_model(model_run = 'waroona_run1', dtime=datetime(2016,1,5,15))
     # read fire at matching time steps:
     ff, = fio.read_fire(model_run, dtimes=cubetimes, extent=extent, firefront=True)
     
+    ## transects to look at
+    if transects is None:
+        transects = [plotting._transects_['%s%d'%(extentname,i+1)] for i in range(6)]
+
     # loop over available timesteps
     topogi = topog.data.data
     zi = zth.data.data
@@ -172,8 +176,7 @@ def cloud_outline_model(model_run = 'waroona_run1', dtime=datetime(2016,1,5,15))
         if ff is not None:
             ffi = ff[i].data.data
         # loop over transects
-        for ii in range(6):
-            transect = plotting._transects_['%s%d'%(extentname,ii+1)]
+        for ii,transect in enumerate(transects):
             clouds_2panel(topogi,si,ui,vi, qci,thi, zi, lat, lon,
                           transect=transect, ff = ffi, extentname=extentname)
             # Save figure into animation folder with numeric identifier

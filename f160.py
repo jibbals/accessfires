@@ -103,7 +103,7 @@ def f160(press,Temp,Tempd, latlon,
         u = u.to(units.knots)
         v = v.to(units.knots)
         pro = (np.squeeze(p_rho0.data.data) * units(str(press_rho.units))).to(units.mbar)
-        print("DEBUG: f160 interp2", u.shape, v.shape, pro.shape)
+        #print("DEBUG: f160 interp2", u.shape, v.shape, pro.shape)
         #print("DEBUG: f160 interp2", u,v,pro)
         nicer_z=np.union1d(np.union1d(np.arange(0,41,5), np.arange(43,81,3)), np.arange(81,140,1))
         #skip=(slice(None,None,None),nicer_z)

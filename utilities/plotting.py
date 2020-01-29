@@ -228,7 +228,7 @@ def map_fire(ff,lats,lons):
     if np.sum(ff<0) > 0:
         plt.contour(lons,lats,np.transpose(ff),np.array([0]), colors='red')
 
-def map_tiff(locname='waroona', fig=None, subplot_row_col_n=[1,1,1],
+def map_tiff(locname='waroona', fig=None, subplot_row_col_n=None,
              extent=None, show_grid=False, add_locations=False):
     """
     satellite image from gsky downloaded into data folder, 
@@ -256,6 +256,9 @@ def map_tiff(locname='waroona', fig=None, subplot_row_col_n=[1,1,1],
     if locname=='sirivan':
         path_to_tiff = "data/Sirivan_Landsat_8_2016.tiff"
         locationstrs=['dunedoo','cassillis']
+
+    if subplot_row_col_n is None:
+        subplot_row_col_n = [1,1,1]
     
     # units are degrees latitude and longitude, so platecarree should work...
     projection = ccrs.PlateCarree()
@@ -491,7 +494,7 @@ def transect(data, z, lat, lon, start, end, npoints=100,
         contourfargs['extend'] = 'max'
     
     ## Check that z includes topography
-    if np.any(z[0]<topog):
+    if np.mean(z[0])<np.mean(topog):
         print("ERROR:",np.mean(z[0]), np.min(z[0]), "(mean,lowest z) is lower than topog", np.mean(topog), np.min(topog))
         print("ERROR:", "Try adding topog to each level of z")
         assert False

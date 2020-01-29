@@ -19,17 +19,12 @@ from utilities import fio, utils, plotting
 
 _sn_ = 'linescan_comparison'
 
-def linescan_vs_firefront(model_run='sirivan_run1',option='stamen'):
+def linescan_vs_firefront(model_run='sirivan_run1'):
     """
     show linescan above firefront on as similar as possible extents
     if firefront is not avail at the desired time, show closest
     
-    can show against satellite imagery or googlemap (with roads etc)
-    options: 
-        'google' for google map
-        'satellite' for satellite map
-        'topog' for model topography
-        NOTE: These are currently broken... use 'topog' as option
+    compares with tiff image as background, brightened as I don't know the actual wavelengths of the tiff I have...
     """
     # sirivan linescan figures extent (eyeballed using google map + matplotlib gridlines)
     linescan_extent =  [149.48, 150.04, -32.18, -31.85]
@@ -73,16 +68,9 @@ def linescan_vs_firefront(model_run='sirivan_run1',option='stamen'):
         # can show either googlemap (roads, rivers), or satellite map (true colour)
         # map first
         subplot_extent2 = [0,0.02,1,0.45]
-        if option=='stamen':
-            stamen_terrain = cimgt.Stamen('terrain-background')
-            ax2 = fig.add_axes(subplot_extent2, frameon=False, projection=stamen_terrain.crs)
-            ax2.set_extent(linescan_extent)
-            ax2.add_image(stamen_terrain, 10) # 10 seems to be max zoom for resolution
-            mproj = stamen_terrain.crs
-        else:
-            _,ax2,mproj = plotting.map_tiff('sirivan', fig=fig,
-                                                  extent=linescan_extent, 
-                                                  subplot_row_col_n=[2,1,1])
+        _,ax2,mproj = plotting.map_tiff('sirivan', fig=fig,
+                                        extent=linescan_extent, 
+                                        subplot_row_col_n=[2,1,1])
         plt.sca(ax2)
         # add firefront hourly up to current datetime indext
         # just read hourly

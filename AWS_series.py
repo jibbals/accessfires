@@ -80,7 +80,7 @@ def df_time_series(df, subplots=None, units=None, legend=True):
         plt.grid(which='major',axis='x', alpha=0.6)
         if ax != axes[-1]:
             plt.xlabel('')
-            ax.tick_params(axis='x',labelbottom='off')
+            ax.tick_params(axis='x',labelbottom=False)
         else:
             #plt.xlabel('time (AWST)')
             plt.xlabel(df.index.name)

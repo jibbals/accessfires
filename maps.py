@@ -44,6 +44,9 @@ __NESTS__ = {'waroona_run1':{'centre':[-32.9, 116.1],
                              'wider_view':[125,162,-44,-11],
                              },
             }
+# old and run2 are the same as run1
+__NESTS__['waroona_run2'] = __NESTS__['waroona_run1']
+__NESTS__['waroona_old'] = __NESTS__['waroona_run1']
 
 ##############################################
 ############### METHODS ####################

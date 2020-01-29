@@ -78,8 +78,8 @@ def emberstorm(theta, u, v, w, z, topog,
         if np.sum(ff<=0) > 0:
             #print("debug:", ff.shape, len(lat), len(lon), np.sum(ff<=0,axis=0).shape)
             ff_lead = np.where(np.sum(ff<=0, axis=0)>0)[0][0]
-            print("debug: fire front most western point is ", lon[ff_lead])
-            print("debug: %.2f%% of the way along the transect"%(100*(start[1]-lon[ff_lead])/(start[1] - end[1])))
+            #print("debug: fire front most western point is ", lon[ff_lead])
+            #print("debug: %.2f%% of the way along the transect"%(100*(start[1]-lon[ff_lead])/(start[1] - end[1])))
             ff_lead_frac=(start[1]-lon[ff_lead])/(start[1] - end[1])
     
     # start to end x=[lon0,lon1], y=[lat0, lat1]
