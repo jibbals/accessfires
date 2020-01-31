@@ -95,9 +95,9 @@ def plot_weather_summary(U,V,W, height, lat, lon, extentname, Q=None, FF=None):
         if Q is not None:
             Qmax = np.max(Q[row], axis=0)
             # add hatches over where Qmax is greater than cloud threshhold
-            plt.contourf(lon,lat,Qmax, [0,__cloud_thresh__], 
-                         colors='none', hatches=[None,'//'],
-                         extend='both')
+            plt.contourf(lon,lat,Qmax, [0,__cloud_thresh__,100], 
+                         colors=['None']*3, hatches=[None,'/','//'],
+                         extend='both',)
         
         if FF is not None:
             with warnings.catch_warnings():
@@ -180,14 +180,12 @@ def weather_summary_model(model_version='waroona_run1',
 if __name__=='__main__':
     
     ## run for all of waroona_run2 datetimes
-    weather_summary_model(model_version='waroona_run2uc')
+    #weather_summary_model(model_version='waroona_run2uc')
     
     ## run zoomed in
     #weather_summary_model('sirivan_run1',zoom_in=plotting._extents_['sirivanz'])
     
-    ## Run for a bunch of runs (may take a couple hours)
-    #for mv in ['sirivan_run1','waroona_old','waroona_oldold','waroona_run1']:
-    #    weather_summary_model(mv)
+    weather_summary_model('waroona_run2',fdtimes=[datetime(2016,1,6,7)])
     
     print("INFO: weather_summary.py done")
 
