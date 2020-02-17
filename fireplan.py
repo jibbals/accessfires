@@ -180,15 +180,15 @@ if __name__=='__main__':
     ### Run the stuff
     
     ## Just create a fireplan figure:
-    mr='sirivan_run1'
-    extent = plotting._extents_['sirivanz']  # zoomed waroona extent
+    mr='waroona_run3'
+    extent = plotting._extents_[mr.split('_')[0]+'z']  # zoomed waroona extent
     # read all the fire data
     ff, = fio.read_fire(model_run=mr, dtimes=None,
                         extent=extent, firefront=True)
     
     # first plot just the fireplan on it's own
     fig,ax,proj = fireplan(ff, show_cbar=True, cbar_XYWH=[.18,.24,.2,.02])
-    fio.save_fig('sirivan_run1', _sn_, 'fireplan.png', plt)
+    fio.save_fig(mr, _sn_, 'fireplan.png', plt)
     
     ## run fireplan and summary for all runs
     #for mr in ['waroona_run2','sirivan_run1','waroona_run1','waroona_old']:

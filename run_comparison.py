@@ -372,7 +372,7 @@ if __name__=='__main__':
     
     
     ## Lets loop over and compare run2 to run2uc
-    mr1,mr2 = ['waroona_run2','waroona_run2uc']
+    mr1,mr2 = ['waroona_run3','waroona_run2']
     for fdate in fio.model_outputs[mr1]['filedates']:
         compare_winds(mr1=mr1,mr2=mr2, hour=fdate)
         compare_clouds(mr1=mr1,mr2=mr2, hour=fdate)
