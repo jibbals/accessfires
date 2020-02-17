@@ -229,7 +229,7 @@ def map_fire(ff,lats,lons):
         plt.contour(lons,lats,np.transpose(ff),np.array([0]), colors='red')
 
 def map_tiff(locname='waroona', fig=None, subplot_row_col_n=None,
-             extent=None, show_grid=False, add_locations=False):
+             extent=None, show_grid=False, locnames=None):
     """
     satellite image from gsky downloaded into data folder, 
     used as background for figures
@@ -251,12 +251,14 @@ def map_tiff(locname='waroona', fig=None, subplot_row_col_n=None,
     gdal.UseExceptions()
     
     path_to_tiff = "data/Waroona_Landsat_8_2015.tiff"
-    locationstrs = ['waroona','yarloop','wagerup']
     
     if locname=='sirivan':
         path_to_tiff = "data/Sirivan_Landsat_8_2016.tiff"
-        locationstrs=['dunedoo','cassillis']
-
+    
+    elif locname=='waroona_big':
+        path_to_tiff = "data/waroona_big.tiff"
+    
+    
     if subplot_row_col_n is None:
         subplot_row_col_n = [1,1,1]
     
@@ -298,6 +300,12 @@ def map_tiff(locname='waroona', fig=None, subplot_row_col_n=None,
     
     if extent is not None:
         ax.set_extent(extent)
+        # Remove any locations outside of the extent
+        if locnames is not None:
+            for locstr in locnames:
+                loc=_latlons_[locstr]
+                if (loc[0]<extent[2]) or (loc[0]>extent[3]) or (loc[1]<extent[0]) or (loc[1]>extent[1]):
+                    locnames.remove(locstr)
         
     if show_grid:
         gl = ax.gridlines(crs=ccrs.PlateCarree(), draw_labels=True,
@@ -305,13 +313,25 @@ def map_tiff(locname='waroona', fig=None, subplot_row_col_n=None,
         gl.xlabels_top = False
         gl.ylabels_left = False
         #gl.xlines = False
-    if add_locations:
-        fireloc=_latlons_['fire_'+locname]
-        locations=[_latlons_[locstr] for locstr in locationstrs]
+    if locnames is not None:
+        # split out fire into it's own thing
+        fires = ['fire' in element for element in locnames]
+        locations=[_latlons_[locstr] for locstr in locnames]
+        LocationsNames = [str.capitalize(locstr) for locstr in locnames]
+        markers=['o']*len(locations)
+        markercolors=['grey']*len(locations)
+        
+        for i in range(len(locations)):
+            if fires[i]:
+                LocationsNames[i]=''
+                markers[i] = '*'
+                markercolors[i] = 'r'
+        
         map_add_nice_text(ax, locations,
-                          [str.capitalize(locstr) for locstr in locationstrs],
-                          fontsizes=14)
-        map_add_nice_text(ax, [fireloc], texts=[''], markers=['*'], markercolors=['r'])
+                          LocationsNames,
+                          markers=markers,
+                          markercolors=markercolors,
+                          fontsizes=14)        
         
     return fig, ax, projection
 
