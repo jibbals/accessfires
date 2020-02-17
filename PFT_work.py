@@ -285,7 +285,8 @@ if __name__ == '__main__':
     #dtimes = fio.model_outputs['waroona_old']['filedates']
     #model_run_PFT_summary(model_run='waroona_old', hour=dtimes[0])
     
-    for mr in ['waroona_run2','waroona_run2uc','waroona_run1','waroona_old']:
+    #['waroona_run2','waroona_run2uc','waroona_run1','waroona_old']:
+    for mr in ['waroona_run2','waroona_run2uc','waroona_run1',]:#'waroona_old']:
         dtimes = fio.model_outputs[mr]['filedates']
         for dtime in dtimes:
             model_run_PFT_summary(model_run=mr, hour=dtime)

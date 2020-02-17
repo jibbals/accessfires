@@ -223,7 +223,7 @@ if __name__=='__main__':
     # deresolved horizontally (don't need high res)
     Hskip=6
     
-    for mr in ['waroona_old',]:#'sirivan_run1','waroona_run1','waroona_run2','waroona_run2uc']:
+    for mr in ['sirivan_run1','waroona_run1','waroona_run2','waroona_run2uc']:#,'waroona_old']:
         # let's time how long it takes
         start = timer()
         extentname=mr.split('_')[0]
