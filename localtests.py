@@ -40,7 +40,7 @@ pio.renderers.default = "browser"
 ### Get run data
 mr='waroona_run2'
 top=8000 # cloud top height to be shown
-top_th=1500 # theta top height 
+top_th=1000 # theta top height 
 hours=fio.model_outputs[mr]['filedates']
 hour=hours[0]
 hour = datetime(2016,1,6,10)

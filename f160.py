@@ -186,12 +186,17 @@ if __name__ == '__main__':
     #checktimes = [ datetime(2016,1,6,5) + timedelta(hours=x) for x in range(2) ]
     #checktimes = [ datetime(2016,1,5,15) ]
     old_times = fio.model_outputs['waroona_old']['filedates']
-    run1_times = fio.model_outputs['waroona_run1']['filedates']
+    run_times = fio.model_outputs['waroona_run1']['filedates']
     
-    for mv, dtimes in zip(['waroona_run1','waroona_old'],[run1_times,old_times]):
+    # 'waroona_run1','waroona_old'],[run_times,run_times,run_times,old_times]):
+    for mv, dtimes in zip(['waroona_run2','waroona_run2uc'],[run_times,run_times]):
         for dtime in dtimes:
             for latlon,latlon_stamp in zip(loc_and_stamp[0],loc_and_stamp[1]):
-                f160_hour(dtime, latlon=latlon,
-                          latlon_stamp=latlon_stamp,
-                          model_version=mv)
+                try:
+                    f160_hour(dtime, latlon=latlon,
+                              latlon_stamp=latlon_stamp,
+                              model_version=mv)
+                except OSError as ose:
+                    print("WARNING: probably no file for ",mv,dtime)
+                    print("       :", ose)
 

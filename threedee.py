@@ -54,7 +54,7 @@ def cube_to_xyz(cube,
     """
     assert len(cube.shape)==3, "cube is not 3-D"
     data = cube[:ztop,:,:].data.data
-    # data is now a level, lat, lon array
+    # data is now a level, lat, lon array... change to lon, lat, lev
     xyz = np.moveaxis(np.moveaxis(data,0,2),0,1)
     return xyz
     
@@ -78,13 +78,13 @@ def create_figure(gofigures,
     fig.update_layout(scene=dict(aspectratio=dict(x=ax,y=ay,z=az),
                                  camera_eye=dict(x=cx,y=cy,z=cz)))
     if filename is None:
-        pio.show()
+        pio.show(fig)
     else:
         ## Try to save figure
         fig.write_image(filename)
 
 def save_system(model_run='waroona_run2', hour=20, 
-                theta_height=1500, theta_min=311, theta_max=320,
+                theta_height=1000, theta_min=311, theta_max=320,
                 top_height=8000, send_to_browser=False):
     """
     Read an hour of model output, plot it in 3d using plotly
@@ -122,7 +122,16 @@ def save_system(model_run='waroona_run2', hour=20,
     ## X Y Z are now [lat, lon, lev] for some reason
     [X,Y,Z] = [ np.moveaxis(arr,0,1) for arr in [X,Y,Z]]
     ## Now they are lon, lat, lev
-
+    
+    # topography surface
+    surface_topog = go.Surface(
+        z=Z[:,:,0],
+        x=X[:,:,0],
+        y=Y[:,:,0],
+        colorscale='earth',
+        surfacecolor=d_topog,
+        showscale=False, # remove colour bar,
+    )
     
     for ti, time in enumerate(cubetimes):
         # get cloud, theta, vert motion, firefront in terms of lon,lat,lev
@@ -131,10 +140,29 @@ def save_system(model_run='waroona_run2', hour=20,
         d_w = cube_to_xyz(w[ti],ztop=topind)
         d_levh = levh[:topind]
         d_ff = ff[ti].data.data # firefront already in lon,lat shape
-    
-    
+        
+        ## Cloud isosurface
+        isosurface_cloud = go.Isosurface(
+            z=Z.flatten(),
+            x=X.flatten(),
+            y=Y.flatten(),
+            value=d_qc.flatten(),
+            isomin=.1,
+            isomax=1,
+            surface_count=3,
+            opacity=0.6,
+            showscale=False,
+        )
+        
         #
         ### 3d figure:
         #
-    
+        figname = None
+        if not send_to_browser:
+            figname = time.strftime('figures/threedee/test_%Y%m%d%H%M.png')
+        create_figure([surface_topog,isosurface_cloud], filename=figname)
+        break
 
+if __name__=='__main__':
+    print("TESTING THREEDEE")
+    save_system(send_to_browser=True)
