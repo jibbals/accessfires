@@ -66,15 +66,18 @@ def fireplan(ff, fire_contour_map = 'autumn',
     ## PLOTTING
 
     # First show satellite image and locations
-    locname='waroona'
+    locname='waroona_big'
     if extent[0]>130: locname='sirivan'
-    fig, gax, gproj = plotting.map_tiff(locname=locname,
-                                        extent=extent, fig=fig,
-                                        subplot_row_col_n=subplot_row_col_n,
-                                        show_grid=False, add_locations=False)
-    if locname=='waroona':
-        plotting.map_add_nice_text(gax,[plotting._latlons_['waroona']],
-                                   texts=['Waroona'], fontsizes=14)
+    fig, gax, gproj = plotting.map_tiff(
+        locname=locname,
+        extent=extent, 
+        fig=fig,
+        subplot_row_col_n=subplot_row_col_n,
+        show_grid=False
+    )
+    if 'waroona' in locname:
+        plotting.map_add_nice_text(gax,[plotting._latlons_['waroona'],plotting._latlons_['yarloop']],
+                                   texts=['Waroona','Yarloop'], fontsizes=14)
     else:
         plotting.map_add_nice_text(gax,[plotting._latlons_['uarbry']],
                                    texts=['Uarbry'], fontsizes=14)
@@ -180,15 +183,16 @@ if __name__=='__main__':
     ### Run the stuff
     
     ## Just create a fireplan figure:
-    mr='waroona_run3'
-    extent = plotting._extents_[mr.split('_')[0]+'z']  # zoomed waroona extent
-    # read all the fire data
-    ff, = fio.read_fire(model_run=mr, dtimes=None,
-                        extent=extent, firefront=True)
+    for mr in ['waroona_run3','waroona_run2']:
+        #extent = plotting._extents_[mr.split('_')[0]+'z']  # zoomed waroona extent
+        extent = [115.6, 116.2, -33.06, -32.8]
+        # read all the fire data
+        ff, = fio.read_fire(model_run=mr, dtimes=None,
+                            extent=extent, firefront=True)
     
-    # first plot just the fireplan on it's own
-    fig,ax,proj = fireplan(ff, show_cbar=True, cbar_XYWH=[.18,.24,.2,.02])
-    fio.save_fig(mr, _sn_, 'fireplan.png', plt)
+        # first plot just the fireplan on it's own
+        fig,ax,proj = fireplan(ff, show_cbar=True, cbar_XYWH=[.18,.3,.2,.02])
+        fio.save_fig(mr, _sn_, 'fireplan.png', plt)
     
     ## run fireplan and summary for all runs
     #for mr in ['waroona_run2','sirivan_run1','waroona_run1','waroona_old']:

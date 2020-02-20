@@ -32,7 +32,15 @@ from utilities import fio, utils, plotting
 _sn_ = 'PFT_work'
 
 
-PFT = {'waroona_run1':{'data':np.array([56.5, 42.1, 34.6, 332.6, 53.2]), # manually calculated PFT
+PFT = {'waroona_run2':{'data':None, # manually calculated PFT
+                       'units':'Gigawatts',
+                       'time':None, # calculated at these times in UTC
+                       'latlon':None, # ~ 1km from fire
+                       'latlon_stamp':None,
+                       'style':'--',
+                       'color':'k',
+                       },
+        'waroona_run1':{'data':np.array([56.5, 42.1, 34.6, 332.6, 53.2]), # manually calculated PFT
                        'units':'Gigawatts',
                        'time':np.array([datetime(2016,1,5,15,10),
                                         datetime(2016,1,6,5,10),
@@ -64,6 +72,13 @@ PFT = {'waroona_run1':{'data':np.array([56.5, 42.1, 34.6, 332.6, 53.2]), # manua
                        'color':'k',
                        },
       }
+for mr in fio.model_outputs.keys():
+    if mr not in PFT.keys():
+        PFT[mr] = PFT['waroona_run2']
+        if 'waroona' in mr:
+            PFT[mr]['latlon'] = plotting._latlons_['fire_waroona_upwind']
+        else:
+            PFT[mr]['latlon'] = plotting._latlons_['fire_sirivan_upwind']
 
 ## Manual Calculations for PFT:
 ## YYYYMMDDhhmmrun: 
@@ -280,13 +295,14 @@ if __name__ == '__main__':
     
     ## Compare firepower/PFT for some runs
     #firepower_comparison(runs=['waroona_old','waroona_run1'])
-    
+    firepower_comparison(runs=['waroona_run3'])
+
     ## Summary figure for PFT at a site for one output hour
     #dtimes = fio.model_outputs['waroona_old']['filedates']
     #model_run_PFT_summary(model_run='waroona_old', hour=dtimes[0])
     
     #['waroona_run2','waroona_run2uc','waroona_run1','waroona_old']:
-    for mr in ['waroona_run2','waroona_run2uc','waroona_run1',]:#'waroona_old']:
+    for mr in ['waroona_run3']:
         dtimes = fio.model_outputs[mr]['filedates']
         for dtime in dtimes:
             model_run_PFT_summary(model_run=mr, hour=dtime)
