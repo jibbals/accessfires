@@ -34,6 +34,21 @@ _sn_ = 'pyrocb'
 
 __cloud_thresh__ = constants.cloud_threshold
 
+## List of PyroCB activity, hourly
+__PCB_hourly__ = {
+    'waroona_run3':{
+        'latlon':[[-32.89,116.05],]*15+ # includes jan 6 hour 5
+                 [[-32.9,115.99],]*2+ # hour 7
+                 [[-32.9,115.94], # hour 8
+                  [-32.9,115.90], # hour 9
+                  [-32.9,115.84],] + # 10
+                  [[-32.88,115.96],]*4 # 11 - 14
+        ,'flag':[False,]*14 + [True,]*5 + [False,]*5 # hours of pcb
+        ,}
+    ,'waroona_run2':{}, # todo
+    }
+
+
 # transects showing the pyroCB in model extents
 # waroona (old run) gets pyrocb around Jan 6, 0600-0830
 # Sirivan gets some pyrocb around Feb 12, 0600 - 0800 UTC
@@ -354,6 +369,7 @@ def moving_pyrocb(model_run='waroona_run2',subset=True):
                                            -1*(2.0**np.arange(-2,6))),
                                 np.array([0]))
     ztop=14000
+    lon_step = 0.13 # ~13km long transects
     cloud_threshold = constants.cloud_threshold
     
     def lin_space_transect(start,end,steps):
@@ -403,6 +419,7 @@ def moving_pyrocb(model_run='waroona_run2',subset=True):
             'waroona_run2':[[-32.89, 116.10, -32.886, 116.19],]*60 + \
                            lin_space_transect([-32.89, 116.09, -32.886, 116.19],
                                               [-32.872, 115.85, -32.885, 116.07],84),
+            'waroona_run3':[[-32.89, 116.07],]
            }
     if subset:
         # subset has 2 outputs/hr, full dataset has 6
@@ -595,7 +612,7 @@ if __name__ == '__main__':
     testing=False
     
     ## New zoomed, moving pyrocb plotting
-    moving_pyrocb(model_run='waroona_run2uc',subset=True)
+    moving_pyrocb(model_run='waroona_run3',subset=True)
     
     ## Run sample for waroona_run2
     #pyrocb_model_run('waroona_run2', dtime=datetime(2016,1,5,15))
