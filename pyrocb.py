@@ -17,6 +17,8 @@ matplotlib.use('Agg',warn=False)
 import matplotlib.pyplot as plt
 import matplotlib.colors as col
 import matplotlib.ticker as tick
+import cartopy.crs as ccrs
+
 import numpy as np
 from datetime import datetime,timedelta
 import iris # file reading and constraints etc
@@ -29,6 +31,8 @@ from utilities import plotting, utils, fio, constants
 ## GLOBALS
 ###
 _sn_ = 'pyrocb'
+
+__cloud_thresh__ = constants.cloud_threshold
 
 # transects showing the pyroCB in model extents
 # waroona (old run) gets pyrocb around Jan 6, 0600-0830
@@ -130,6 +134,81 @@ def left_right_slice(qc, u, w, z,
     plt.ylabel('height (m)')
     plt.xlabel('')
     
+def top_down_vertical_motion(W,lat,lon,FF=None,Q=None,):
+    """
+    W[lat,lon]: vertical motion (m/s)
+    FF, Q : firefront, cloud content(g/kg)
+    """
+    
+    # Standard color scale
+    wcmap=plotting._cmaps_['verticalvelocity']
+    wnorm=col.SymLogNorm(0.25) # linear to +- 0.25, then log scale
+    wcontours=np.union1d(np.union1d(2.0**np.arange(-2,6),-1*(2.0**np.arange(-2,6))),np.array([0]))
+    
+    # Vertical motion on standard colorscale
+    cs = plt.contourf(lon, lat, W, wcontours, cmap=wcmap, norm=wnorm)
+
+    # add cloud hatching
+    if Q is not None:
+        plt.contourf(lon,lat,Q, [0,__cloud_thresh__,100], 
+                     colors=['None']*3, hatches=[None,'/','//'],
+                     extend='both',)
+        
+    if FF is not None:
+        plotting.map_fire(FF,lat,lon)
+        
+    plt.xticks([],[])
+    plt.yticks([],[])
+        
+    return cs    
+    ## reduce vert gap between subplots
+    #fig.subplots_adjust(hspace=0.1)
+    ## add vert wind colourbar
+    #cbar_ax = fig.add_axes([0.905, 0.4, 0.01, 0.2])# X Y Width Height
+    #fig.colorbar(cs, cax=cbar_ax, format=ticker.ScalarFormatter(), pad=0)
+
+def sample_showing_grid(model_run='waroona_run3'):
+    """
+    Show each hour the latlon grid and vertical motion at 4000,5000,6000 metres
+    """
+    all_hours = fio.model_outputs[model_run]['filedates']
+    extentname=model_run.split('_')[0]
+    extent=plotting._extents_[extentname]
+    
+    for di,hour in enumerate(all_hours):
+        ## Read hour of output
+        try:
+            cubes=fio.read_model_run(model_run,fdtime=hour,extent=extent,
+                                     add_winds=True)
+        except OSError as ose:
+            print("WARNING: OSError: probably missing some data")
+            print("       :", ose)
+            continue
+        
+        W, = cubes.extract('upward_air_velocity')
+        Q, = cubes.extract('qc')
+        height = W.coord('level_height').points
+        lat = W.coord('latitude').points
+        lon = W.coord('longitude').points
+        
+        h1 = np.argmin(np.abs(height-4000)) # nearest to 4k
+        h2 = np.argmin(np.abs(height-5000))
+        h3 = np.argmin(np.abs(height-7000))
+        FF, = fio.read_fire(model_run, dtimes=[hour], extent=extent)
+        ## Horizontal map of vertical motion
+        f, axes = plt.subplots(3,1,figsize=[12,16],subplot_kw={'projection': ccrs.PlateCarree()})
+        for ax, hi in zip(axes,[h1,h2,h3]):
+            plt.sca(ax)
+            cs = top_down_vertical_motion(W[0,hi].data.data,
+                                          FF=FF[0].data, Q=Q[0,hi].data.data,
+                                          lat=lat,lon=lon,)
+            plotting.map_add_locations_extent(extentname,hide_text=True)
+            plotting.map_draw_gridlines(ax,)
+            #plt.setp(ax.get_xticklabels(), rotation=45)
+            plt.title('~%d m'%int(height[hi]))
+        
+        fio.save_fig(model_run,_sn_,hour,plt,subdir="sample_with_grid")
+        
 
 def pyrocb(w, qc, z, wmean, topog, lat, lon,
            transect1, transect2, transect3,
@@ -263,7 +342,7 @@ def pyrocb(w, qc, z, wmean, topog, lat, lon,
                     format=tick.ScalarFormatter())
     # -ve labelpad moves label closer to colourbar
     cb.set_label('m/s', labelpad=-3)
-        
+
 def moving_pyrocb(model_run='waroona_run2',subset=True):
     """
     follow pyrocb with a transect showing vert motion and pot temp
