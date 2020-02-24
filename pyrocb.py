@@ -20,6 +20,7 @@ import matplotlib.ticker as tick
 import cartopy.crs as ccrs
 
 import numpy as np
+import pandas as pd
 from datetime import datetime,timedelta
 import iris # file reading and constraints etc
 import warnings
@@ -34,20 +35,6 @@ _sn_ = 'pyrocb'
 
 __cloud_thresh__ = constants.cloud_threshold
 
-## List of PyroCB activity, hourly
-__PCB_hourly__ = {
-    'waroona_run3':{
-        'latlon':[[-32.89,116.05],]*15+ # includes jan 6 hour 5
-                 [[-32.9,115.99],]*2+ # hour 7
-                 [[-32.9,115.94], # hour 8
-                  [-32.9,115.90], # hour 9
-                  [-32.9,115.84],] + # 10
-                  [[-32.88,115.96],]*4 # 11 - 14
-        ,'flag':[False,]*14 + [True,]*5 + [False,]*5 # hours of pcb
-        ,}
-    ,'waroona_run2':{}, # todo
-    }
-
 
 # transects showing the pyroCB in model extents
 # waroona (old run) gets pyrocb around Jan 6, 0600-0830
@@ -60,6 +47,57 @@ __PYRO_TRANSECTS__ = {'waroona':{'X1':[[-32.89, 115.90], [-32.88, 116.19]],
                                  'X2':[[-32.20, 149.60], [-31.85, 149.85]],
                                  'X3':[[-32.15, 149.90], [-31.85, 149.60]],
                                  'LR1':[[-32.50, 149.50], [-32.50, 150.00]]}}
+
+## List of PyroCB latlon, and time 
+__PCB_occurrences__ = {
+    'waroona_run3':{
+        'latlon':[(-32.9,116.05), (-32.9,116.04),
+                  (-32.9, 116.00), (-32.9,115.96),
+                  (-32.88, 116.01)],
+        'time':[datetime(2016,1,6,6), datetime(2016,1,6,7), 
+                datetime(2016,1,6,8), datetime(2016,1,6,10),
+                datetime(2016,1,6,11)]
+        },
+    'waroona_run2':{
+        'latlon':[(-32.9,116.08),(-32.91,116.07),
+                  (-32.9,116.02),(-32.89,116.00),
+                  (-32.9,115.99),(-32.90,115.97),
+                  (-33.0,115.88)],
+        'time':[datetime(2016,1,6,5), datetime(2016,1,6,6), 
+                datetime(2016,1,6,7), datetime(2016,1,6,8),
+                datetime(2016,1,6,9), datetime(2016,1,6,10),
+                datetime(2016,1,6,11)]
+        },
+    'sirivan_run1':{
+        'latlon':[(1,2),],
+        'time':[datetime(2017,1,6,5), datetime(2017,1,6,6), 
+                datetime(2017,1,6,7), datetime(2017,1,6,8),
+                datetime(2017,1,6,9), datetime(2017,1,6,10),
+                datetime(2017,1,6,11)]
+        }
+    }
+
+def pcb_occurrences(model_run, times):
+    """
+        return list of latlons, interpolated to match where pcb are 
+        spotted in model_run at times given by input times
+    """
+    latlons = __PCB_occurrences__[model_run]['latlon']
+    lats = [lat for lat,_ in latlons]
+    lons = [lon for _,lon in latlons]
+    pcbtimes = __PCB_occurrences__[model_run]['time']
+    
+    # X is hours since 2015
+    # interpolate lats and lons onto new list of datetimes
+    pcb_X = [(dt - datetime(2015,1,1)).total_seconds()/3600.0 for dt in pcbtimes]
+    full_X = [(dt - datetime(2015,1,1)).total_seconds()/3600.0 for dt in times]
+    full_lats = np.interp(full_X,pcb_X, lats, left=lats[0], right=lats[-1])
+    full_lons = np.interp(full_X,pcb_X, lons, left=lons[0], right=lons[-1])
+    full_latlons = [ (lat, lon) for lat,lon in zip(full_lats, full_lons) ]
+    
+    return full_latlons
+    
+
 
 def map_with_transect(data,lat,lon, transect,
                       ff=None, 
@@ -358,178 +396,152 @@ def pyrocb(w, qc, z, wmean, topog, lat, lon,
     # -ve labelpad moves label closer to colourbar
     cb.set_label('m/s', labelpad=-3)
 
-def moving_pyrocb(model_run='waroona_run2',subset=True):
+def moving_pyrocb(model_run='waroona_run3', hours = None,
+                  ztop=14000, xlen=0.1, nquivers=12):
     """
     follow pyrocb with a transect showing vert motion and pot temp
-    set subset to false if running on full dataset (on NCI)
+    ARGUMENTS:
+        model_run: name of model run to look at
+        hours: list of hours to plot
+        ztop: altitute ceiling (metres) for transects
+        xlen: horizontal distance (degrees) shown by transects
     """
+    
     extentname=model_run.split('_')[0]
     extent = plotting._extents_[extentname]
     clevs_vertwind = np.union1d(np.union1d(2.0**np.arange(-2,6),
                                            -1*(2.0**np.arange(-2,6))),
                                 np.array([0]))
     ztop=14000
-    lon_step = 0.13 # ~13km long transects
     cloud_threshold = constants.cloud_threshold
     
-    def lin_space_transect(start,end,steps):
-        j0,k0,l0,m0 = start
-        j1,k1,l1,m1 = end
-        out = [ np.linspace(a,b,steps) for [a,b] in [[j0,j1],[k0,k1],[l0,l1],[m0,m1]] ]
-        outt= np.array(out).T # transpose
-        loutt = list([list(intt) for intt in outt])
-        return loutt
-        
-    # zoomed in transects for pyrocb:
-    tran = {'sirivan_run1':[[-32.05,149.5,-32.11,149.8],]*9+
-                           [[-32.07,149.6,-32.15,150.0],]*5 + # up to 0331utc
-                           [[-32.05, 149.6, -32.1, 150.0], #0401
-                            [-32.038, 149.58, -32.075, 150.0], # 0431
-                            [-32.026, 149.56, -32.05, 150.0], # 0501
-                            [-32.025, 149.55, -32.04, 150.0], # 0531
-                            [-32.025, 149.65, -32.04, 150.1], # 0601
-                            [-32.00, 149.53, -32.03, 150.0], # 0631
-                            [-31.98, 149.58, -32.02, 150.1],  # 0701
-                            [-31.96, 149.53, -31.92, 150.1],  # 0730
-                            [-31.96, 149.55, -31.88, 150.1]]+  # 0801
-                           lin_space_transect([-31.94,149.5,-31.90,150.1],
-                                              [-31.83,149.5,-31.82,150.2],25),
-            'waroona_old':[[-32.9, 116.15, -32.86, 116.19],]*15 + # up to 2201
-                           [[-32.9, 116.15, -32.86, 116.19], # 2231
-                            [-32.898, 116.144, -32.86, 116.19], # 2301
-                            [-32.896, 116.138, -32.86, 116.19], # 2330
-                            [-32.893, 116.133, -32.86, 116.19], # 0000
-                            [-32.891, 116.127, -32.86, 116.19], # 0030
-                            [-32.888, 116.122, -32.86, 116.19], # 0100
-                            [-32.886, 116.116, -32.86, 116.19], # 0130
-                            [-32.884, 116.111, -32.86, 116.19], # 0200
-                            [-32.882, 116.105, -32.86, 116.19],]+ # 0230
-                            lin_space_transect([-32.88, 116.1, -32.86, 116.19],
-                                               [-32.92, 116.1, -32.84, 116.17],13), # 0300 - 0830
-            # Run 1 starts later (8 hrs later!?) starts at 0030 UTC
-            'waroona_run1':[[-32.89, 116.15, -32.886, 116.19],]*60 + \
-                           [[-32.888, 116.14, -32.886, 116.19],]*3 + \
-                           [[-32.886, 116.13, -32.886, 116.19],]*3 + \
-                           [[-32.886, 116.12, -32.886, 116.19],]*3 + \
-                           [[-32.886, 116.11, -32.886, 116.19],]*3 + \
-                           lin_space_transect([-32.886, 116.11, -32.886, 116.19],
-                                              [-32.881, 115.95, -32.885, 116.09],57) + \
-                           lin_space_transect([-32.879, 115.95, -32.885, 116.09],
-                                              [-32.872, 115.92, -32.885, 116.09],15), #1240 - 1440
-            'waroona_run2':[[-32.89, 116.10, -32.886, 116.19],]*60 + \
-                           lin_space_transect([-32.89, 116.09, -32.886, 116.19],
-                                              [-32.872, 115.85, -32.885, 116.07],84),
-            'waroona_run3':[[-32.89, 116.07],]
-           }
-    if subset:
-        # subset has 2 outputs/hr, full dataset has 6
-        tran['waroona_run1'] = tran['waroona_run1'][::3]
-        tran['waroona_run2'] = tran['waroona_run2'][::3]
-    tran['waroona_run2uc'] = tran['waroona_run2']
-        
-    transects = tran[model_run]
-    #datetimes = fio.model_outputs[model_run]['filedates']
     ## read um output over extent [t, lev, lat, lon]
-    cubes = fio.read_model_run(model_run, extent=extent, add_topog=True)
-                               #add_z=True, add_winds=True, add_topog=True)
-    #print("DEBUG:",cubes)
-    w, = cubes.extract('upward_air_velocity')
-    #u, = cubes.extract('u')
-    qc, = cubes.extract('qc')
-    topog0, = cubes.extract('surface_altitude')
-    topog = topog0.data
-    #z, = cubes.extract('z_th') 
-    
-    lat = w.coord('latitude').points
-    lon = w.coord('longitude').points
-
-    ## fire front
-    ffdtimes = utils.dates_from_iris(w)
-    ff, = fio.read_fire(model_run=model_run, dtimes=ffdtimes, extent=extent, firefront=True)
-    # add zth cube
-    p, pmsl = cubes.extract(['air_pressure','air_pressure_at_sea_level'])
-    Ta, = cubes.extract('air_temperature')
-    nz,ny,nx = p[0].shape
-    
-    for i,transect in enumerate(transects):
-        # take mean of vert motion between lvls 25-48 approx 500m - 1500m
-        with warnings.catch_warnings():
-            # ignore warning from collapsing non-contiguous dimension:
-            warnings.simplefilter('ignore')
-            wmean = w[i,25:48,:,:].collapsed('model_level_number', iris.analysis.MEAN)
-        h0,h1 = wmean.coord('level_height').bounds[0]
-        fire=None
-        if ff is not None:
-            fire=ff[i].data.data
-        qci = qc[i].data.data
-        wi = w[i].data.data
-        ## calc zth
-        # repeat surface pressure along z axis
-        reppmsl = np.repeat(pmsl[i].data[np.newaxis,:,:],nz, axis=0)
-        zth = -(287*300/9.8)*np.log(p[i].data/reppmsl)
+    for hour in hours:
+        cubes = fio.read_model_run(model_run, extent=extent, 
+                                   fdtime=[hour],
+                                   add_topog=True,
+                                   add_winds=True)
+                                   #add_z=True)
+        w, = cubes.extract('upward_air_velocity')
+        ffdtimes = utils.dates_from_iris(w) 
+        u, = cubes.extract('u')
+        qc, = cubes.extract('qc')
+        topog0, = cubes.extract('surface_altitude')
+        topog = topog0.data
+        #z, = cubes.extract('z_th') 
         
-        a,b,c,d = transect
-        start=[a,b]
-        end=[c,d]
+        lat = w.coord('latitude').points
+        lon = w.coord('longitude').points
         
-        ## map showing transect
-        fig = plt.figure(figsize=[10,16])
-        plt.subplot(3,1,1)
-        cs, _ = map_with_transect(wmean.data, lat, lon, transect=[start,end], 
-                                  ff=fire, color='k', linewidth=1,
-                                  clevs = clevs_vertwind,
-                                  cbar=False, 
-                                  cmap=plotting._cmaps_['verticalvelocity'],
-                                  norm=col.SymLogNorm(0.25), 
-                                  cbarform=tick.ScalarFormatter(), 
-                                  clabel='m/s')
-        plotting.map_add_locations_extent(extentname,hide_text=True) 
-        wmeantitle='Vertical motion mean (%3.0fm - %4.0fm)'%(h0,h1)
-        plt.title(wmeantitle)
+        pcb_centres = pcb_occurrences(model_run,times=ffdtimes)
+        # transects = [lat0,lon0,lat1,lon1]
+        transects = [[plat,plon-xlen/2.0,plat,plon+xlen/2.0] for (plat,plon) in pcb_centres]
         
-        ## Transect of vert motion
-        plt.subplot(3,1,2)
+        ## fire front
+        ff, = fio.read_fire(model_run=model_run, dtimes=ffdtimes, extent=extent, firefront=True)
+        # add zth cube
+        p, pmsl = cubes.extract(['air_pressure','air_pressure_at_sea_level'])
+        Ta, = cubes.extract('air_temperature')
+        nz,ny,nx = p[0].shape
         
-        wslice, xslice, zslice = plotting.transect_w(wi, zth,
-                                                     lat, lon, start, end,
-                                                     npoints=100, title='',
-                                                     topog=topog, ztop=ztop,
-                                                     contours=clevs_vertwind,
-                                                     lines=None, colorbar=True)
-        ## add cloud outlines
-        ## Add contour where clouds occur
-        qcslice = utils.cross_section(qci, lat, lon, start, end, npoints=100)
-        with warnings.catch_warnings():
-            # ignore warning when there are no clouds:
-            warnings.simplefilter('ignore')
-            plt.contour(xslice,zslice,qcslice,np.array([cloud_threshold]),colors='k')
-    
-        plt.ylabel('height (m)')
-        plt.xlabel('')
-        plt.title('vertical motion transect')
+        for i,transect in enumerate(transects):
+            # take mean of vert motion between lvls 25-48 approx 500m - 1500m
+            with warnings.catch_warnings():
+                # ignore warning from collapsing non-contiguous dimension:
+                warnings.simplefilter('ignore')
+                wmean = w[i,25:48,:,:].collapsed('model_level_number', iris.analysis.MEAN)
+            h0,h1 = wmean.coord('level_height').bounds[0]
+            fire=None
+            if ff is not None:
+                fire=ff[i].data.data
+            qci = qc[i].data.data
+            ui = u[i].data.data
+            wi = w[i].data.data
+            
+            ## calc zth
+            # repeat surface pressure along z axis
+            reppmsl = np.repeat(pmsl[i].data[np.newaxis,:,:],nz, axis=0)
+            zth = -(287*300/9.8)*np.log(p[i].data/reppmsl)
+            
+            a,b,c,d = transect
+            start=[a,b]
+            end=[c,d]
+            
+            ## map showing transect
+            plt.figure(figsize=[10,16])
+            plt.subplot(3,1,1)
+            cs, _ = map_with_transect(wmean.data, lat, lon, transect=[start,end], 
+                                      ff=fire, color='k', linewidth=1,
+                                      clevs = clevs_vertwind,
+                                      cbar=False, 
+                                      cmap=plotting._cmaps_['verticalvelocity'],
+                                      norm=col.SymLogNorm(0.25), 
+                                      cbarform=tick.ScalarFormatter(), 
+                                      clabel='m/s')
+            plotting.map_add_locations_extent(extentname,hide_text=True) 
+            wmeantitle='Vertical motion mean (%3.0fm - %4.0fm)'%(h0,h1)
+            plt.title(wmeantitle)
+            
+            ## Transect of vert motion
+            plt.subplot(3,1,2)
+            npoints=100
+            wslice, xslice, zslice = plotting.transect_w(wi, zth,
+                                                         lat, lon, start, end,
+                                                         npoints=npoints, title='',
+                                                         topog=topog, ztop=ztop,
+                                                         contours=clevs_vertwind,
+                                                         lines=None, colorbar=True)
+            ## add cloud outlines
+            ## Add contour where clouds occur
+            qcslice = utils.cross_section(qci, lat, lon, start, end, npoints=100)
+            with warnings.catch_warnings():
+                # ignore warning when there are no clouds:
+                warnings.simplefilter('ignore')
+                plt.contour(xslice,zslice,qcslice,np.array([cloud_threshold]),colors='k')
         
-        ## plot potential temp
-        plt.subplot(3,1,3)
-        theta = utils.potential_temperature(p[i].data,Ta[i].data)
-        plotting.transect_theta(theta,zth,lat,lon,start,end,
-                                npoints=100, topog=topog, title='',
-                                ztop=ztop)
-        
-        ## Plot title and vmotion colour bar
-        plt.title('potential temperature transect')
-        stitle = ffdtimes[i].strftime("Vertical motion %Y %b %d %H:%M (UTC)")
-        plt.suptitle(stitle)
-        
-        #fig=plt.gcf()
-        #axes=[0.33, 0.65, 0.33, 0.02]
-        #f.subplots_adjust(right=axes[0]-0.01)
-        #cbar_ax = fig.add_axes(axes)
-        #cb = fig.colorbar(cs, cax=cbar_ax, 
-        #                format=tick.ScalarFormatter())
-        # -ve labelpad moves label closer to colourbar
-        #cb.set_label('m/s', labelpad=-3)
-        
-        fio.save_fig(model_run,_sn_,ffdtimes[i],plt,subdir='moving')
+            
+            ## Add quivers to transect
+            # get longitudinal wind speed slice along transect
+            uslice = utils.cross_section(ui,lat,lon,start,end,npoints=npoints)
+            
+            # lets cut away the upper levels before making our quiver
+            ztopirows, ztopicols = np.where(zslice < ztop) # index rows and columns
+            ztopi = np.max(ztopirows) # highest index with height below ztop
+            
+            # quiver east-west and vertical winds
+            quiverscale=160
+            plotting.map_quiver(uslice[:ztopi+4,:], wslice[:ztopi+4,:], 
+                                zslice[:ztopi+4,:], xslice[:ztopi+4,:], 
+                                nquivers=nquivers, scale=quiverscale,
+                                alpha=0.5, pivot='middle')
+            
+            
+            plt.ylabel('height (m)')
+            plt.xlabel('')
+            plt.title('vertical motion transect')
+            
+            ## plot potential temp
+            plt.subplot(3,1,3)
+            theta = utils.potential_temperature(p[i].data,Ta[i].data)
+            plotting.transect_theta(theta,zth,lat,lon,start,end,
+                                    npoints=100, topog=topog, title='',
+                                    ztop=ztop)
+            
+            ## Plot title and vmotion colour bar
+            plt.title('potential temperature transect')
+            stitle = ffdtimes[i].strftime("Vertical motion %Y %b %d %H:%M (UTC)")
+            plt.suptitle(stitle)
+            
+            #fig=plt.gcf()
+            #axes=[0.33, 0.65, 0.33, 0.02]
+            #f.subplots_adjust(right=axes[0]-0.01)
+            #cbar_ax = fig.add_axes(axes)
+            #cb = fig.colorbar(cs, cax=cbar_ax, 
+            #                format=tick.ScalarFormatter())
+            # -ve labelpad moves label closer to colourbar
+            #cb.set_label('m/s', labelpad=-3)
+            
+            fio.save_fig(model_run,_sn_,ffdtimes[i],plt,subdir='moving')
         
     
 def pyrocb_model_run(model_run='waroona_run1', dtime=datetime(2016,1,5,15)):
@@ -611,8 +623,11 @@ if __name__ == '__main__':
     model_runs = ['waroona_run1','waroona_old','sirivan_run1']
     testing=False
     
+    sample_showing_grid(model_run="sirivan_run1")
+    
     ## New zoomed, moving pyrocb plotting
-    moving_pyrocb(model_run='waroona_run3',subset=True)
+    second_half = [datetime(2016,1,5,15)+ timedelta(hours=12+x) for x in range(12)]
+    #moving_pyrocb(model_run='waroona_run3', hours=second_half)
     
     ## Run sample for waroona_run2
     #pyrocb_model_run('waroona_run2', dtime=datetime(2016,1,5,15))
