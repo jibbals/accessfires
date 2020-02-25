@@ -513,8 +513,8 @@ def transect(data, z, lat, lon, start, end, npoints=100,
     if 'extend' not in contourfargs:
         contourfargs['extend'] = 'max'
     
-    ## Check that z includes topography
-    if np.mean(z[0])<np.mean(topog):
+    ## Check that z includes topography (within margin of 10 metres)
+    if np.mean(z[0]+10)<np.mean(topog):
         print("ERROR:",np.mean(z[0]), np.min(z[0]), "(mean,lowest z) is lower than topog", np.mean(topog), np.min(topog))
         print("ERROR:", "Try adding topog to each level of z")
         assert False

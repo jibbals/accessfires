@@ -36,44 +36,43 @@ _sn_ = 'pyrocb'
 __cloud_thresh__ = constants.cloud_threshold
 
 
-# transects showing the pyroCB in model extents
-# waroona (old run) gets pyrocb around Jan 6, 0600-0830
-# Sirivan gets some pyrocb around Feb 12, 0600 - 0800 UTC
-__PYRO_TRANSECTS__ = {'waroona':{'X1':[[-32.89, 115.90], [-32.88, 116.19]],
-                                 'X2':[[-32.95, 116.09], [-32.78, 116.16]],
-                                 'X3':[[-32.95, 116.15], [-32.78, 116.09]],
-                                 'LR1':[[-32.87, 115.90], [-32.87, 116.18]]}, # left to right transect, to allow easy quiver on (u,w) dims
-                      'sirivan':{'X1':[[-32.15, 149.40], [-32.00, 150.10]],
-                                 'X2':[[-32.20, 149.60], [-31.85, 149.85]],
-                                 'X3':[[-32.15, 149.90], [-31.85, 149.60]],
-                                 'LR1':[[-32.50, 149.50], [-32.50, 150.00]]}}
-
 ## List of PyroCB latlon, and time 
 __PCB_occurrences__ = {
     'waroona_run3':{
         'latlon':[(-32.9,116.05), (-32.9,116.04),
                   (-32.9, 116.00), (-32.9,115.96),
-                  (-32.88, 116.01)],
+                  (-32.88, 116.01), (-32.88,115.94)],
         'time':[datetime(2016,1,6,6), datetime(2016,1,6,7), 
                 datetime(2016,1,6,8), datetime(2016,1,6,10),
-                datetime(2016,1,6,11)]
+                datetime(2016,1,6,11),datetime(2016,1,6,14)]
         },
     'waroona_run2':{
         'latlon':[(-32.9,116.08),(-32.91,116.07),
                   (-32.9,116.02),(-32.89,116.00),
                   (-32.9,115.99),(-32.90,115.97),
-                  (-33.0,115.88)],
+                  (-33.0,115.88), (-32.88,115.94)],
         'time':[datetime(2016,1,6,5), datetime(2016,1,6,6), 
                 datetime(2016,1,6,7), datetime(2016,1,6,8),
                 datetime(2016,1,6,9), datetime(2016,1,6,10),
-                datetime(2016,1,6,11)]
+                datetime(2016,1,6,11),datetime(2016,1,6,14)]
+        },
+    'waroona_run1':{
+        'latlon':[(-32.88,116.14),(-32.88,116.0),],
+        'time':[datetime(2016,1,5,15), datetime(2016,1,6,14),]
+        },
+    'waroona_old':{
+        'latlon':[(-32.88,116.14), (-32.89,116.14),        
+                  (-32.9,116.11),],
+        'time':[datetime(2016,1,5,21), datetime(2016,1,6,0), 
+                datetime(2016,1,6,8),]
         },
     'sirivan_run1':{
-        'latlon':[(1,2),],
-        'time':[datetime(2017,1,6,5), datetime(2017,1,6,6), 
-                datetime(2017,1,6,7), datetime(2017,1,6,8),
-                datetime(2017,1,6,9), datetime(2017,1,6,10),
-                datetime(2017,1,6,11)]
+        'latlon':[(-32.1,149.725),(-32.1,149.875),
+                  (-32.04,149.875),(-32.05,150.0255),
+                  (-31.9,150)],
+        'time':[datetime(2017,2,12,1), datetime(2017,2,12,3), 
+                datetime(2017,2,12,6), datetime(2017,2,12,7),
+                datetime(2017,2,12,18)]
         }
     }
 
@@ -96,7 +95,40 @@ def pcb_occurrences(model_run, times):
     full_latlons = [ (lat, lon) for lat,lon in zip(full_lats, full_lons) ]
     
     return full_latlons
+
+def transect_plus_quiver(w,u,qc,topog,zth,lat,lon,start,end,ztop,contours,
+                         npoints=100,nquivers=13):
+    '''
+    '''
+    wslice, xslice, zslice = plotting.transect_w(w, zth,
+                                                 lat, lon, start, end,
+                                                 npoints=npoints, title='',
+                                                 topog=topog, ztop=ztop,
+                                                 contours=contours,
+                                                 lines=None, colorbar=True)
+    ## add cloud outlines
+    ## Add contour where clouds occur
+    qcslice = utils.cross_section(qc, lat, lon, start, end, npoints=npoints)
+    with warnings.catch_warnings():
+        # ignore warning when there are no clouds:
+        warnings.simplefilter('ignore')
+        plt.contour(xslice,zslice,qcslice,np.array([__cloud_thresh__]),colors='k')
+
     
+    ## Add quivers to transect
+    # get longitudinal wind speed slice along transect
+    uslice = utils.cross_section(u,lat,lon,start,end,npoints=npoints)
+    
+    # lets cut away the upper levels before making our quiver
+    ztopirows, ztopicols = np.where(zslice < ztop) # index rows and columns
+    ztopi = np.max(ztopirows) # highest index with height below ztop
+    
+    # quiver east-west and vertical winds
+    quiverscale=160
+    plotting.map_quiver(uslice[:ztopi+4,:], wslice[:ztopi+4,:], 
+                        zslice[:ztopi+4,:], xslice[:ztopi+4,:], 
+                        nquivers=nquivers, scale=quiverscale,
+                        alpha=0.5, pivot='middle')
 
 
 def map_with_transect(data,lat,lon, transect,
@@ -263,15 +295,13 @@ def sample_showing_grid(model_run='waroona_run3'):
         fio.save_fig(model_run,_sn_,hour,plt,subdir="sample_with_grid")
         
 
-def pyrocb(w, qc, z, wmean, topog, lat, lon,
+def pyrocb(w, u, qc, z, wmean, topog, lat, lon,
            transect1, transect2, transect3,
            ff=None,
            wmeantitle='Average vertical motion',
            extentname=None,
            ztop=15000,
            cloud_threshold=constants.cloud_threshold,
-           ext='.png',
-           dpi=300,
            ):
     '''
     311: mean vert windspeed between 500m and 1500m (?)
@@ -330,18 +360,21 @@ def pyrocb(w, qc, z, wmean, topog, lat, lon,
     ax2=plt.subplot(3,1,2)
     
     ## Plot vert motion transect
-    wslice, xslice, zslice = plotting.transect_w(w, z, lat, lon, start, end,
-                                                 npoints=100, title='',
-                                                 topog=topog, ztop=ztop,
-                                                 lines=None, colorbar=False)
-    ## add cloud outlines
-    ## Add contour where clouds occur
-    qcslice = utils.cross_section(qc, lat, lon, start, end, npoints=100)
-    with warnings.catch_warnings():
-        # ignore warning when there are no clouds:
-        warnings.simplefilter('ignore')
-        plt.contour(xslice,zslice,qcslice,np.array([cloud_threshold]),colors='k')
-
+    #    wslice, xslice, zslice = plotting.transect_w(w, z, lat, lon, start, end,
+    #                                                 npoints=100, title='',
+    #                                                 topog=topog, ztop=ztop,
+    #                                                 lines=None, colorbar=False)
+    #    ## add cloud outlines
+    #    ## Add contour where clouds occur
+    #    qcslice = utils.cross_section(qc, lat, lon, start, end, npoints=100)
+    #    with warnings.catch_warnings():
+    #        # ignore warning when there are no clouds:
+    #        warnings.simplefilter('ignore')
+    #        plt.contour(xslice,zslice,qcslice,np.array([cloud_threshold]),colors='k')
+    transect_plus_quiver(w,u,qc,topog,z,lat,lon,start,end,ztop,
+                         contours=clevs_vertwind,
+                         npoints=100,nquivers=13)
+    
     plt.ylabel('height (m)')
     plt.xlabel('')
     for spine in [ax2.spines['bottom'], ax2.spines['top']]:
@@ -413,7 +446,6 @@ def moving_pyrocb(model_run='waroona_run3', hours = None,
                                            -1*(2.0**np.arange(-2,6))),
                                 np.array([0]))
     ztop=14000
-    cloud_threshold = constants.cloud_threshold
     
     ## read um output over extent [t, lev, lat, lon]
     for hour in hours:
@@ -484,37 +516,9 @@ def moving_pyrocb(model_run='waroona_run3', hours = None,
             
             ## Transect of vert motion
             plt.subplot(3,1,2)
-            npoints=100
-            wslice, xslice, zslice = plotting.transect_w(wi, zth,
-                                                         lat, lon, start, end,
-                                                         npoints=npoints, title='',
-                                                         topog=topog, ztop=ztop,
-                                                         contours=clevs_vertwind,
-                                                         lines=None, colorbar=True)
-            ## add cloud outlines
-            ## Add contour where clouds occur
-            qcslice = utils.cross_section(qci, lat, lon, start, end, npoints=100)
-            with warnings.catch_warnings():
-                # ignore warning when there are no clouds:
-                warnings.simplefilter('ignore')
-                plt.contour(xslice,zslice,qcslice,np.array([cloud_threshold]),colors='k')
-        
-            
-            ## Add quivers to transect
-            # get longitudinal wind speed slice along transect
-            uslice = utils.cross_section(ui,lat,lon,start,end,npoints=npoints)
-            
-            # lets cut away the upper levels before making our quiver
-            ztopirows, ztopicols = np.where(zslice < ztop) # index rows and columns
-            ztopi = np.max(ztopirows) # highest index with height below ztop
-            
-            # quiver east-west and vertical winds
-            quiverscale=160
-            plotting.map_quiver(uslice[:ztopi+4,:], wslice[:ztopi+4,:], 
-                                zslice[:ztopi+4,:], xslice[:ztopi+4,:], 
-                                nquivers=nquivers, scale=quiverscale,
-                                alpha=0.5, pivot='middle')
-            
+            transect_plus_quiver(wi,ui,qci,topog,zth,lat,lon,start,end,ztop,
+                                 contours=clevs_vertwind,
+                                 npoints=100,nquivers=13)
             
             plt.ylabel('height (m)')
             plt.xlabel('')
@@ -554,10 +558,6 @@ def pyrocb_model_run(model_run='waroona_run1', dtime=datetime(2016,1,5,15)):
     ### First use datetime and extentname to read correct outputs:
     extentname=model_run.split('_')[0]
     extent = plotting._extents_[extentname]
-    X1 = __PYRO_TRANSECTS__[extentname]['X1']
-    X2 = __PYRO_TRANSECTS__[extentname]['X2']
-    X3 = __PYRO_TRANSECTS__[extentname]['X3']
-    LR1 = __PYRO_TRANSECTS__[extentname]['LR1']
     
     ## read um output over extent [t, lev, lat, lon]
     cubes = fio.read_model_run(model_run, fdtime=[dtime], extent=extent,
@@ -576,6 +576,13 @@ def pyrocb_model_run(model_run='waroona_run1', dtime=datetime(2016,1,5,15)):
     ffdtimes = utils.dates_from_iris(w)
     ff, = fio.read_fire(model_run=model_run, dtimes=ffdtimes, extent=extent, firefront=True)
     
+    lat_pcb, lon_pcb = pcb_occurrences(model_run,ffdtimes)[0]
+    multiplyer=1
+    if 'sirivan' in model_run:
+        multiplyer=2
+    X1 = [[lat_pcb,lon_pcb - .14*multiplyer], [lat_pcb, lon_pcb+.14*multiplyer]]
+    X2 = [[lat_pcb-0.08, lon_pcb-0.08], [lat_pcb+0.08, lon_pcb+0.08]]
+    X3 = [[lat_pcb+0.08, lon_pcb-0.08], [lat_pcb-0.08, lon_pcb+0.08]]
     
     # take mean of vert motion between lvls 25-48 approx 500m - 1500m
     with warnings.catch_warnings():
@@ -598,7 +605,7 @@ def pyrocb_model_run(model_run='waroona_run1', dtime=datetime(2016,1,5,15)):
             ffi = ff[i].data.data
         
         ## First make the left to right figure
-        left_right_slice(qci, ui, wi, zi, topogi, lat, lon, LR1)
+        left_right_slice(qci, ui, wi, zi, topogi, lat, lon, X1)
         fio.save_fig(model_run, _sn_, ffdtimes[i], plt, subdir='LR1')
         
         ## second make the full pyrocb plot:
@@ -607,7 +614,7 @@ def pyrocb_model_run(model_run='waroona_run1', dtime=datetime(2016,1,5,15)):
         stitle = ffdtimes[i].strftime("Vertical motion %Y %b %d %H:%M (UTC)")
         wmeantitle='Mean(%3.0fm - %4.0fm)'%(h0,h1)
         
-        pyrocb(w=wi, qc=qci, z=zi, wmean=wmeani, topog=topogi,
+        pyrocb(w=wi, u=ui, qc=qci, z=zi, wmean=wmeani, topog=topogi,
                lat=lat, lon=lon, transect1=X1, transect2=X2, transect3=X3,
                ff=ffi,
                wmeantitle=wmeantitle,
@@ -616,21 +623,24 @@ def pyrocb_model_run(model_run='waroona_run1', dtime=datetime(2016,1,5,15)):
         plt.suptitle(stitle)
         fio.save_fig(model_run, _sn_, ffdtimes[i], plt, dpi=200)
 
-
-
 if __name__ == '__main__':
     
     model_runs = ['waroona_run1','waroona_old','sirivan_run1']
     testing=False
     
-    sample_showing_grid(model_run="sirivan_run1")
+    ## check to see where pcb are occurring
+    #sample_showing_grid(model_run="waroona_run1")
     
     ## New zoomed, moving pyrocb plotting
-    second_half = [datetime(2016,1,5,15)+ timedelta(hours=12+x) for x in range(12)]
-    #moving_pyrocb(model_run='waroona_run3', hours=second_half)
+    waroona_second_half = [datetime(2016,1,5,15)+ timedelta(hours=12+x) for x in range(12)]
+    sirivan_check = __PCB_occurrences__['sirivan_run1']['time']
+    #moving_pyrocb(model_run='waroona_run3', hours=waroona_second_half)
+    #moving_pyrocb(model_run='sirivan_run1', hours=sirivan_check,
+    #              xlen=0.3)
     
     ## Run sample for waroona_run2
-    #pyrocb_model_run('waroona_run2', dtime=datetime(2016,1,5,15))
+    #for hour in waroona_second_half:
+    #    pyrocb_model_run('waroona_run3', dtime=hour)
     
     ### These are the first pyrocb plots I made (3 transects, not moving)
     #for mr in model_runs :
