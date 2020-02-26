@@ -36,6 +36,18 @@ _topog_sirivan_ = 'data/sirivan/umnsaa_pa2017021121.nc'
 _files_sirivan_ = sorted(glob('data/sirivan/umnsaa_pc*.nc'))
 
 model_outputs = {
+        ## New sirivan run (on GADI) by harvey in Feb 2020
+        'sirivan_run2':{
+            'path':'data/sirivan_run2/',
+            'topog':'umnsaa_2016010515_slv.nc',
+            'filedates':np.array([datetime(2016,1,5,15) + timedelta(hours=x) for x in range(24)]),
+            'hasfire':True,
+            'path_firefront':'fire/firefront.CSIRO_new_gadi.20160105T1500Z.nc',
+            'path_fireflux':'fire/sensible_heat.CSIRO_new_gadi.20160105T1500Z.nc',
+            'path_firespeed':'fire/fire_speed.CSIRO_new_gadi.20160105T1500Z.nc',
+            'run':'Run 6 Feb 2020',
+            'origdir':'/scratch/en0/hxy548/cylc-run/au-aa799/share/cycle/20160105T1500Z/waroona/0p3/ukv_os38/um/',
+            'origfiredir':'/g/data/en0/hxy548/fire_vars/waroona/0p3/'},
         ## New waroona run (on GADI) by harvey in Feb 2020
         'waroona_run3':{
             'path':'data/waroona_run3/',
