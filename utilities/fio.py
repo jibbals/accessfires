@@ -37,17 +37,30 @@ _files_sirivan_ = sorted(glob('data/sirivan/umnsaa_pc*.nc'))
 
 model_outputs = {
         ## New sirivan run (on GADI) by harvey in Feb 2020
+        ## there is also a high res version of this
         'sirivan_run2':{
             'path':'data/sirivan_run2/',
-            'topog':'umnsaa_2016010515_slv.nc',
-            'filedates':np.array([datetime(2016,1,5,15) + timedelta(hours=x) for x in range(24)]),
+            'topog':'umnsaa_2017021121_slv.nc',
+            'filedates':np.array([datetime(2017,2,11,21) + timedelta(hours=x) for x in range(24)]),
             'hasfire':True,
-            'path_firefront':'fire/firefront.CSIRO_new_gadi.20160105T1500Z.nc',
-            'path_fireflux':'fire/sensible_heat.CSIRO_new_gadi.20160105T1500Z.nc',
-            'path_firespeed':'fire/fire_speed.CSIRO_new_gadi.20160105T1500Z.nc',
-            'run':'Run 6 Feb 2020',
-            'origdir':'/scratch/en0/hxy548/cylc-run/au-aa799/share/cycle/20160105T1500Z/waroona/0p3/ukv_os38/um/',
-            'origfiredir':'/g/data/en0/hxy548/fire_vars/waroona/0p3/'},
+            'path_firefront':'fire/firefront.CSIRO_gadi.20170211T2100Z.nc',
+            'path_fireflux':'fire/sensible_heat.CSIRO_gadi.20170211T2100Z.nc',
+            'path_firespeed':'fire/fire_speed.CSIRO_gadi.20170211T2100Z.nc',
+            'run':'Run 26 Feb 2020',
+            'origdir':'/scratch/en0/hxy548/cylc-run/au-aa860/share/cycle/20170211T2100Z/sirivan/0p3/ukv_os38/um/',
+            'origfiredir':'/g/data/en0/hxy548/fire_vars/sirivan/0p3/'},
+        ## high res version of sirivan run2 (100m x 100m)
+        'sirivan_run2_hr':{
+            'path':'data/sirivan_run2_hr/',
+            'topog':'umnsaa_2017021121_slv.nc',
+            'filedates':np.array([datetime(2017,2,11,21) + timedelta(hours=x) for x in range(24)]),
+            'hasfire':True,
+            'path_firefront':'fire/firefront.CSIRO_gadi.20170211T2100Z.nc',
+            'path_fireflux':'fire/sensible_heat.CSIRO_gadi.20170211T2100Z.nc',
+            'path_firespeed':'fire/fire_speed.CSIRO_gadi.20170211T2100Z.nc',
+            'run':'Run 26 Feb 2020',
+            'origdir':'/scratch/en0/hxy548/cylc-run/au-aa860/share/cycle/20170211T2100Z/sirivan/0p1/ukv_os38/um/',
+            'origfiredir':'/g/data/en0/hxy548/fire_vars/sirivan/0p1/'},
         ## New waroona run (on GADI) by harvey in Feb 2020
         'waroona_run3':{
             'path':'data/waroona_run3/',
@@ -516,7 +529,7 @@ def read_model_run(model_version, fdtime=None, subdtimes=None, extent=None,
             else:
                 allcubes.extend(cubelist)
         
-    elif 'waroona_run' in model_version:
+    elif '_run' in model_version:
         for dtime in fdtimes:
             slv,ro1,th1,th2 = read_waroona_run1(dtime, mv=model_version)
 

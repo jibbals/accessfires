@@ -64,7 +64,7 @@ def outline_waroona():
     
     plotting.init_plots()
     
-    cube_topog = fio.read_topog('waroona_old',inner)
+    cube_topog = fio.read_topog('waroona_run3',inner)
     latt = cube_topog.coord('latitude').points
     lont = cube_topog.coord('longitude').points
     topog = cube_topog.data.data
@@ -73,7 +73,7 @@ def outline_waroona():
     fig, ax, proj = plotting.map_tiff(locname='waroona',
                                       extent=extent, #fig=fig,
                                       subplot_row_col_n=[2,1,1],
-                                      show_grid=False, add_locations=True)
+                                      show_grid=False, locnames=['waroona','perth'])
     
     # add coastline
     ax.coastlines()
@@ -103,7 +103,7 @@ def outline_waroona():
     _, ax2, proj2 = plotting.map_tiff(locname='waroona',
                                       extent=inner, fig=fig,
                                       subplot_row_col_n=[2,2,3],
-                                      show_grid=False, add_locations=True)
+                                      show_grid=False, locnames=['waroona','yarloop','fire_waroona'])
     plt.title("Fire location")
     
     ## Add scale
@@ -130,7 +130,7 @@ def show_nests(model_run='waroona_run1', annotate_res=True, title=''):
     fig, ax, proj = plotting.map_tiff(locname=locname,
                                       extent=aust,
                                       show_grid=True, 
-                                      add_locations=False)
+                                      locnames=[locname,])
     
     # add coastline, stock img (tiff is currently just for zoomed in stuff)
     ax.coastlines()

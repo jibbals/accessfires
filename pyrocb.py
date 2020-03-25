@@ -66,6 +66,22 @@ __PCB_occurrences__ = {
         'time':[datetime(2016,1,5,21), datetime(2016,1,6,0), 
                 datetime(2016,1,6,8),]
         },
+    'sirivan_run2_hr':{
+        'latlon':[(-32.1,149.725),(-32.1,149.875),
+                  (-32.04,149.875),(-32.05,150.0255),
+                  (-31.9,150)],
+        'time':[datetime(2017,2,12,1), datetime(2017,2,12,3), 
+                datetime(2017,2,12,6), datetime(2017,2,12,7),
+                datetime(2017,2,12,18)]
+        },
+    'sirivan_run2':{
+        'latlon':[(-32.1,149.725),(-32.1,149.875),
+                  (-32.04,149.875),(-32.05,150.0255),
+                  (-31.9,150)],
+        'time':[datetime(2017,2,12,1), datetime(2017,2,12,3), 
+                datetime(2017,2,12,6), datetime(2017,2,12,7),
+                datetime(2017,2,12,18)]
+        },
     'sirivan_run1':{
         'latlon':[(-32.1,149.725),(-32.1,149.875),
                   (-32.04,149.875),(-32.05,150.0255),
@@ -73,7 +89,7 @@ __PCB_occurrences__ = {
         'time':[datetime(2017,2,12,1), datetime(2017,2,12,3), 
                 datetime(2017,2,12,6), datetime(2017,2,12,7),
                 datetime(2017,2,12,18)]
-        }
+        },
     }
 
 def pcb_occurrences(model_run, times):
@@ -447,6 +463,9 @@ def moving_pyrocb(model_run='waroona_run3', hours = None,
                                 np.array([0]))
     ztop=14000
     
+    if hours is None:
+        hours = fio.model_outputs[model_run]['filedates']
+
     ## read um output over extent [t, lev, lat, lon]
     for hour in hours:
         cubes = fio.read_model_run(model_run, extent=extent, 
@@ -625,7 +644,7 @@ def pyrocb_model_run(model_run='waroona_run1', dtime=datetime(2016,1,5,15)):
 
 if __name__ == '__main__':
     
-    model_runs = ['waroona_run1','waroona_old','sirivan_run1']
+    model_runs = ['waroona_run3','waroona_run2','sirivan_run1']
     testing=False
     
     ## check to see where pcb are occurring
@@ -635,17 +654,18 @@ if __name__ == '__main__':
     waroona_second_half = [datetime(2016,1,5,15)+ timedelta(hours=12+x) for x in range(12)]
     sirivan_check = __PCB_occurrences__['sirivan_run1']['time']
     #moving_pyrocb(model_run='waroona_run3', hours=waroona_second_half)
-    #moving_pyrocb(model_run='sirivan_run1', hours=sirivan_check,
-    #              xlen=0.3)
+    moving_pyrocb(model_run='sirivan_run1', 
+                  #hours=sirivan_check,
+                  xlen=0.3)
     
     ## Run sample for waroona_run2
     #for hour in waroona_second_half:
     #    pyrocb_model_run('waroona_run3', dtime=hour)
     
     ### These are the first pyrocb plots I made (3 transects, not moving)
-    #for mr in model_runs :
-    #    dtimes = fio.model_outputs[mr]['filedates']
-    #    if testing:
-    #        dtimes = dtimes[0:2]
-    #    for dtime in dtimes:
-    #        pyrocb_model_run(model_run=mr, dtime=dtime)
+    for mr in model_runs :
+        dtimes = fio.model_outputs[mr]['filedates']
+        if testing:
+            dtimes = dtimes[0:2]
+        for dtime in dtimes:
+            pyrocb_model_run(model_run=mr, dtime=dtime)

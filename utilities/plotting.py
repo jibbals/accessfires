@@ -74,6 +74,7 @@ _extents_['sirivanz']   = [149.4, 150.15, -32.2, -31.8]
 _extents_['sirivans']   = [147,152, -34, -30] # synoptic
 _latlons_['dunedoo']    = -31.99, 149.53
 _latlons_['uarbry']      = -32.047280, 149.71
+_latlons_['sirivan']    = _latlons_['uarbry'] # no idea where sir ivan is..
 _latlons_['cassillis']      = -32.01, 150.0
 _latlons_['fire_sirivan'] = -32.05, 149.59
 _latlons_['fire_sirivan_upwind'] = -32.01, 149.5
@@ -513,8 +514,8 @@ def transect(data, z, lat, lon, start, end, npoints=100,
     if 'extend' not in contourfargs:
         contourfargs['extend'] = 'max'
     
-    ## Check that z includes topography (within margin of 10 metres)
-    if np.mean(z[0]+10)<np.mean(topog):
+    ## Check that z includes topography (within margin of 40 metres)
+    if np.mean(z[0]+40)<np.mean(topog):
         print("ERROR:",np.mean(z[0]), np.min(z[0]), "(mean,lowest z) is lower than topog", np.mean(topog), np.min(topog))
         print("ERROR:", "Try adding topog to each level of z")
         assert False

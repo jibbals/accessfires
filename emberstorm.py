@@ -245,7 +245,7 @@ if __name__ == '__main__':
     
     hours=fio.model_outputs[mr]['filedates']
     testhours = [datetime(2016,1,6,13)]
-    interesting_hours=[datetime(2016,1,6,x) for x in range(10,15)]
+    interesting_hours=[datetime(2016,1,6,x) for x in range(8,15)]
 
 
     make_plots_emberstorm(mr, hours=interesting_hours)

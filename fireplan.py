@@ -183,9 +183,11 @@ if __name__=='__main__':
     ### Run the stuff
     
     ## Just create a fireplan figure:
-    for mr in ['waroona_run3','waroona_run2']:
+    for mr in ['waroona_old','waroona_run1','sirivan_run1','waroona_run3','waroona_run2']:
         #extent = plotting._extents_[mr.split('_')[0]+'z']  # zoomed waroona extent
         extent = [115.6, 116.2, -33.06, -32.8]
+        if 'sirivan' in mr:
+            extent = plotting._extents_['sirivan']
         # read all the fire data
         ff, = fio.read_fire(model_run=mr, dtimes=None,
                             extent=extent, firefront=True)

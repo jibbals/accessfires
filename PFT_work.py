@@ -139,7 +139,7 @@ def pft_altitude_vs_pressure(model_run='waroona_run1', latlon=plotting._latlons_
     plt.title("z$_{fc}$",y=0.73)
     plt.ylabel('altitude [km]')
 
-def firepower_comparison(runs=['waroona_run1','waroona_old','waroona_run2'], localtime=False):
+def firepower_comparison(runs=['waroona_run1','waroona_old','waroona_run2','waroona_run3'], localtime=False):
     """
     Plot overlaid time series of two model runs fire power from integral of intensity
     """
@@ -295,15 +295,15 @@ if __name__ == '__main__':
     
     ## Compare firepower/PFT for some runs
     #firepower_comparison(runs=['waroona_old','waroona_run1'])
-    firepower_comparison(runs=['waroona_run3'])
+    firepower_comparison()
 
     ## Summary figure for PFT at a site for one output hour
     #dtimes = fio.model_outputs['waroona_old']['filedates']
     #model_run_PFT_summary(model_run='waroona_old', hour=dtimes[0])
     
     #['waroona_run2','waroona_run2uc','waroona_run1','waroona_old']:
-    for mr in ['waroona_run3']:
-        dtimes = fio.model_outputs[mr]['filedates']
-        for dtime in dtimes:
-            model_run_PFT_summary(model_run=mr, hour=dtime)
+    #for mr in ['waroona_run3']:
+    #    dtimes = fio.model_outputs[mr]['filedates']
+    #    for dtime in dtimes:
+    #        model_run_PFT_summary(model_run=mr, hour=dtime)
     
