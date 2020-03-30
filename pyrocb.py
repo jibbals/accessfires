@@ -268,19 +268,22 @@ def top_down_vertical_motion(W,lat,lon,FF=None,Q=None,):
     #cbar_ax = fig.add_axes([0.905, 0.4, 0.01, 0.2])# X Y Width Height
     #fig.colorbar(cs, cax=cbar_ax, format=ticker.ScalarFormatter(), pad=0)
 
-def sample_showing_grid(model_run='waroona_run3'):
+def sample_showing_grid(model_run='waroona_run3', extentname=None, HSkip=None):
     """
     Show each hour the latlon grid and vertical motion at 4000,5000,6000 metres
     """
     all_hours = fio.model_outputs[model_run]['filedates']
-    extentname=model_run.split('_')[0]
+    
+    if extentname is None:
+        extentname=model_run.split('_')[0]
+    
     extent=plotting._extents_[extentname]
     
     for di,hour in enumerate(all_hours):
         ## Read hour of output
         try:
             cubes=fio.read_model_run(model_run,fdtime=hour,extent=extent,
-                                     add_winds=True)
+                                     add_winds=True, HSkip=HSkip)
         except OSError as ose:
             print("WARNING: OSError: probably missing some data")
             print("       :", ose)
@@ -295,7 +298,7 @@ def sample_showing_grid(model_run='waroona_run3'):
         h1 = np.argmin(np.abs(height-4000)) # nearest to 4k
         h2 = np.argmin(np.abs(height-5000))
         h3 = np.argmin(np.abs(height-7000))
-        FF, = fio.read_fire(model_run, dtimes=[hour], extent=extent)
+        FF, = fio.read_fire(model_run, dtimes=[hour], extent=extent, HSkip=HSkip)
         ## Horizontal map of vertical motion
         f, axes = plt.subplots(3,1,figsize=[12,16],subplot_kw={'projection': ccrs.PlateCarree()})
         for ax, hi in zip(axes,[h1,h2,h3]):
@@ -646,7 +649,7 @@ if __name__ == '__main__':
     
     ## check to see where pcb are occurring
     if True:
-        sample_showing_grid(model_run="sirivan_run2_hr")
+        sample_showing_grid(model_run="sirivan_run2_hr", extentname='sirivans', HSkip=8)
     
 
     ## New zoomed, moving pyrocb plotting

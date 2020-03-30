@@ -189,8 +189,9 @@ if __name__=='__main__':
     
     #weather_summary_model('waroona_run2',)#fdtimes=[datetime(2016,1,6,7)])
     
-    zoom_in = plotting._extents_['sirivans']
-    weather_summary_model('sirivan_run2_hr',zoom_in=zoom_in,HSkip=10)#fdtimes=[datetime(2016,1,6,7)])
+    #zoom_in = plotting._extents_['sirivans']
+    zoom_in=None
+    weather_summary_model('sirivan_run2_hr',zoom_in=zoom_in,HSkip=5)#fdtimes=[datetime(2016,1,6,7)])
 
     print("INFO: weather_summary.py done")
 

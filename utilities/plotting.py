@@ -134,16 +134,23 @@ def map_add_locations_extent(extentname, hide_text=False):
     
     locstrings = {'waroona':['waroona','yarloop'],
                   'waroonaz':['waroona'],
-                  'sirivan':['dunedoo','cassillis','uarbry']}
+                  'sirivan':['dunedoo','cassillis','uarbry'],
+                  'sirivans':['dunedoo','cassillis','uarbry']}
     dx=.025
     dxfire = .025
     dy=.015
     dyfire = .015
-    if extentname =='sirivan':
+    if extentname in ['sirivan','sirivans']:
         dx=[.065,.02,.125]
         dy =[.02,.015,-.07]
         dxfire=.05
         dyfire=-.06
+
+    # Where is fire ignition
+    firename = "fire_"+extentname
+    if extentname[-1] =="s":
+        firename = "fire_"+extentname[:-1]
+
     locs = locstrings[extentname]
     text = [name.capitalize() for name in locs]
     if hide_text:
@@ -151,7 +158,7 @@ def map_add_locations_extent(extentname, hide_text=False):
     
     map_add_locations(locs, text=text, textcolor='k', dx=dx,dy=dy)
     # add fire ignition
-    map_add_locations(['fire_%s'%extentname], text=[['Ignition',''][hide_text]], 
+    map_add_locations([firename], text=[['Ignition',''][hide_text]], 
                       color='r', marker='*', dx=dxfire, dy=dyfire, textcolor='k')
     # add weather stations
     if extentname=='waroona':
