@@ -67,12 +67,18 @@ __PCB_occurrences__ = {
                 datetime(2016,1,6,8),]
         },
     'sirivan_run2_hr':{
-        'latlon':[(-32.1,149.725),(-32.1,149.875),
-                  (-32.04,149.875),(-32.05,150.0255),
-                  (-31.9,150)],
-        'time':[datetime(2017,2,12,1), datetime(2017,2,12,3), 
-                datetime(2017,2,12,6), datetime(2017,2,12,7),
-                datetime(2017,2,12,18)]
+        'latlon':[(-32.1,149.8),(-32.13,149.95),
+                  (-32.07,149.95),(-32.03,149.95),
+                  (-32.07,150.0),(-31.95,149.825),
+                  (-31.9, 149.875),(-31.87,149.99),
+                  (-31.78, 150.025), (-31.63,150.025),
+                  (-31.5, 149.95)],
+        'time':[datetime(2017,2,12,2), datetime(2017,2,12,3), 
+                datetime(2017,2,12,4), datetime(2017,2,12,5),
+                datetime(2017,2,12,6),datetime(2017,2,12,7),
+                datetime(2017,2,12,8),datetime(2017,2,12,9),
+                datetime(2017,2,12,10),datetime(2017,2,12,11),
+                datetime(2017,2,12,12),]
         },
     'sirivan_run2':{
         'latlon':[(-32.1,149.725),(-32.1,149.875),
@@ -115,6 +121,8 @@ def pcb_occurrences(model_run, times):
 def transect_plus_quiver(w,u,qc,topog,zth,lat,lon,start,end,ztop,contours,
                          npoints=100,nquivers=13):
     '''
+    Show latitude following transect with horizontal and vertical winds
+    must follow one latitude to allow vertical wind to be accounted for in quivers
     '''
     wslice, xslice, zslice = plotting.transect_w(w, zth,
                                                  lat, lon, start, end,
@@ -446,7 +454,7 @@ def pyrocb(w, u, qc, z, wmean, topog, lat, lon,
     cb.set_label('m/s', labelpad=-3)
 
 def moving_pyrocb(model_run='waroona_run3', hours = None,
-                  ztop=14000, xlen=0.1, nquivers=12):
+                  ztop=14000, xlen=0.1, nquivers=12, HSkip=None):
     """
     follow pyrocb with a transect showing vert motion and pot temp
     ARGUMENTS:
@@ -471,7 +479,8 @@ def moving_pyrocb(model_run='waroona_run3', hours = None,
         cubes = fio.read_model_run(model_run, extent=extent, 
                                    fdtime=[hour],
                                    add_topog=True,
-                                   add_winds=True)
+                                   add_winds=True,
+                                   HSkip=HSkip)
                                    #add_z=True)
         w, = cubes.extract('upward_air_velocity')
         ffdtimes = utils.dates_from_iris(w) 
@@ -489,7 +498,11 @@ def moving_pyrocb(model_run='waroona_run3', hours = None,
         transects = [[plat,plon-xlen/2.0,plat,plon+xlen/2.0] for (plat,plon) in pcb_centres]
         
         ## fire front
-        ff, = fio.read_fire(model_run=model_run, dtimes=ffdtimes, extent=extent, firefront=True)
+        ff, = fio.read_fire(model_run=model_run, 
+                            dtimes=ffdtimes, 
+                            extent=extent, 
+                            firefront=True,
+                            HSkip=HSkip)
         # add zth cube
         p, pmsl = cubes.extract(['air_pressure','air_pressure_at_sea_level'])
         Ta, = cubes.extract('air_temperature')
@@ -644,19 +657,22 @@ def pyrocb_model_run(model_run='waroona_run1', dtime=datetime(2016,1,5,15)):
 
 if __name__ == '__main__':
     
+    waroona_second_half = [datetime(2016,1,5,15)+ timedelta(hours=12+x) for x in range(12)]
+    sirivan_second_half = [datetime(2017,2,11,21)+ timedelta(hours=12+x) for x in range(12)]
+    
     ## check to see where pcb are occurring
-    if True:
+    if False:
         sample_showing_grid(model_run="sirivan_run2_hr")
     
 
     ## New zoomed, moving pyrocb plotting
-    if False:
-        waroona_second_half = [datetime(2016,1,5,15)+ timedelta(hours=12+x) for x in range(12)]
-        sirivan_check = __PCB_occurrences__['sirivan_run1']['time']
-        #moving_pyrocb(model_run='waroona_run3', hours=waroona_second_half)
-        moving_pyrocb(model_run='sirivan_run1', 
-                      #hours=sirivan_check,
-                      xlen=0.3)
+    if True:
+        mr = 'sirivan_run2_hr'
+        xlen=1.3 # one degree of longitude for transect length
+        hours=sirivan_second_half, # run half the hours
+        moving_pyrocb(model_run=mr, 
+                      hours=hours,
+                      xlen=xlen)
     
     ## Run sample for waroona_run2
     if False:
@@ -668,7 +684,7 @@ if __name__ == '__main__':
         model_runs = ['waroona_run3','waroona_run2','sirivan_run1']
         for mr in model_runs :
             dtimes = fio.model_outputs[mr]['filedates']
-            if testing:
+            if False: # Maybe just do a few hours for testing
                 dtimes = dtimes[0:2]
             for dtime in dtimes:
                 pyrocb_model_run(model_run=mr, dtime=dtime)

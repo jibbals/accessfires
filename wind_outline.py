@@ -136,18 +136,15 @@ def wind_outline(s,u,v,w,
     vsv = len(lat)//nquivers
     skip = (slice(None,None,vsv),slice(None,None,vsu))
     
-    ## colour the arrows
-    # map wind speed to colour map domain [0, 1]
-    norm = col.Normalize()
-    norm.autoscale(s[skip])
+    ## add quiver
     plt.get_cmap(plotting._cmaps_['windspeed'])
     plt.quiver(lon[skip[1]],lat[skip[0]],u[0][skip],v[0][skip], scale=quiverscale)
-               #color=cmap(norm(s[skip])), 
     
     ## Second row is transect plots
     plt.subplot(3,1,2)
     wslice, xslice, zslice  = plotting.transect_w(w,z, lat, lon,start,end,
                                                   npoints=100,topog=topog,
+                                                  ff=ff,
                                                   ztop=ztop,
                                                   lines=None)
     plt.ylabel('height (m)')
@@ -159,7 +156,9 @@ def wind_outline(s,u,v,w,
         plt.contour(xslice,zslice,qcslice,np.array([cloud_threshold]),colors='teal')
     
     ax3 = plt.subplot(3,1,3)
-    trs, trx, trz = plotting.transect_s(s,z,lat,lon,start,end,topog=topog, ztop=ztop)
+    trs, trx, trz = plotting.transect_s(s,z,lat,lon,start,end,
+                                        topog=topog, ztop=ztop,
+                                        ff=ff)
     xticks,xlabels = plotting.transect_ticks_labels(start,end)
     plt.xticks(xticks[0::2],xlabels[0::2]) # show transect start and end
     
