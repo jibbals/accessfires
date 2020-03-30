@@ -644,28 +644,31 @@ def pyrocb_model_run(model_run='waroona_run1', dtime=datetime(2016,1,5,15)):
 
 if __name__ == '__main__':
     
-    model_runs = ['waroona_run3','waroona_run2','sirivan_run1']
-    testing=False
-    
     ## check to see where pcb are occurring
-    #sample_showing_grid(model_run="waroona_run1")
+    if True:
+        sample_showing_grid(model_run="sirivan_run2_hr")
     
+
     ## New zoomed, moving pyrocb plotting
-    waroona_second_half = [datetime(2016,1,5,15)+ timedelta(hours=12+x) for x in range(12)]
-    sirivan_check = __PCB_occurrences__['sirivan_run1']['time']
-    #moving_pyrocb(model_run='waroona_run3', hours=waroona_second_half)
-    moving_pyrocb(model_run='sirivan_run1', 
-                  #hours=sirivan_check,
-                  xlen=0.3)
+    if False:
+        waroona_second_half = [datetime(2016,1,5,15)+ timedelta(hours=12+x) for x in range(12)]
+        sirivan_check = __PCB_occurrences__['sirivan_run1']['time']
+        #moving_pyrocb(model_run='waroona_run3', hours=waroona_second_half)
+        moving_pyrocb(model_run='sirivan_run1', 
+                      #hours=sirivan_check,
+                      xlen=0.3)
     
     ## Run sample for waroona_run2
-    #for hour in waroona_second_half:
-    #    pyrocb_model_run('waroona_run3', dtime=hour)
+    if False:
+        for hour in waroona_second_half:
+            pyrocb_model_run('waroona_run3', dtime=hour)
     
     ### These are the first pyrocb plots I made (3 transects, not moving)
-    for mr in model_runs :
-        dtimes = fio.model_outputs[mr]['filedates']
-        if testing:
-            dtimes = dtimes[0:2]
-        for dtime in dtimes:
-            pyrocb_model_run(model_run=mr, dtime=dtime)
+    if False:
+        model_runs = ['waroona_run3','waroona_run2','sirivan_run1']
+        for mr in model_runs :
+            dtimes = fio.model_outputs[mr]['filedates']
+            if testing:
+                dtimes = dtimes[0:2]
+            for dtime in dtimes:
+                pyrocb_model_run(model_run=mr, dtime=dtime)

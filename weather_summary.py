@@ -119,7 +119,8 @@ def plot_weather_summary(U,V,W, height, lat, lon, extentname, Q=None, FF=None):
 
 def weather_summary_model(model_version='waroona_run1',
                           fdtimes=None,
-                          zoom_in=None):
+                          zoom_in=None,
+                          HSkip=None):
     '''
     Read model run output hour by hour, running plot_weather_summary on each
     time slice. Can subset to just show fdtimes, and can also zoom to specific 
@@ -142,7 +143,8 @@ def weather_summary_model(model_version='waroona_run1',
         
         # read cubes
         cubes = fio.read_model_run(model_version, fdtime=[fdtime], extent=extent, 
-                                   add_winds=True)
+                                   add_winds=True,
+                                   HSkip=HSkip)
         u,v = cubes.extract(['u','v'])
         w, = cubes.extract('upward_air_velocity')
         clouds = cubes.extract('qc')
@@ -154,7 +156,7 @@ def weather_summary_model(model_version='waroona_run1',
         height = w.coord('level_height').points
         dtimes = utils.dates_from_iris(u)
         
-        ff, = fio.read_fire(model_version, dtimes, extent=extent)    
+        ff, = fio.read_fire(model_version, dtimes, extent=extent, HSkip=HSkip)
         
         # for each time slice create a weather summary plot
         for i,dtime in enumerate(dtimes):
@@ -187,7 +189,8 @@ if __name__=='__main__':
     
     #weather_summary_model('waroona_run2',)#fdtimes=[datetime(2016,1,6,7)])
     
-    weather_summary_model('sirivan_run2_hr',)#fdtimes=[datetime(2016,1,6,7)])
+    zoom_in = plotting._extents_['sirivans']
+    weather_summary_model('sirivan_run2_hr',zoom_in=zoom_in,HSkip=10)#fdtimes=[datetime(2016,1,6,7)])
 
     print("INFO: weather_summary.py done")
 

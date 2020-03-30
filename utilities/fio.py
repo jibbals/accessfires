@@ -365,7 +365,7 @@ def read_pft(model_run='waroona_run1',times=None, lats=None, lons=None):
         
     return pftd, ptimes, plats, plons 
 
-def read_nc_iris(fpath, constraints=None, keepvars=None):
+def read_nc_iris(fpath, constraints=None, keepvars=None, HSkip=None):
     '''
     Read netcdf file using iris, returning cubeslist
     actual data is not read until you call cube.data
@@ -375,7 +375,7 @@ def read_nc_iris(fpath, constraints=None, keepvars=None):
     print("INFO: Reading(iris) ",fpath)
     # First read all cubes in file using constraints
     if constraints is not None:
-        cubes=iris.load(fpath, constraints)
+        cubes = iris.load(fpath, constraints)
     else:
         cubes = iris.load(fpath)
 
@@ -383,13 +383,33 @@ def read_nc_iris(fpath, constraints=None, keepvars=None):
     if keepvars is not None:
         cubes = cubes.extract(keepvars)
 
+    # Maybe we want to cut down on the horizontal resolution
+    if HSkip is not None:
+        if not (HSkip == False):
+            # For each cube, apply ::HSkip to lon/lat dimension
+            small_cubes = iris.cube.CubeList()
+            for cube in cubes:
+                if cube.ndim == 2:
+                    mini = cube[::HSkip,::HSkip]
+                elif cube.ndim == 3:
+                    mini = cube[...,::HSkip,::HSkip]
+                elif cube.ndim == 4:
+                    mini = cube[...,...,::HSkip,::HSkip]
+                else:
+                    print("ERROR: HSKIP is missing the cube: ")
+                    print(cube)
+                    assert False, "shouldn't miss any cubes"
+                small_cubes.append(mini)
+            cubes = small_cubes
+    
     return cubes
 
 def read_fire(model_run='waroona_run1',
               dtimes=None, constraints=None, extent=None,
               firefront=True,
               sensibleheat=False,
-              firespeed=False):
+              firespeed=False,
+              HSkip=None):
     '''
     Read fire output cubes matching dtimes time dim
     '''
@@ -398,6 +418,9 @@ def read_fire(model_run='waroona_run1',
         # needs to be iterable to match cubelist return type 
         return [None]*np.sum([firefront,sensibleheat,firespeed]) 
     
+    ## Set hskip automatically for high res output
+    HSkip = _set_hskip_for_hr_(model_run,HSkip)
+
     ## otherwise read fire paths and return fire cubes
     ddir        = model_outputs[model_run]['path']
     ffpath      = ddir+model_outputs[model_run]['path_firefront']
@@ -407,6 +430,8 @@ def read_fire(model_run='waroona_run1',
     if extent is not None:
         constraints = _constraints_from_extent_(extent,constraints)
 
+
+
     # Build up cubelist based on which files you want to read
     cubelist = iris.cube.CubeList()
     flags = [firefront, sensibleheat, firespeed]
@@ -414,7 +439,7 @@ def read_fire(model_run='waroona_run1',
     units = [None, 'Watts/m2', 'm/s']
     for flag, path, unit in zip(flags, paths, units):
         if flag:
-            cube, = read_nc_iris(path, constraints=constraints)
+            cube, = read_nc_iris(path, constraints=constraints, HSkip=HSkip)
             if unit is not None:
                 cube.units=unit
             cubelist.append(cube)
@@ -440,9 +465,16 @@ def read_fire(model_run='waroona_run1',
 
     return cubelist
 
+def _set_hskip_for_hr_(model_version,HSkip):
+    """ set HSkip to 3 if model_version is high res and HSkip has not been set manually """
+    if ('_hr' in model_version):
+        if HSkip is None:
+            HSkip = 3
+    return HSkip
+
 def read_model_run(model_version, fdtime=None, subdtimes=None, extent=None,
                    add_topog=True, add_z=False, add_winds=False, add_theta=False,
-                   add_dewpoint=False, add_RH=False):
+                   add_dewpoint=False, add_RH=False, HSkip=None):
     '''
     Read output from particular model run into cubelist, generally concatenates
     along the time dimension.
@@ -460,6 +492,9 @@ def read_model_run(model_version, fdtime=None, subdtimes=None, extent=None,
         add_<metric>: bool,
             add data cubes to returned cubelist
             WARNING: Some of these will use RAM
+        HSkip: integer, optional
+            slice horizontal dimension [::HSkip] to reduce resolution
+            high resolution output is automatically HSkipped by 3 unless HSkip is set to false
 
     RETURNS:
         iris.cube.CubeList with standardised dimensions [time, level, latitude, longitude]
@@ -497,6 +532,10 @@ def read_model_run(model_version, fdtime=None, subdtimes=None, extent=None,
     ## make sure we have model run data
     assert model_version in model_outputs.keys(), "%s not yet supported by 'read_model_run'"%model_version
 
+    ## Set HSkip to 3 for high res model outputs
+    ## can set HSkip to False to bypass this
+    HSkip=_set_hskip_for_hr_(model_version,HSkip)
+
     ddir = model_outputs[model_version]['path']
 
     timelesscubes=[]
@@ -531,7 +570,7 @@ def read_model_run(model_version, fdtime=None, subdtimes=None, extent=None,
         
     elif '_run' in model_version:
         for dtime in fdtimes:
-            slv,ro1,th1,th2 = read_waroona_run1(dtime, mv=model_version)
+            slv,ro1,th1,th2 = read_standard_run(dtime, mv=model_version, HSkip=HSkip)
 
             # Remove specific humidity from slv, since we get the whole array from th1
             slv.remove(slv.extract('specific_humidity')[0])
@@ -549,11 +588,18 @@ def read_model_run(model_version, fdtime=None, subdtimes=None, extent=None,
             allcubes.extend(th2)
 
         if add_z:
-            # also read 3d model height
-            zro, = read_nc_iris(ddir+'umnsaa_2016010515_mdl_ro1.nc',
-                                constraints = 'height_above_reference_ellipsoid')
-            zth, = read_nc_iris(ddir+'umnsaa_2016010515_mdl_th1.nc',
-                                constraints = 'height_above_reference_ellipsoid')
+            # also read model height above ground level
+            # This field is only in the first output file
+            height_varname = 'height_above_reference_ellipsoid'
+            height_date = model_outputs[model_version]['filedates'][0]
+            ro1_height_path = ddir+height_date.strftime('umnsaa_%Y%m%d%H_mdl_ro1.nc')
+            zro, = read_nc_iris(ro1_height_path,
+                                constraints = height_varname, 
+                                HSkip=HSkip)
+            th1_height_path = ddir+height_date.strftime('umnsaa_%Y%m%d%H_mdl_th1.nc')
+            zth, = read_nc_iris(th1_height_path,
+                                constraints = height_varname,
+                                HSkip=HSkip)
             zro.rename('z_rho')
             zth.rename('z_th')
             timelesscubes.append(zth)
@@ -635,7 +681,8 @@ def read_model_run(model_version, fdtime=None, subdtimes=None, extent=None,
         # oldold is special case, topog read in read_waroona_oldold()
         if model_version != "waroona_oldold":
             topog, = read_nc_iris(ddir + model_outputs[model_version]['topog'],
-                                  constraints = 'surface_altitude')
+                                  constraints = 'surface_altitude',
+                                  HSkip=HSkip)
             allcubes.append(topog)
 
     ## Subset spatially
@@ -794,10 +841,10 @@ def read_model_run(model_version, fdtime=None, subdtimes=None, extent=None,
     return allcubes
 
 
-def read_waroona_run1(dtime, constraints=None, extent=None, mv='waroona_run1'):
+def read_standard_run(dtime, constraints=None, extent=None, mv='waroona_run1', HSkip=None):
     '''
-        Read the converted waroona model output files
-        returns list of 4 iris cube lists:
+        Read converted model output files
+        returns list of 4 iris cube lists, matching the model output files: slv, ro1, th1, th2
         ========
         0: specific_humidity / (1)             (time: 6; latitude: 576; longitude: 576)
         1: surface_air_pressure / (Pa)         (time: 6; latitude: 576; longitude: 576)
@@ -829,7 +876,7 @@ def read_waroona_run1(dtime, constraints=None, extent=None, mv='waroona_run1'):
     ## mdl_ro1 - multi level, on ro dimension (winds)
     ## mdl_th1 - multi level, on theta dimension
     ## mdl_th2 - multi level, on theta dimension (since um output file size is limited)
-    _waroona_run1_files_vars_ = {
+    _standard_run_vars_ = {
         'slv':[
             'specific_humidity',  # kg/kg [t,lat,lon]
             'surface_air_pressure', # Pa
@@ -855,9 +902,9 @@ def read_waroona_run1(dtime, constraints=None, extent=None, mv='waroona_run1'):
             ],
         }
     cubelists = []
-    for filetype,varnames in _waroona_run1_files_vars_.items():
+    for filetype,varnames in _standard_run_vars_.items():
         path = ddir+'umnsaa_%s_%s.nc'%(dstamp,filetype)
-        cubelists.append(read_nc_iris(path,constraints=constraints,keepvars=varnames))
+        cubelists.append(read_nc_iris(path,constraints=constraints,keepvars=varnames,HSkip=HSkip))
 
     return cubelists
 
@@ -1000,7 +1047,7 @@ def read_waroona_oldold(constraints=None, extent=None):
 
     return cubelist
 
-def read_sirivan_run1(dtime, constraints=None, extent=None):
+def read_sirivan_run1(dtime, constraints=None, extent=None, HSkip=None):
     '''
     0: mass_fraction_of_cloud_liquid_water_in_air / (kg kg-1) (time: 2; model_level_number: 140; latitude: 88; longitude: 106)
     1: mass_fraction_of_cloud_ice_in_air / (kg kg-1) (time: 2; model_level_number: 140; latitude: 88; longitude: 106)
@@ -1033,7 +1080,7 @@ def read_sirivan_run1(dtime, constraints=None, extent=None):
                 'specific_humidity', # kg/kg [lat,lon]
                 'specific_humidity_0', # kg/kg [t,z,lat,lon] #???
                 ]
-    cubes = read_nc_iris(path,constraints=constraints,keepvars=varnames)
+    cubes = read_nc_iris(path,constraints=constraints,keepvars=varnames,HSkip=HSkip)
 
     # specific_humidity is the name of two variables, we just want the good one
     shcubes = cubes.extract('specific_humidity')
@@ -1056,7 +1103,7 @@ def read_sirivan_run1(dtime, constraints=None, extent=None):
     return cubes
 
 
-def read_topog(model_version, extent=None):
+def read_topog(model_version, extent=None, HSkip=None):
     '''
     Read topography cube
     '''
@@ -1067,7 +1114,7 @@ def read_topog(model_version, extent=None):
     if extent is not None:
         constraints = _constraints_from_extent_(extent,constraints)
     topog, = read_nc_iris(ddir + model_outputs[model_version]['topog'],
-                          constraints = constraints)
+                          constraints = constraints, HSkip=HSkip)
 
     return topog
 

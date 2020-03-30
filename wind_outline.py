@@ -229,6 +229,7 @@ def outline_model_winds(model_run='sirivan_run1', hours=None, dpi=200):
 if __name__ == '__main__':
     
     allmr = fio.model_outputs.keys()
+    allmr = ['sirivan_run2_hr']
     for mr in allmr:
         hours = fio.model_outputs[mr]['filedates']
         for hour in hours:
