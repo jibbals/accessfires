@@ -1150,6 +1150,12 @@ def subset_time_iris(cube,dtimes,seccheck=121):
     # subset cube to desired times
     return cube[tinds]
 
+def make_folder(pname):
+    folder = '/'.join(pname.split('/')[:-1]) + '/'
+    if not os.path.exists(folder):
+        print("INFO: Creating folder:",folder)
+        os.makedirs(folder)
+
 def save_fig_to_path(pname,plt, dpi=150):
     '''
     Create dir if necessary
@@ -1160,15 +1166,27 @@ def save_fig_to_path(pname,plt, dpi=150):
         plt = matplotlib.pyplot instance
 
     '''
-    folder = '/'.join(pname.split('/')[:-1]) + '/'
-    if not os.path.exists(folder):
-        print("INFO: Creating folder:",folder)
-        os.makedirs(folder)
+    make_folder(pname)
     print ("INFO: Saving figure:",pname)
     plt.savefig(pname, dpi=dpi)
     plt.close()
 
-def save_fig(model_run,script_name,pname, plt, subdir=None,
+def standard_fig_name(model_run, script_name, pname, 
+                      subdir=None, ext='.png'):
+    if isinstance(pname,datetime):
+        dstamp=pname.strftime('%Y%m%d%H%M')
+        pname='fig_%s%s'%(dstamp,ext)
+
+    if subdir is not None:
+        pname='%s/'%subdir + pname
+
+    if len(pname.split('.')) == 1: # no extension
+        pname=pname+ext
+    
+    path='figures/%s/%s/%s'%(model_run,script_name,pname)
+    return path
+
+def save_fig(model_run, script_name, pname, plt, subdir=None,
              ext='.png', dpi=150):
     """
     create figurename as figures/model_run/script_name/[subdir/]fig_YYYYMMDDhhmm.png
@@ -1181,17 +1199,6 @@ def save_fig(model_run,script_name,pname, plt, subdir=None,
         subdir : string - optional extra subdir
         ext : optional, only used if pname has no extension
     """
-
-    if isinstance(pname,datetime):
-        dstamp=pname.strftime('%Y%m%d%H%M')
-        pname='fig_%s%s'%(dstamp,ext)
-
-    if subdir is not None:
-        pname='%s/'%subdir + pname
-
-    if len(pname.split('.')) == 1: # no extension
-        pname=pname+ext
-    
-    path='figures/%s/%s/%s'%(model_run,script_name,pname)
+    path = standard_fig_name(model_run, script_name, pname, subdir, ext)
 
     save_fig_to_path(path,plt, dpi=dpi)
