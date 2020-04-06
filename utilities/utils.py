@@ -90,6 +90,17 @@ def cross_section(data,lats,lons,start,end,npoints=None):
   
   return np.squeeze(slicedata)
 
+def cube_to_xyz(cube,
+                ztop=-1):
+    """
+    take iris cube [lev, lat, lon]
+    pull out the data and reshape it to [lon,lat,lev]
+    """
+    assert len(cube.shape)==3, "cube is not 3-D"
+    data = cube[:ztop,:,:].data.data
+    # data is now a level, lat, lon array... change to lon, lat, lev
+    xyz = np.moveaxis(np.moveaxis(data,0,2),0,1)
+    return xyz
 
 def date_index(date,dates, dn=None, ignore_hours=False):
     new_date=date

@@ -22,12 +22,12 @@ from datetime import datetime
 import plotly.graph_objects as go
 from plotly.io import show
 import plotly.io as pio
+# Make browser the default plotly renderer
+pio.renderers.default = "browser"
 
 ## Run these if running on local laptop:
 import sys
 if "g/data" not in sys.prefix:
-    # Make browser the default plotly renderer
-    pio.renderers.default = "browser"
     # turn on orca (server that takes plotly interactive images and saves them to static png)
     pio.orca.ensure_server()
     # check orca status
@@ -207,7 +207,8 @@ def save_system(model_run='waroona_run2', hour=20,
             z=Z[:,:,vm_ind],
             x=X[:,:,vm_ind],
             y=Y[:,:,vm_ind],
-            colorscale='PiYG_r',
+            colorscale='PiYG', # This was PiYG_r on local laptop
+            reversescale=True,  # should be equivalent to _r
             surfacecolor=d_w[:,:,vm_ind],
             opacity=.65,
             cmin=-2, 

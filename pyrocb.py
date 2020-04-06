@@ -119,6 +119,7 @@ def pcb_occurrences(model_run, times):
     return full_latlons
 
 def transect_plus_quiver(w,u,qc,topog,zth,lat,lon,start,end,ztop,contours,
+                         ff=None, 
                          npoints=100,nquivers=13):
     '''
     Show latitude following transect with horizontal and vertical winds
@@ -126,6 +127,7 @@ def transect_plus_quiver(w,u,qc,topog,zth,lat,lon,start,end,ztop,contours,
     '''
     wslice, xslice, zslice = plotting.transect_w(w, zth,
                                                  lat, lon, start, end,
+                                                 ff=ff,
                                                  npoints=npoints, title='',
                                                  topog=topog, ztop=ztop,
                                                  contours=contours,
@@ -421,6 +423,7 @@ def pyrocb(w, u, qc, z, wmean, topog, lat, lon,
         wslicex,xslicex,zslicex = plotting.transect_w(w, z, lat, lon, 
                                                       startx, endx,
                                                       title='',
+                                                      ff=ff,
                                                       npoints=100,
                                                       topog=topog, 
                                                       colorbar=False,
@@ -472,7 +475,6 @@ def moving_pyrocb(model_run='waroona_run3', hours = None,
     clevs_vertwind = np.union1d(np.union1d(2.0**np.arange(-2,6),
                                            -1*(2.0**np.arange(-2,6))),
                                 np.array([0]))
-    ztop=14000
     
     if hours is None:
         hours = fio.model_outputs[model_run]['filedates']
@@ -551,7 +553,11 @@ def moving_pyrocb(model_run='waroona_run3', hours = None,
             
             ## Transect of vert motion
             plt.subplot(3,1,2)
+            print("DEBUG:")
+            print(np.shape(fire))
+            print(np.shape(wi), np.shape(ui), np.shape(qci), np.shape(topog), np.shape(lat), np.shape(lon))
             transect_plus_quiver(wi,ui,qci,topog,zth,lat,lon,start,end,ztop,
+                                 ff=np.transpose(fire),
                                  contours=clevs_vertwind,
                                  npoints=100,nquivers=13)
             
@@ -563,9 +569,14 @@ def moving_pyrocb(model_run='waroona_run3', hours = None,
             plt.subplot(3,1,3)
             theta = utils.potential_temperature(p[i].data,Ta[i].data)
             plotting.transect_theta(theta,zth,lat,lon,start,end,
+                                    ff=np.transpose(fire),
                                     npoints=100, topog=topog, title='',
                                     ztop=ztop)
             
+            ## Add transect length as xlabel
+            transect_length = utils.distance_between_points(start,end)
+            plt.xlabel("<- %.2fkm ->"%(transect_length/1000.0))
+
             ## Plot title and vmotion colour bar
             plt.title('potential temperature transect')
             stitle = ffdtimes[i].strftime("Vertical motion %Y %b %d %H:%M (UTC)")
@@ -660,8 +671,8 @@ def pyrocb_model_run(model_run='waroona_run1', dtime=datetime(2016,1,5,15)):
 
 if __name__ == '__main__':
     
-    waroona_second_half = [datetime(2016,1,5,15)+ timedelta(hours=12+x) for x in range(12)]
-    sirivan_second_half = [datetime(2017,2,11,21)+ timedelta(hours=12+x) for x in range(12)]
+    waroona_second_half = np.array([datetime(2016,1,5,15)+ timedelta(hours=12+x) for x in range(12)])
+    sirivan_good_half = np.array([datetime(2017,2,11,21)+ timedelta(hours=5+x) for x in range(19)])
     
     ## check to see where pcb are occurring
     if False:
@@ -670,8 +681,8 @@ if __name__ == '__main__':
     ## New zoomed, moving pyrocb plotting
     if True:
         mr = 'sirivan_run2_hr'
-        xlen=1.3 # one degree of longitude for transect length
-        hours=sirivan_second_half, # run half the hours
+        xlen=.4 # degrees of longitude for transect length
+        hours=sirivan_good_half # run half the hours
         moving_pyrocb(model_run=mr, 
                       hours=hours,
                       xlen=xlen)
