@@ -20,6 +20,7 @@ from datetime import datetime
 from scipy.stats import gaussian_kde, cumfreq
 
 from utilities import utils, plotting, fio, constants
+import fireplan
 
 ## GLOBAL
 #Script name
@@ -365,15 +366,41 @@ def compare_at_site(mr1='waroona_run2', mr2='waroona_run2uc', latlon = plotting.
     """
     print("TBD")
         
-
+def compare_fire_spread(mrlist, mrcolors=None, extent=None,
+                        overplot=False, HSkip=None):
+    '''
+        Show hourly fire spread overplotted or sidebyside
+    '''
+    extentname = mrlist[0].split('_')[0]
+    if extent is None:
+        extent = plotting._extents_[extentname]
+    
+    ## Plot fireplan for high res run
+    # read all the fire data
+    if not overplot:
+        fig = plt.figure(figsize=(10,14))
+        for i,mr in enumerate(mrlist):
+            ff, = fio.read_fire(model_run=mr, dtimes=None,
+                                extent=extent, firefront=True,
+                                HSkip=HSkip)
+            subplot_row_col_n=[len(mrlist),1,i+1]
+            _,ax,proj = fireplan.fireplan(ff, show_cbar=False, 
+                                          fig=fig, 
+                                          subplot_row_col_n=subplot_row_col_n,)
+            plt.title(mr)
+        fio.save_fig('comparison','compare_fire_spread', 'firespread.png', plt)
 
 
 if __name__=='__main__':
     
+    if True:
+        compare_fire_spread(['sirivan_run1','sirivan_run2_hr'],HSkip=4)
     
-    ## Lets loop over and compare run2 to run2uc
-    mr1,mr2 = ['waroona_run3','waroona_run2']
-    for fdate in fio.model_outputs[mr1]['filedates']:
-        compare_winds(mr1=mr1,mr2=mr2, hour=fdate)
-        compare_clouds(mr1=mr1,mr2=mr2, hour=fdate)
+    if False:
+        ## Lets loop over and compare run2 to run2uc
+        mr1,mr2 = ['waroona_run3','waroona_run2']
+        for fdate in fio.model_outputs[mr1]['filedates']:
+            compare_winds(mr1=mr1,mr2=mr2, hour=fdate)
+            compare_clouds(mr1=mr1,mr2=mr2, hour=fdate)
+    
     print("run_comparison.py done")

@@ -205,7 +205,13 @@ def save_system(model_run='waroona_run2', hour=20,
             x=namedlocs_lons,
             y=namedlocs_lats,
             z=[0]*len(namedlocs),
-            mode='markers'
+            mode='markers',
+            marker=dict(
+                size=12,
+                color='black',           # array/list of desired values
+                #colorscale='Viridis',   # choose a colorscale
+                opacity=0.8
+                ),
             )
         surface_list.append(locations_scatter)
         
