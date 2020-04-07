@@ -4,6 +4,8 @@
 Created on Wed Jan 22 15:14:27 2020
     Look at surfaces in 3d
         show surface level, and atmospheric stuff in a set of 3d axes
+    may require extra modules to be loaded...
+    module load gtk
 @author: jesse
 """
 
@@ -64,8 +66,8 @@ def cube_to_xyz(cube,
     
 
 def create_figure(gofigures, 
-                  camera_eye=[1.2,-1.4,.3], 
-                  aspectratio=[1,1,1], 
+                  camera_eye=[1.4,-1.6,.35], 
+                  aspectratio=[1,1,0.8], 
                   filename=None,
                   **layoutargs):
     """
@@ -135,13 +137,17 @@ def save_system(model_run='waroona_run2', hour=20,
                                add_topog=True, 
                                add_winds=True,
                                HSkip=HSkip)
-    ff, = fio.read_fire(model_run,
-                        dtimes=[dtime],
-                        extent=extent,
-                        HSkip=HSkip)
-    d_ff = ff[0].data.data # firefront already in lon,lat shape
     
     th, qc = cubes.extract(['potential_temperature','qc'])
+    # datetimes in hour output
+    cubetimes = utils.dates_from_iris(th)
+    
+    ff, = fio.read_fire(model_run,
+                        dtimes=cubetimes,
+                        extent=extent,
+                        HSkip=HSkip)
+    
+    # Get the rest of the desired data
     topog, = cubes.extract(['surface_altitude'])
     d_topog = topog.data.data.T # convert to lon,lat
     u,v,w = cubes.extract(['u','v','upward_air_velocity'])
@@ -159,19 +165,27 @@ def save_system(model_run='waroona_run2', hour=20,
     ## Cut down to desired level
     [X, Y, Z] = [ arr[:,:,:topind] for arr in [X,Y,Z]]
 
-    
     # topography surface
     topog_layer = go.Surface(
         z=Z[:,:,0],
         x=X[:,:,0],
         y=Y[:,:,0],
-        colorscale='earth',
+        colorscale='earth', # was not reversed on local laptop
+        reversescale=True,
         surfacecolor=d_topog,
         showscale=False, # remove colour bar,
     )
     
-    # several output slices per hour (save all)
-    cubetimes = utils.dates_from_iris(th)
+    namedlocs=[]
+    namedlocs_lats = []
+    namedlocs_lons = []
+    for (namedloc, (loclat, loclon)) in plotting._latlons_.items():
+        #print(namedloc, loclat, loclon)
+        if loclon < extent[1] and loclon > extent[0] and loclat < extent[3] and loclat > extent[2]:
+            if 'fire' not in namedloc and 'pyrocb' not in namedloc:
+                namedlocs.append(namedloc)
+                namedlocs_lats.append(loclat)
+                namedlocs_lons.append(loclon)
     
     for hi, cubetime in enumerate(cubetimes):
         verbose("Creating surfaces")
@@ -181,10 +195,22 @@ def save_system(model_run='waroona_run2', hour=20,
         d_th = cube_to_xyz(th[hi],ztopind=topind_th)
         d_w = cube_to_xyz(w[hi],ztopind=topind)
         
+        #d_ff = ff[hi].data.data # firefront already in lon,lat shape
+        
         # surfaces to be plotted in 3d
         surface_list = [topog_layer]
         
+        ## Points for waroona, yarloop
+        locations_scatter = go.Scatter3d(
+            x=namedlocs_lons,
+            y=namedlocs_lats,
+            z=[0]*len(namedlocs),
+            mode='markers'
+            )
+        surface_list.append(locations_scatter)
+        
         ## atmospheric heat (theta)
+        # TODO: smaller markers, labelled by location name
         if np.sum(d_th > theta_min) > 0:
             theta_surf = go.Isosurface(
                 z=Z[:,:,:topind_th].flatten(),
@@ -254,16 +280,21 @@ def save_system(model_run='waroona_run2', hour=20,
 
 if __name__=='__main__':
     
+    wider_waroona = plotting._extents_['waroona']
+    wider_waroona[0] -= .4 # move west edge west
+    wider_waroona[1] += .2 # move east edge east
+    wider_waroona[2] -= .1 # move south edge south
+    
     # Save a bunch of images
-    for hour in range(15,24):
+    for hour in [17]:#range(15,24):
         
         #theta_min=311
         #theta_max=320
         #vert_motion_height = 1700
         save_system(model_run='waroona_run2',
                     hour = hour,
-                    extent=[115.2,116.2, -33.05,-32.7], # similar to 'waroona' but extra west
-                    HSkip=4,
-                    top_height=14000,
+                    extent=wider_waroona,
+                    HSkip=8,
+                    top_height=13500,
                     theta_height=2000,
-                    send_to_browser=False,)
+                    send_to_browser=True,)
