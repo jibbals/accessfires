@@ -134,6 +134,19 @@ model_outputs = {
             'path_fireflux':'fire/sensible_heat.01.nc',
             'path_firespeed':'fire/fire_speed.01.nc',
             'origfiredir':'/short/en0/mxp548/cylc-run/au-aa714/work/20160105T1500Z/waroona_0p4_ukv_os38_um_fcst_000/'},
+        ## Sirivan run (june 2019) at 100mx100m resolution
+        'sirivan_run1_hr':{
+            'path':'data/sirivan_run1_hr/',
+            'topog':'umnsaa_pa2017021121.nc',
+            'filedates':np.array([datetime(2017,2,11,21) + timedelta(hours=x) for x in range(24)]),
+            'hasfire':True,
+            'run':'Run in June 2019?',
+            'path_firefront':'fire/firefront.CSIRO_MinT.20170211T2100Z.nc',
+            'path_fireflux':'fire/sensible_heat.CSIRO_MinT.20170211T2100Z.nc',
+            'path_firespeed':'fire/fire_speed.CSIRO_MinT.20170211T2100Z.nc',
+            'origdir':'/short/en0/hxy548/cylc-run/au-aa860/share/cycle/20170211T2100Z/sirivan/0p1/ukv_os38/um',
+            'origfiredir':'/short/en0/hxy548/cylc-run/au-aa860/work/20170211T2100Z/sirivan_0p1_ukv_os38_um_fcst_000/',
+            },
         ## Sirivan run around June (2019)
         'sirivan_run1':{
             'path':'data/sirivan_run1/',
