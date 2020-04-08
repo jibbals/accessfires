@@ -241,7 +241,7 @@ def make_plots_emberstorm(model_run='waroona_run1', hours=None, wmap_height=300)
 
 if __name__ == '__main__':
     plotting.init_plots()
-    mr = 'waroona_run2'
+    mr = 'waroona_run3'
     
     hours=fio.model_outputs[mr]['filedates']
     testhours = [datetime(2016,1,6,13)]

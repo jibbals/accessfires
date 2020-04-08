@@ -36,6 +36,18 @@ _topog_sirivan_ = 'data/sirivan/umnsaa_pa2017021121.nc'
 _files_sirivan_ = sorted(glob('data/sirivan/umnsaa_pc*.nc'))
 
 model_outputs = {
+        ## New high res gadi run with fuelmap applied (April 2020)
+        'sirivan_run3_hr':{
+            'path':'data/sirivan_run3_hr/',
+            'topog':'umnsaa_2017021121_slv.nc',
+            'filedates':np.array([datetime(2017,2,11,21) + timedelta(hours=x) for x in range(24)]),
+            'hasfire':True,
+            'path_firefront':'fire/firefront.CSIRO_gadi_fuelmap.20170211T2100Z.nc',
+            'path_fireflux':'fire/sensible_heat.CSIRO_gadi_fuelmap.20170211T2100Z.nc',
+            'path_firespeed':'fire/fire_speed.CSIRO_gadi_fuelmap.20170211T2100Z.nc',
+            'run':'Run April 2020',
+            'origdir':'/scratch/en0/hxy548/cylc-run/au-aa860/share/cycle/20170211T2100Z/sirivan/0p1/ukv_os38/um/',
+            'origfiredir':'/g/data/en0/hxy548/fire_vars/sirivan/0p1/'},
         ## New sirivan run (on GADI) by harvey in Feb 2020
         ## there is also a high res version of this
         'sirivan_run2':{

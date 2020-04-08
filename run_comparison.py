@@ -383,6 +383,21 @@ def compare_fire_spread(mrlist, mrcolors=None, extent=None,
             ff, = fio.read_fire(model_run=mr, dtimes=None,
                                 extent=extent, firefront=True,
                                 HSkip=HSkip)
+            # ff is [time,lon,lat]
+            # find most eastern part for each hour
+            skip=30 # actually do 30 mins
+            ffmin = np.min(ff.data[::skip],axis=2) # remove lat dimension
+            fflons = ff.coord('longitude').points
+            fftimes = utils.dates_from_iris(ff)[::skip]
+            print("INFO: ", mr, ff.shape)
+            print("INFO:    MIN LON      |     MAX LON ")
+            for ti in range(ffmin.shape[0]):# every x mins
+                if np.sum(ffmin[ti] < 0) > 0:
+                    minlon = fflons[ffmin[ti] < 0][0]
+                    maxlon = fflons[ffmin[ti] < 0][-1]
+                    print("%02d%02d     %.3f      |     %.3f   "%(fftimes[ti].hour,fftimes[ti].minute,minlon,maxlon)) 
+
+
             subplot_row_col_n=[len(mrlist),1,i+1]
             _,ax,proj = fireplan.fireplan(ff, show_cbar=False, 
                                           fig=fig, 
@@ -394,7 +409,7 @@ def compare_fire_spread(mrlist, mrcolors=None, extent=None,
 if __name__=='__main__':
     
     if True:
-        compare_fire_spread(['sirivan_run1','sirivan_run2_hr'],HSkip=4)
+        compare_fire_spread(['sirivan_run1','sirivan_run2_hr', 'sirivan_run3_hr'], HSkip=10)
     
     if False:
         ## Lets loop over and compare run2 to run2uc
