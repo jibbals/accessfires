@@ -198,8 +198,15 @@ def cloud_system(model_run='waroona_run2', hour=20,
                 namedlocs_lats.append(loclat)
                 namedlocs_lons.append(loclon)
     
+    # angle for view is 270 degrees - 90* hour/24
+    # or 270 - 90 * (60*hour + 60*hi/n_hi)/(24*60)
+    
     for hi, cubetime in enumerate(cubetimes):
         verbose("Creating surfaces")
+        camera_eye = [-2 * np.cos(np.deg2rad(290-120*((60*(hour+hi/len(cubetimes))))/(24.0*60))), 
+                      2 * np.sin(np.deg2rad(290-120*((60*(hour+hi/len(cubetimes))))/(24.0*60))),
+                      0.35]
+        print("DEBUG:", camera_eye)
         
         # get cloud, theta, vert motion, firefront in terms of lon,lat,lev
         d_qc = cube_to_xyz(qc[hi],ztopind=topind)
@@ -300,19 +307,29 @@ def cloud_system(model_run='waroona_run2', hour=20,
         
         ## title, lables
         layoutargs = dict(
-            title=cubetime.strftime('Clouds %Y%m%d%H%M(UTC)'),
+            #title=cubetime.strftime('Clouds %Y%m%d%H%M(UTC)'),
+            title={"text":cubetime.strftime('Clouds %Y%m%d%H%M(UTC)'),
+                   "yref": "paper",
+                   "y" : 1,
+                   "yanchor" : "bottom"},
             font=dict(
                     family="Courier New, monospace",
                     size=18,
                     color="#222222"
                 ),
+            #margin=dict(
+            #        #l=60,
+            #        #r=10,
+            #        #b=0,
+            #        t=0,
+            #    ),
             )
 
         figname = None
         if not send_to_browser:
             #figname = cubetime.strftime('figures/threedee/test_%Y%m%d%H%M.png')
             figname = fio.standard_fig_name(model_run,_sn_,cubetime)
-        create_figure(surface_list, filename=figname, **layoutargs)
+        create_figure(surface_list, filename=figname, camera_eye=camera_eye, **layoutargs)
 
 def transect_wall(model_run = 'waroona_run3', 
                      hour=20,
@@ -373,6 +390,7 @@ def transect_wall(model_run = 'waroona_run3',
     ## Now they are lon, lat, lev
     ## Cut down to desired level
     [X, Y, Z] = [ arr[:,:,:topind] for arr in [X,Y,Z]]
+    
     
     for ti, cubetime in enumerate(cubetimes):
         surface_list=[]
