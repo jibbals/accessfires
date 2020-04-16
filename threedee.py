@@ -119,7 +119,7 @@ def create_figure(gofigures,
 
 def cloud_system(model_run='waroona_run2', hour=20, 
                 theta_height=1000, theta_min=311, theta_max=320,
-                vert_motion_height = 1700,
+                vert_motion_height = 2500,
                 top_height=8000, send_to_browser=False,
                 extent=None,
                 HSkip=5):
@@ -218,7 +218,7 @@ def cloud_system(model_run='waroona_run2', hour=20,
             z=[0]*len(namedlocs),
             mode='markers',
             marker=dict(
-                size=12,
+                size=6,
                 color='black',           # array/list of desired values
                 #colorscale='Viridis',   # choose a colorscale
                 opacity=0.8
@@ -244,35 +244,55 @@ def cloud_system(model_run='waroona_run2', hour=20,
             surface_list.append(theta_surf)
             verbose("adding heat surface")
         
-        ## Vertical winds contour at some altitude 
+        ## volume plot showing vertical motion 
+        wmax = 6
+        wmin = 2
         vm_ind = np.sum(levh<vert_motion_height)
-        vert_motion_layer = go.Surface(
-            z=Z[:,:,vm_ind],
-            x=X[:,:,vm_ind],
-            y=Y[:,:,vm_ind],
-            colorscale='PiYG', # This was PiYG_r on local laptop
+        up_volume = go.Volume(
+            x=X[:,:,:vm_ind].flatten(), 
+            y=Y[:,:,:vm_ind].flatten(), 
+            z=Z[:,:,:vm_ind].flatten(),
+            value=d_w[:,:,:vm_ind].flatten(),
+            isomin=wmin,
+            isomax=wmax,
+            opacity=0.1, # max opacity
+            surface_count=15,
+            colorscale='Reds', # This was PiYG_r on local laptop
+            #reversescale=True,  # should be equivalent to _r
+            showscale=False, 
+        )
+        surface_list.append(up_volume)
+        
+        down_volume = go.Volume(
+            x=X[:,:,:vm_ind].flatten(), 
+            y=Y[:,:,:vm_ind].flatten(), 
+            z=Z[:,:,:vm_ind].flatten(),
+            value=d_w[:,:,:vm_ind].flatten(),
+            isomin=-wmax,
+            isomax=-wmin,
+            opacity=0.1, # max opacity
+            surface_count=15,
+            colorscale='Blues', # This was PiYG_r on local laptop
             reversescale=True,  # should be equivalent to _r
-            surfacecolor=d_w[:,:,vm_ind],
-            opacity=.65,
-            cmin=-2, 
-            cmax=2,
-            showscale=False, # remove colour bar,
-            )
-        surface_list.append(vert_motion_layer)
+            showscale=False, 
+        )
+        surface_list.append(down_volume)
         
         ## Cloud isosurface
-        cloud_surf = go.Isosurface(
+        qcmin = 0.1
+        qcmax = 1
+        w_volume = go.Volume(
+            x=X.flatten(), 
+            y=Y.flatten(), 
             z=Z.flatten(),
-            x=X.flatten(),
-            y=Y.flatten(),
             value=d_qc.flatten(),
-            isomin=.1,
-            isomax=1,
-            surface_count=3,
-            opacity=0.6,
-            showscale=False,
+            isomin=qcmin,
+            isomax=qcmax,
+            opacity=0.1, # max opacity
+            surface_count=20,
+            showscale=False, 
         )
-        surface_list.append(cloud_surf)
+        surface_list.append(w_volume)
         
         #
         ### 3d figure:
@@ -288,14 +308,13 @@ def cloud_system(model_run='waroona_run2', hour=20,
                 ),
             )
 
-        
         figname = None
         if not send_to_browser:
             #figname = cubetime.strftime('figures/threedee/test_%Y%m%d%H%M.png')
             figname = fio.standard_fig_name(model_run,_sn_,cubetime)
         create_figure(surface_list, filename=figname, **layoutargs)
 
-def downslope_system(model_run = 'waroona_run3', 
+def transect_wall(model_run = 'waroona_run3', 
                      hour=20,
                      extent=[115.88, 116.0, -32.86,-32.83],
                      HSkip=None,
@@ -305,6 +324,11 @@ def downslope_system(model_run = 'waroona_run3',
             surface wind speeds
             heat flux
             pot temp up to ~ 600m
+        TODO: 
+            make transect show higher altitude, but cap whole figure at some height
+            add surface wind direction/speed somehow
+            vertical motion instead of pot temp on transect wall
+            move transect wall to middle of figure, make it .8 opaque
             
     """
     top_height=1000
@@ -350,11 +374,15 @@ def downslope_system(model_run = 'waroona_run3',
     ## Cut down to desired level
     [X, Y, Z] = [ arr[:,:,:topind] for arr in [X,Y,Z]]
     
-    for cubetime in cubetimes:
+    for ti, cubetime in enumerate(cubetimes):
         surface_list=[]
         
         # surface sensible heat flux [t,lon,lat]
-        d_sh = sh[0].data.data
+        d_sh = sh[ti].data.data
+        
+        d_zth = z_th[:topind,:,:].data.data # [lev, lat, lon]
+        d_th = th[ti,:topind,:,:].data.data # [lev, lat, lon]
+        #d_th = threedee.cube_to_xyz(th[ti],ztopind=topind) # [lon,lat,lev]
         
         # topography surface
         topog_layer = go.Surface(
@@ -369,13 +397,37 @@ def downslope_system(model_run = 'waroona_run3',
             #opacityscale=[[0.0, 0], [100.0, .8], [shcmax, 1]], 
             #hidesurface=True,
             #showscale=False, # remove colour bar,
+            coloraxis='coloraxis', # first colour bar
         )
         surface_list.append(topog_layer)
         
         ## Pull out transect to paint against the wall
+        #print("DEBUG:",d_th.shape, np.shape(lat),np.shape(lon),transect)
+        # transect of pot temp
         sliceth  = utils.cross_section(d_th,lat,lon,transect[0],transect[1],npoints=len(lon))
-        slicetopog = utils.cross_section(d_topog,lat,lon,transect[0],transect[1],npoints=len(lon))
-        slicez = utils.cross_section(z_th,lat,lon,transect[0],transect[1],npoints=len(lon))
+        # transect of topography
+        slicetopog = utils.cross_section(d_topog.T,lat,lon,transect[0],transect[1],npoints=len(lon))
+        # transect of height
+        slicez = utils.cross_section(d_zth,lat,lon,transect[0],transect[1],npoints=len(lon))
+        # transects are [lat, lon] - and should represent one latitude over multiple longitudes
+        #print(np.shape(slicez), np.shape(sliceth))
+        transect_layer = go.Surface(
+            z=slicez.T, # height
+            x=X[:,:,0], # longitudes
+            y=np.zeros(np.shape(slicez.T)) + np.max(Y), # highest latitude
+            colorscale='plasma', # pot temp colour map
+            cmin=380,
+            cmax=410,
+            #reversescale=True,
+            surfacecolor=sliceth.T, # colour by pot temp
+            #opacityscale=[[0.0, 0], [100.0, .8], [shcmax, 1]], 
+            #hidesurface=True,
+            #showscale=False, # remove colour bar,
+            coloraxis='coloraxis2', # second colour bar
+            colorbar = dict(xanchor='right'),
+        )
+        surface_list.append(transect_layer)
+        
         
         ### Paint figure
         figname = None
@@ -395,14 +447,14 @@ if __name__=='__main__':
     wider_waroona[2] -= .1 # move south edge south
     
     # check downslope stuff!
-    if True:
+    if False:
         overfire=[116.09, 116.19, -32.91,-32.84]
         downslope_system(model_run='waroona_run1',hour=18,
                          extent=overfire,
                          HSkip=None)
     
     
-    if False:
+    if True:
         
         # Save a bunch of images
         for hour in [17]:#range(15,24):
