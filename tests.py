@@ -88,6 +88,7 @@ def latlon_comparison_from_extent_subsetting():
         assert np.all(np.isclose(lons, flons)), "old lons and flons don't match"
 
 
+
 def read_time_comparison():
     '''
         does subsetting prior to reading save time? 
@@ -254,3 +255,17 @@ def compare_z_heights():
     plt.ylabel("zth")
     plt.legend()
     plt.title("h vs zth, not index matched (yet)")
+    
+def vorticity_test():
+    """
+    dummy wind fields, give expected vorticity?
+    expected results was calced by hand
+    """
+    u = np.array([[1,1],[1,2],[2,3]])
+    v = np.array([[1,2],[1,1],[2,3]])
+    lats = np.array([3,2,1]) # rows
+    lons = np.array([1,2]) # cols
+    expected_zeta = np.array([[1,2],[.5,1],[2,2]])
+    zeta, OW, OWZ = utils.vorticity(u,v,lats,lons)
+    #print(zeta)
+    assert np.all(expected_zeta == zeta), "Vorticity calculation does not match expectation"

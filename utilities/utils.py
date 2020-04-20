@@ -286,4 +286,59 @@ def wind_speed(u,v, fix=True):
     #s[:,:,:,0] = np.NaN # set that edge to NaN
     # could also jsut set them to the adjacent edge
     #s[:,:,:,0] = s[:,:,:,1]
+
+def vorticity(u,v,lats,lons):
+    """
+    
+    ARGUMENTS:
+        u = longitudinal wind [lats,lons] (m/s)
+        v = latitudinal wind [lats,lons] (m/s)
+        lats (deg)
+        lons (deg)
         
+    RETURNS: zeta is transformed from m/s/deg to 1/s
+        zeta, OW_norm, OWZ
+        
+    NOTES:
+        derivatives calculated using numpy gradient function
+            >>> f = np.array([1, 2, 4, 7, 11, 16], dtype=float)
+            >>> np.gradient(f)
+            array([1. , 1.5, 2.5, 3.5, 4.5, 5. ])
+            ## array locations can be inserted , essentially used as devision terms
+            ## gradient at each point is mean of gradient on either side
+            ## eg: 2 dim array
+            np.gradient(np.array([[1, 2, 6], [3, 4, 5]], dtype=float))
+                [array([[ 2.,  2., -1.], [ 2.,  2., -1.]]), # first output is along rows
+                array([[1. , 2.5, 4. ], [1. , 1. , 1. ]])] # second output is along columns
+            # This method has a dummy test in tests.py -> vorticity_test()
+        Hi Jesse,
+        Vorticity = zeta = v_x - u_y (where v_x = dv/dx. u_y = du/dy).
+        Shearing deformation = F = v_x + U_y
+        Stretching deformation = E = u_x - v_y
+        OW = zeta^2 - (E^2 + F^2)        Here "^2" means squared
+        OW_norm = OW/zeta^2
+        OWZ = OW/zeta
+        Try plotting zeta, OW_norm and OWZ.  They should all be insightful.
+        Cheers,
+        Kevin.
+        
+    """
+    lat_deg_per_metre = 1/111.32e3 # 111.32km per degree
+    lat_mean = np.mean(lats)
+    lon_deg_per_metre = lat_deg_per_metre * np.cos(np.deg2rad(lat_mean))
+    
+    mlats = lats / lat_deg_per_metre # convert lats into metres
+    mlons = lons / lon_deg_per_metre # convert lons into metres
+    
+    # u[lat,lon]
+    u_lat, u_lon = np.gradient(u,mlats,mlons)
+    v_lat, v_lon = np.gradient(v,mlats,mlons)
+    # u is left to right (longitudinal wind)
+    # v is south to north (latitudinal wind)
+    zeta = v_lon - u_lat
+    F = v_lon + u_lat
+    E = u_lon - v_lat
+    OW = zeta**2 - (E**2 + F**2)
+    OW_norm = OW/(zeta**2)
+    OWZ = OW/zeta
+    return zeta, OW_norm, OWZ

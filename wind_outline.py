@@ -220,6 +220,82 @@ def outline_model_winds(model_run='sirivan_run1', hours=None, dpi=200):
                          subdir='transect_%d'%(ii+1),
                          dpi=dpi)
 
+def vorticity_layers(model_run="waroona_run2", hour=16, levels=[1,3,5,10,20],
+                     extent=None, HSkip=None):
+    '''
+    Show horizontal slices of vorticity and horizontal winds on several vertical levels. 
+    '''
+    extentname=None
+    if extent is None:
+        extentname=model_run.split('_')[0]
+        extent = plotting._extents_[extentname]
+        
+    fdtime = fio.model_outputs[model_run]['filedates'][hour]
+    
+    # read cubes
+    cubes = fio.read_model_run(model_run, fdtime=[fdtime], extent=extent, 
+                               add_winds=True,
+                               HSkip=HSkip)
+    u,v = cubes.extract(['u','v'])
+    w, = cubes.extract('upward_air_velocity')
+    lat = w.coord('latitude').points
+    lon = w.coord('longitude').points
+    height = w.coord('level_height').points
+        
+    dtimes = utils.dates_from_iris(u)
+        
+    ff, = fio.read_fire(model_run, dtimes, extent=extent, HSkip=HSkip)
+    
+    # constant colorbar for vorticity
+    cmap="PuOr"
+    contours=np.arange(-.025,.025,.001)
+    # streamplot density of lines
+    density_x,density_y = .8,.5
+    
+    for di, dtime in enumerate(dtimes):
+        fig = plt.figure(figsize=[10,10])
+        
+        for ii,lev in enumerate(levels):
+            plt.subplot(len(levels),1,ii+1)
+        
+            Ui = u[di,lev].data.data
+            Vi = v[di,lev].data.data
+            zi,OWi,OWZi = utils.vorticity(Ui,Vi,lat,lon)
+            
+            # plot vorticity (units will be wrong: dims are degrees not metres)
+            #print("DEBUG:",zi.shape, Vi.shape, Ui.shape, u.shape, v.shape, len(lat), len(lon))
+            cs = plt.contourf(lon,lat,zi, contours, cmap=cmap, extend='both')
+            
+            # show winds
+            plt.streamplot(lon,lat,Ui,Vi, color='k', 
+                           density=(density_x, density_y))
+            
+            if extentname is not None:
+                plotting.map_add_locations_extent(extentname, hide_text=True)
+        
+            plt.xticks([],[])
+            plt.yticks([],[])
+            plt.ylabel("%.0f m"%(height[lev]),fontsize=13)
+            
+            # add fire contour
+            if ff is not None:
+                plotting.map_fire(ff[di].data.data,lat,lon)
+        
+            plt.xticks([],[])
+            plt.yticks([],[])
+            if ii==0:
+                plt.title('vorticity (1/s)')
+        
+        # reduce vert gap between subplots
+        fig.subplots_adjust(hspace=0.1)
+        # add colourbar
+        cbar_ax = fig.add_axes([0.905, 0.4, 0.01, 0.2])# X Y Width Height
+        fig.colorbar(cs, cax=cbar_ax, format=matplotlib.ticker.ScalarFormatter(), pad=0)
+        
+        # save figure
+        fio.save_fig(model_run=model_run, script_name=_sn_,pname=dtime,
+                     plt=plt,subdir="vorticity")
+                     
 #########################################################################
 #########################################################################
 #########################################################################
@@ -227,11 +303,16 @@ def outline_model_winds(model_run='sirivan_run1', hours=None, dpi=200):
 
 if __name__ == '__main__':
     
-    allmr = fio.model_outputs.keys()
-    allmr = ['sirivan_run2_hr']
-    for mr in allmr:
-        hours = fio.model_outputs[mr]['filedates']
-        for hour in hours:
-            print("info: wind_outline", mr, hour)
-            outline_model_winds(mr, hours=[hour])
+    if True:
+        for hour in [15,16,17,18,19,20]:
+            vorticity_layers(hour=hour)
+    
+    if False:
+        allmr = fio.model_outputs.keys()
+        allmr = ['sirivan_run2_hr']
+        for mr in allmr:
+            hours = fio.model_outputs[mr]['filedates']
+            for hour in hours:
+                print("info: wind_outline", mr, hour)
+                outline_model_winds(mr, hours=[hour])
     
