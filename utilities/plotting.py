@@ -237,7 +237,102 @@ def map_fire(ff,lats,lons):
     if np.sum(ff<0) > 0:
         plt.contour(lons,lats,np.transpose(ff),np.array([0]), colors='red')
 
-def map_tiff(locname='waroona', fig=None, subplot_row_col_n=None,
+
+def map_tiff_qgis(file='sirivan_map.tiff', extent=None, show_grid=False,
+                  locnames=None,
+                  fig=None, subplot_row_col_n=[1,1,1], subplot_axes=None):
+    """
+    satellite image from ESRI, roads added from OSM using QGIS, saved as .tiff
+    
+    ARGUMENTS:
+        locname: "sirivan_map_linescan.tiff" or whatever in qgis folder
+        extent: [lon0, lon1, lat0, lat1]
+            where is projection zoomed in to
+        show_grid: {True|False}
+            show lats and lons around map
+        fig: matplotlib pyplot figure (default=[1,1,1])
+            can add map to an already created figure object
+        subplot_row_col_n: [row,col,n] (optional)
+            subplot axes to create and add map to
+        subplot_extent: [x0,y0,width,height]
+            where to put axes inside figure (can use instead of subplot_row_col_n)
+    """
+    gdal.UseExceptions()
+    
+    path_to_tiff = "data/QGIS/"+file
+    
+    if subplot_row_col_n is None:
+        subplot_row_col_n = [1,1,1]
+    
+    # gdal dataset
+    ds = gdal.Open(path_to_tiff)
+    # RGBa image read in as a numpy array
+    img = plt.imread(path_to_tiff)
+    
+    # projection defined in QGIS
+    projection = ccrs.epsg("3857")
+    
+    # geotransform for tiff coords
+    # tells us the image bounding coordinates
+    gt = ds.GetGeoTransform()
+    imgextent = (gt[0], gt[0] + ds.RasterXSize * gt[1],
+                 gt[3] + ds.RasterYSize * gt[5], gt[3])
+    
+    if fig is None:
+        fig = plt.figure(figsize=(13, 9))
+    
+    # if the subplotaxes are defined, use them, otherwise use subplot_row_col
+    
+    if subplot_axes is not None:
+        ax = fig.add_axes(subplot_axes, frameon=False, projection=projection)
+    else:
+        nrows,ncols,n = subplot_row_col_n
+        ax = fig.add_subplot(nrows,ncols,n,projection=projection)
+    
+    ax.imshow(img,
+              extent=imgextent, 
+              origin='upper')
+    
+    if extent is not None:
+        ax.set_extent(extent)
+        #crop to desired extent
+        
+        # if we have locations and defined extent, put them in 
+        if locnames is not None:
+            for locstr in locnames:
+                loc=_latlons_[locstr]
+                if (loc[0]<extent[2]) or (loc[0]>extent[3]) or (loc[1]<extent[0]) or (loc[1]>extent[1]):
+                    locnames.remove(locstr)
+        
+    if show_grid:
+        gl = ax.gridlines(crs=ccrs.PlateCarree(), draw_labels=True,
+                          linewidth=2, color='gray', alpha=0.35, linestyle='--')
+        gl.xlabels_top = False
+        gl.ylabels_left = False
+        #gl.xlines = False
+    if locnames is not None:
+        # split out fire into it's own thing
+        fires = ['fire' in element for element in locnames]
+        locations=[_latlons_[locstr] for locstr in locnames]
+        LocationsNames = [str.capitalize(locstr) for locstr in locnames]
+        markers=['o']*len(locations)
+        markercolors=['grey']*len(locations)
+        
+        for i in range(len(locations)):
+            if fires[i]:
+                LocationsNames[i]=''
+                markers[i] = '*'
+                markercolors[i] = 'r'
+        
+        map_add_nice_text(ax, locations,
+                          LocationsNames,
+                          markers=markers,
+                          markercolors=markercolors,
+                          fontsizes=14)        
+        
+    return fig, ax, projection
+
+def map_tiff_gsky(locname='waroona', fig=None, subplot_row_col_n=None,
              extent=None, show_grid=False, locnames=None):
     """
     satellite image from gsky downloaded into data folder, 

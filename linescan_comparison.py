@@ -27,7 +27,7 @@ def linescan_vs_firefront(model_run='sirivan_run1'):
     compares with tiff image as background, brightened as I don't know the actual wavelengths of the tiff I have...
     """
     # sirivan linescan figures extent (eyeballed using google map + matplotlib gridlines)
-    linescan_extent =  [149.48, 150.04, -32.18, -31.85]
+    linescan_extent =  plotting._extents_['sirivan_linescan']
     latlon_CRS = ccrs.PlateCarree()
         
     # read fire front (all datetimes)
@@ -67,10 +67,10 @@ def linescan_vs_firefront(model_run='sirivan_run1'):
         #show fire plan on row 2 (matching linescan times)
         # can show either googlemap (roads, rivers), or satellite map (true colour)
         # map first
-        subplot_extent2 = [0,0.02,1,0.45]
-        _,ax2,mproj = plotting.map_tiff('sirivan', fig=fig,
-                                        extent=linescan_extent, 
-                                        subplot_row_col_n=[2,1,1])
+        subplot_axes2 = [0,0.02,1,0.45]
+        _,ax2,mproj = plotting.map_tiff_qgis('sirivan_map_linescan', fig=fig,
+                                        extent=linescan_extent,
+                                        subplot_axes=subplot_axes2)
         plt.sca(ax2)
         # add firefront hourly up to current datetime indext
         # just read hourly
@@ -85,7 +85,7 @@ def linescan_vs_firefront(model_run='sirivan_run1'):
                 if np.min(ffdata)>0:
                     continue
                 plt.contour(lon, lat, ffdata.T, np.array([0]),
-                            colors='orangered', linewidths=2,
+                            colors='darkgrey', linewidths=2,
                             transform=latlon_CRS)
 
         # final outline contour
