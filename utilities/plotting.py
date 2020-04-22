@@ -265,7 +265,9 @@ def map_tiff_qgis(file='sirivan_map.tiff', extent=None, show_grid=False,
         subplot_row_col_n = [1,1,1]
     
     # gdal dataset
+    # this prints a warning statement... pipe output and warning filter don't work
     ds = gdal.Open(path_to_tiff)
+
     # RGBa image read in as a numpy array
     img = plt.imread(path_to_tiff)
     

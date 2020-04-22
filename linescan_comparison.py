@@ -68,7 +68,7 @@ def linescan_vs_firefront(model_run='sirivan_run1'):
         # can show either googlemap (roads, rivers), or satellite map (true colour)
         # map first
         subplot_axes2 = [0,0.02,1,0.45]
-        _,ax2,mproj = plotting.map_tiff_qgis('sirivan_map_linescan', fig=fig,
+        _,ax2,mproj = plotting.map_tiff_qgis('sirivan_map_linescan.tiff', fig=fig,
                                         extent=linescan_extent,
                                         subplot_axes=subplot_axes2)
         plt.sca(ax2)
@@ -85,7 +85,7 @@ def linescan_vs_firefront(model_run='sirivan_run1'):
                 if np.min(ffdata)>0:
                     continue
                 plt.contour(lon, lat, ffdata.T, np.array([0]),
-                            colors='darkgrey', linewidths=2,
+                            colors='pink', linewidths=2,alpha=0.8,
                             transform=latlon_CRS)
 
         # final outline contour
@@ -95,8 +95,8 @@ def linescan_vs_firefront(model_run='sirivan_run1'):
                         linestyles='dotted',
                         colors='magenta', linewidths=2, transform=latlon_CRS)
         plt.title(ffstamp)
-        fio.save_fig('sirivan_run1',_sn_,"linescan_%s"%dstr,plt,dpi=150)
+        fio.save_fig(model_run,_sn_,"linescan_%s"%dstr,plt)
 
 if __name__=='__main__':
     
-    linescan_vs_firefront()
+    linescan_vs_firefront("sirivan_run3_hr")

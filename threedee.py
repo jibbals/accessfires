@@ -475,15 +475,15 @@ if __name__=='__main__':
     if True:
         
         # Save a bunch of images
-        for hour in [17]:#range(15,24):
+        for hour in [14]:#range(15,24):
             
             #theta_min=311
             #theta_max=320
             #vert_motion_height = 1700
-            cloud_system(model_run='waroona_run2',
+            cloud_system(model_run='waroona_run3',
                         hour = hour,
                         extent=wider_waroona,
-                        HSkip=8,
+                        HSkip=5,
                         top_height=13500,
                         theta_height=2000,
                         send_to_browser=True,)

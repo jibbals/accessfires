@@ -221,6 +221,7 @@ def outline_model_winds(model_run='sirivan_run1', hours=None, dpi=200):
                          dpi=dpi)
 
 def vorticity_layers(model_run="waroona_run2", hour=16, levels=[1,3,5,10,20],
+                     vorticity_max=0.01,
                      extent=None, HSkip=None):
     '''
     Show horizontal slices of vorticity and horizontal winds on several vertical levels. 
@@ -248,7 +249,7 @@ def vorticity_layers(model_run="waroona_run2", hour=16, levels=[1,3,5,10,20],
     
     # constant colorbar for vorticity
     cmap="PuOr"
-    contours=np.arange(-.025,.025,.001)
+    contours=np.linspace(-1*vorticity_max,vorticity_max,50)
     # streamplot density of lines
     density_x,density_y = .8,.5
     
@@ -304,8 +305,8 @@ def vorticity_layers(model_run="waroona_run2", hour=16, levels=[1,3,5,10,20],
 if __name__ == '__main__':
     
     if True:
-        for hour in [15,16,17,18,19,20]:
-            vorticity_layers(hour=hour)
+        for hour in np.arange(12,24):
+            vorticity_layers("sirivan_run1",hour=hour)
     
     if False:
         allmr = fio.model_outputs.keys()
