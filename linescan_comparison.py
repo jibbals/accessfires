@@ -8,6 +8,7 @@ Created on Wed Oct  2 12:16:43 2019
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.image as mpimg
+import matplotlib.colors as col
 
 from glob import glob
 from datetime import datetime, timedelta
@@ -31,7 +32,8 @@ def linescan_vs_firefront(model_run='sirivan_run1'):
     latlon_CRS = ccrs.PlateCarree()
         
     # read fire front (all datetimes)
-    ff, = fio.read_fire(model_run,extent=linescan_extent)
+    ff, sh = fio.read_fire(model_run,extent=linescan_extent,
+                           firefront=True,sensibleheat=True)
     ffdates = utils.dates_from_iris(ff)
     lat = ff.coord('latitude').points
     lon = ff.coord('longitude').points
@@ -88,15 +90,32 @@ def linescan_vs_firefront(model_run='sirivan_run1'):
                             colors='pink', linewidths=2,alpha=0.8,
                             transform=latlon_CRS)
 
+        plt.title(ffstamp)
         # final outline contour
         ffdata = ff[di].data.data
         if np.min(ffdata)<0:
             plt.contour(lon, lat, ffdata.T, np.array([0]), 
-                        linestyles='dotted',
+                        linestyles='dotted', alpha=0.6,
                         colors='magenta', linewidths=2, transform=latlon_CRS)
-        plt.title(ffstamp)
-        fio.save_fig(model_run,_sn_,"linescan_%s"%dstr,plt)
+            shdata = sh[di].data.data
+            # show heat flux:
+            #print("DEBUG:",np.shape(shdata),np.min(shdata),np.max(shdata))
+            if np.max(shdata) > 100:
+                #shdata[shdata<500] = np.NaN
+                shmin,shmax=1e2,2e5
+                cnorm = col.LogNorm(vmin=shmin,vmax=shmax,)
+                shlevels = np.logspace(2,5.4,)
+                cs=plt.contourf(lon,lat,shdata.T+1,shlevels, 
+                                transform=latlon_CRS,
+                                cmap='hot', norm=cnorm, vmin=shmin, vmax=shmax,
+                                alpha=0.5)
+                cax = fig.add_axes([.91,.1,.02,.3], frameon=False)
+                plt.colorbar(cs,cax=cax, label='sensible heat flux',
+                             ticks=[1e2,1e3,1e4,1e5,2e5],
+                             orientation='vertical')
+        
+        fio.save_fig(model_run, _sn_, "linescan_%s"%dstr, plt)
 
 if __name__=='__main__':
     
-    linescan_vs_firefront("sirivan_run3_hr")
+    linescan_vs_firefront("sirivan_run1")
