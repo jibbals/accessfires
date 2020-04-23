@@ -14,6 +14,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import warnings
 from datetime import datetime
+from scipy import interpolate
 
 # local modules
 from utilities import plotting, utils, fio
@@ -39,8 +40,6 @@ def emberstorm(theta, u, v, w, z, topog,
                ff=None,
                wmap=None,
                wmap_height=None,
-               nquivers=14,
-               quiverscale=60,
                ztop=700,
                transect=_transects_[0],
                shadows=None):
@@ -59,6 +58,9 @@ def emberstorm(theta, u, v, w, z, topog,
         transect: [lat0,lon0],[lat1,lon1] - for transect that will be shown
         shadows: [transects] - faint transects to add to topography (for style)
     '''
+    # TODO Replace with streamplots
+    nquivers=12
+    quiverscale=70
     extent = [lon[0],lon[-1],lat[0],lat[-1]]
     
     ## figure
@@ -101,8 +103,15 @@ def emberstorm(theta, u, v, w, z, topog,
                                marker='*', color='r')
 
     # Quiver, reduce arrow density
-    plotting.map_quiver(u[0],v[0],lat,lon,nquivers=nquivers, alpha=0.5,
-                        pivot='middle', scale=quiverscale)
+    #plotting.map_quiver(u[0],v[0],lat,lon,nquivers=nquivers, alpha=0.5,
+    #                    pivot='middle', scale=quiverscale)
+    # streamplot density of lines
+    density_x,density_y = .8,.5
+    # show winds
+    plt.streamplot(lon,lat,u[0],v[0], color='k',
+                   density=(density_x, density_y),
+                   )#alpha=0.7)
+    
     
     # Finally add some faint pink or green hatching based on vertical wind motion
     if wmap is not None:
@@ -167,6 +176,30 @@ def emberstorm(theta, u, v, w, z, topog,
                         zslice[:ztopi+4,:], xslice[:ztopi+4,:], 
                         nquivers=nquivers, scale=quiverscale*3,
                         alpha=0.5, pivot='middle')
+    #density_x,density_y = .8,.5
+    ## show winds
+    #print("DEBUG:",uslice.shape, wslice.shape, zslice.shape, xslice.shape)
+    #### Interpolate uwslice from [z[2d], x[2d]] to regular grid [z,x] 
+    #xx = xslice#[:ztopi+4,:] # [z,x] dimensions
+    #zz = zslice#[:ztopi+4,:]
+    #uu = uslice#[:ztopi+4,:]
+    #ww = wslice#[:ztopi+4,:]
+    #
+    ## target grid to interpolate to
+    #meshx, meshz = np.meshgrid(xx[0,:],zz[:,0])
+    ## interpolate
+    #print("DEBUG: interpolate from", uu.shape)
+    #meshu = interpolate.griddata((xx.flatten(),zz.flatten()),uu.flatten(),(meshx,meshz),method='linear',fill_value=np.NaN)
+    #print("DEBUG: interpolated to", meshu.shape)
+    #meshw = interpolate.griddata((xx.flatten(),zz.flatten()),ww.flatten(),(meshx,meshz),method='linear')
+    ####
+    #plt.streamplot(meshx, meshz,
+    #               meshu, meshw, 
+    #               color='k', density=(density_x, density_y),
+    #               )#alpha=0.7)
+    
+    # reset plot edges?
+    #plt.ylim(extent[2:]); plt.xlim(extent[0:2])
     
     if ff_lead_frac is not None:
             if ff_lead_frac > 1: ff_lead_frac=1
@@ -248,4 +281,4 @@ if __name__ == '__main__':
     interesting_hours=[datetime(2016,1,6,x) for x in range(8,15)]
 
 
-    make_plots_emberstorm(mr, hours=interesting_hours)
+    make_plots_emberstorm(mr, hours=testhours)
