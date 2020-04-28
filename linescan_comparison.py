@@ -118,4 +118,4 @@ def linescan_vs_firefront(model_run='sirivan_run1'):
 
 if __name__=='__main__':
     
-    linescan_vs_firefront("sirivan_run1")
+    linescan_vs_firefront("sirivan_run3_hr")

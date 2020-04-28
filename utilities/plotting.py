@@ -833,3 +833,130 @@ def utm_from_lon(lon):
     return np.floor( ( lon + 180 ) / 6) + 1
 
 
+#### NOT WORKING/FINISHED ####
+# def transect_wall(model_run = 'waroona_run3', 
+#                 hour=20,
+#                 extent=[115.88, 116.0, -32.86,-32.83],
+#                 HSkip=None,
+#                 send_to_browser=True):
+#     """
+#         look at waroona emberstorm bits
+#             surface wind speeds
+#             heat flux
+#             pot temp up to ~ 600m
+#         TODO: 
+#             make transect show higher altitude, but cap whole figure at some height
+#             add surface wind direction/speed somehow
+#             vertical motion instead of pot temp on transect wall
+#             move transect wall to middle of figure, make it .8 opaque
+            
+#     """
+#     top_height=1000
+#     hours=fio.model_outputs[model_run]['filedates']
+#     dtime=hours[hour]
+#     # [lat,lon], [lat1,lon1] of extent transect through middle
+#     transect = [[(extent[2]+extent[3])/2,extent[0]],[(extent[2]+extent[3])/2,extent[1]]]
+    
+#     cubes = fio.read_model_run(model_run, 
+#                                fdtime=dtime, 
+#                                extent=extent, 
+#                                add_theta=True, 
+#                                add_topog=True, 
+#                                add_winds=True,
+#                                add_z=True,
+#                                HSkip=HSkip)
+    
+#     th, qc, z_th = cubes.extract(['potential_temperature','qc','z_th'])
+#     # datetimes in hour output
+#     cubetimes = utils.dates_from_iris(th)
+    
+#     ff, sh = fio.read_fire(model_run,
+#                            dtimes=cubetimes,
+#                            extent=extent,
+#                            sensibleheat=True,
+#                            HSkip=HSkip)
+    
+#     # Get the rest of the desired data
+#     topog, = cubes.extract(['surface_altitude'])
+#     d_topog = topog.data.data.T # convert to lon,lat
+#     u,v = cubes.extract(['u','v'])
+#     levh  = qc.coord('level_height').points
+#     topind = np.sum(levh<top_height)
+    
+#     # these are level, lat, lon cubes
+#     lat,lon = th.coord('latitude').points, th.coord('longitude').points
+    
+#     # dimensional mesh
+#     X,Y,Z = np.meshgrid(lon,lat,levh) 
+#     ## X Y Z are now [lat, lon, lev] for some reason
+#     [X,Y,Z] = [ np.moveaxis(arr,0,1) for arr in [X,Y,Z]]
+#     ## Now they are lon, lat, lev
+#     ## Cut down to desired level
+#     [X, Y, Z] = [ arr[:,:,:topind] for arr in [X,Y,Z]]
+    
+    
+#     for ti, cubetime in enumerate(cubetimes):
+#         surface_list=[]
+        
+#         # surface sensible heat flux [t,lon,lat]
+#         d_sh = sh[ti].data.data
+        
+#         d_zth = z_th[:topind,:,:].data.data # [lev, lat, lon]
+#         d_th = th[ti,:topind,:,:].data.data # [lev, lat, lon]
+#         #d_th = threedee.cube_to_xyz(th[ti],ztopind=topind) # [lon,lat,lev]
+        
+#         # topography surface
+#         topog_layer = go.Surface(
+#             z=d_topog,
+#             x=X[:,:,0],
+#             y=Y[:,:,0],
+#             colorscale=shcolor, # surface heat colormap 
+#             cmin=shcmin,
+#             cmax=shcmax,
+#             #reversescale=True,
+#             surfacecolor=d_sh, # colour by sensible heat
+#             #opacityscale=[[0.0, 0], [100.0, .8], [shcmax, 1]], 
+#             #hidesurface=True,
+#             #showscale=False, # remove colour bar,
+#             coloraxis='coloraxis', # first colour bar
+#         )
+#         surface_list.append(topog_layer)
+        
+#         ## Pull out transect to paint against the wall
+#         #print("DEBUG:",d_th.shape, np.shape(lat),np.shape(lon),transect)
+#         # transect of pot temp
+#         sliceth  = utils.cross_section(d_th,lat,lon,transect[0],transect[1],npoints=len(lon))
+#         # transect of topography
+#         slicetopog = utils.cross_section(d_topog.T,lat,lon,transect[0],transect[1],npoints=len(lon))
+#         # transect of height
+#         slicez = utils.cross_section(d_zth,lat,lon,transect[0],transect[1],npoints=len(lon))
+#         # transects are [lat, lon] - and should represent one latitude over multiple longitudes
+#         #print(np.shape(slicez), np.shape(sliceth))
+#         transect_layer = go.Surface(
+#             z=slicez.T, # height
+#             x=X[:,:,0], # longitudes
+#             y=np.zeros(np.shape(slicez.T)) + np.max(Y), # highest latitude
+#             colorscale='plasma', # pot temp colour map
+#             cmin=380,
+#             cmax=410,
+#             #reversescale=True,
+#             surfacecolor=sliceth.T, # colour by pot temp
+#             #opacityscale=[[0.0, 0], [100.0, .8], [shcmax, 1]], 
+#             #hidesurface=True,
+#             #showscale=False, # remove colour bar,
+#             coloraxis='coloraxis2', # second colour bar
+#             colorbar = dict(xanchor='right'),
+#         )
+#         surface_list.append(transect_layer)
+        
+        
+#         ### Paint figure
+#         figname = None
+#         if not send_to_browser:
+#             #figname = cubetime.strftime('figures/threedee/test_%Y%m%d%H%M.png')
+#             figname = fio.standard_fig_name(model_run,_sn_,cubetime,subdir='downslope')
+        
+#         layoutargs = dict(title=cubetime.strftime('%Y%m%d%H%M(UTC)'),
+#                           font=dict(size=18, color="#111111"),)
+                                    
+#         create_figure(surface_list, filename=figname, **layoutargs)

@@ -305,8 +305,11 @@ def vorticity_layers(model_run="waroona_run2", hour=16, levels=[1,3,5,10,20],
 if __name__ == '__main__':
     
     if True:
-        for hour in np.arange(12,24):
-            vorticity_layers("sirivan_run1",hour=hour)
+        extent=None
+        SI_PCB = [149.5,150.2,-32.15,-31.95] # lon0,lon1,lat0,lat1
+        for hour in np.arange(16,22):
+            vorticity_layers("sirivan_run1",hour=hour,
+                             extent=SI_PCB)
     
     if False:
         allmr = fio.model_outputs.keys()

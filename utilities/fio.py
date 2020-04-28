@@ -587,7 +587,7 @@ def read_model_run(model_version, fdtime=None, subdtimes=None, extent=None,
             
     elif model_version=='sirivan_run1':
         for dtime in fdtimes:
-            cubelist = read_sirivan_run1(dtime)
+            cubelist = read_sirivan_run1(dtime, HSkip=HSkip)
             if allcubes is None:
                 allcubes = cubelist
             else:
@@ -595,7 +595,9 @@ def read_model_run(model_version, fdtime=None, subdtimes=None, extent=None,
         
     elif '_run' in model_version:
         for dtime in fdtimes:
-            slv,ro1,th1,th2 = read_standard_run(dtime, mv=model_version, HSkip=HSkip)
+            slv,ro1,th1,th2 = read_standard_run(dtime, 
+                                                mv=model_version, 
+                                                HSkip=HSkip)
 
             # Remove specific humidity from slv, since we get the whole array from th1
             slv.remove(slv.extract('specific_humidity')[0])
@@ -832,6 +834,8 @@ def read_model_run(model_version, fdtime=None, subdtimes=None, extent=None,
 
     if add_theta:
         # Estimate potential temp
+        test_theta = allcubes.extract(['air_pressure','air_temperature'])
+        print("DEBUG:",test_theta)
         p, Ta = allcubes.extract(['air_pressure','air_temperature'])
         theta = utils.potential_temperature(p.data,Ta.data)
         # create cube
@@ -1105,9 +1109,14 @@ def read_sirivan_run1(dtime, constraints=None, extent=None, HSkip=None):
                 'specific_humidity', # kg/kg [lat,lon]
                 'specific_humidity_0', # kg/kg [t,z,lat,lon] #???
                 ]
-    cubes = read_nc_iris(path,constraints=constraints,keepvars=varnames,HSkip=HSkip)
+    cubes = read_nc_iris(
+        path,
+        constraints=constraints,
+        keepvars=varnames,
+        HSkip=HSkip
+        )
 
-    # specific_humidity is the name of two variables, we just want the good one
+    # specific_humidity is the name of two or three variables, we just want the good one
     shcubes = cubes.extract('specific_humidity')
     if len(shcubes)==2:
         sh,sh0 = shcubes
@@ -1115,11 +1124,28 @@ def read_sirivan_run1(dtime, constraints=None, extent=None, HSkip=None):
             cubes.remove(sh)
         else:
             cubes.remove(sh0)
+    elif len(shcubes)==3:
+        sh,sh0,sh1 = shcubes
+        cubes.remove(sh1)
+        if len(sh.shape)==2:
+            cubes.remove(sh)
+        else:
+            cubes.remove(sh0)
+    
 
     # air_temperature is the name of two variables, we just want the good one
     Tacubes = cubes.extract('air_temperature')
     if len(Tacubes)==2:
         Ta0,Ta = Tacubes
+        if len(Ta.shape)==2:
+            cubes.remove(Ta)
+        else:
+            cubes.remove(Ta0)
+    if len(Tacubes)==3:
+        Ta0,Ta, Ta1 = Tacubes
+        for thing in [Ta0,Ta,Ta1]:
+            print("DEBUG:",thing.summary(shorten=True))
+        cubes.remove(Ta1)
         if len(Ta.shape)==2:
             cubes.remove(Ta)
         else:

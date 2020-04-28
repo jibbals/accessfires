@@ -13,6 +13,7 @@ Created on Mon Aug  5 13:55:32 2019
 
 import numpy as np
 from matplotlib import pyplot as plt
+from datetime import datetime
 
 # read tiff file
 from osgeo import gdal, osr
@@ -20,7 +21,8 @@ import cartopy.crs as ccrs
 
 from utilities import utils, plotting, fio
 
-
+si = fio.read_sirivan_run1(datetime(2017,2,11,21))
+print(si)
 
 ## show tiff from qgis
 #
