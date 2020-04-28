@@ -210,32 +210,35 @@ def firepower_comparison(runs=['waroona_run1','waroona_old','waroona_run2','waro
     ax.xaxis.set_major_formatter(mdates.DateFormatter("%H:%M"))
     fio.save_fig(run, _sn_, 'firepower.png',subdir='comparison',plt=plt)
 
-def PFT_map(PFT,plats,plons,colorbar=True, lines=[100]):
+def PFT_map(PFT,plats,plons, vmax=250):
     """
     Plot top-down map of PFT with contour and optional colour bar
+    vmax - 0 is linear reds
+    vmax+ is shown as light blue
     """
-    cnorm = colors.SymLogNorm(1,vmin=0,vmax=1000)
-    levs = np.union1d([0],np.logspace(0,3,20))
+    
     # remove negatives before plotting log scale (or else warnings apear)
     PFT_pos = np.copy(PFT)
+    #PFT_pos[PFT_pos > vmax] = vmax
     PFT_pos[PFT_pos<=0] = np.NaN
-    cs = plt.contourf(plons,plats,PFT_pos, levs, 
-                      norm=cnorm,
-                      locator=ticker.LogLocator(),
-                      cmap="YlOrRd_r")
-    cb = None
-    if colorbar:
-        cb = plt.colorbar(pad=0.01)
-        cb.set_label('PFT [Gigawatts]')
-        cb.set_ticks([1e1, 1e2, 1e3])
-        cb.ax.set_yticklabels(['10$^1$','10$^2$','10$^3$'])
     
-    if lines is not None:
-        with warnings.catch_warnings():
-            # ignore warning when there are no fires:
-            warnings.simplefilter('ignore')
-            plt.contour(plons,plats,PFT,np.array(lines))
-        
+    cs = plt.contourf(plons, plats, PFT_pos,
+                      levels = np.arange(0,vmax,30),
+                      cmap="Reds_r",
+                      extend="max",
+                      vmax=vmax, vmin=0)
+    cs.cmap.set_over("blue")
+    cs.changed()
+    
+    tickvals = np.append(np.arange(0,vmax,100),vmax)
+    #print("DEBUG:",tickvals)
+    cb = plt.colorbar(cs,pad=0.01,ticks=tickvals)
+    cb.set_label('PFT [Gigawatts]')
+    
+    cb.set_ticks(list(tickvals))
+    cb.ax.set_yticklabels(list(tickvals))
+    
+    
     return cs, cb
     
 def model_run_PFT_summary(model_run='waroona_run1', hour=datetime(2016,1,5,15)):
@@ -275,14 +278,14 @@ def model_run_PFT_summary(model_run='waroona_run1', hour=datetime(2016,1,5,15)):
         if ff is not None:
             plotting.map_fire(ff[i].data,lats,lons)
         
-        # add scale
-        #plotting.scale_bar(plt.gca(), cartopy.crs.PlateCarree(),10)
-        
         ## Second plot will be PFT map with 'surface' winds overlaid
         plt.subplot(2,1,2)
         PFT_map(pft[i],plats,plons)
+        
         # overlay winds
-        plotting.map_quiver(u[i].data,v[i].data,lats,lons, scale=140)
+        plt.streamplot(lons,lats,u[i],v[i], color='k', 
+                       density=(.8, .5))
+        
         plotting.map_add_locations_extent(extentname,hide_text=True)
         ## Turn off the tick values
         plt.xticks([]); plt.yticks([])
@@ -295,11 +298,13 @@ if __name__ == '__main__':
     
     ## Compare firepower/PFT for some runs
     #firepower_comparison(runs=['waroona_old','waroona_run1'])
-    firepower_comparison()
+    #firepower_comparison()
 
     ## Summary figure for PFT at a site for one output hour
-    #dtimes = fio.model_outputs['waroona_old']['filedates']
-    #model_run_PFT_summary(model_run='waroona_old', hour=dtimes[0])
+    mr = 'waroona_run1'
+    dtimes = fio.model_outputs[mr]['filedates']
+    for hour in np.arange(16,22):
+        model_run_PFT_summary(model_run=mr, hour=dtimes[hour])
     
     #['waroona_run2','waroona_run2uc','waroona_run1','waroona_old']:
     #for mr in ['waroona_run3']:

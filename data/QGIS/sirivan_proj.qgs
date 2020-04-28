@@ -16,10 +16,10 @@
   <mapcanvas>
     <units>meters</units>
     <extent>
-      <xmin>16587213.42122464813292027</xmin>
-      <ymin>-3812004.49780993070453405</ymin>
-      <xmax>16751202.17139191366732121</xmax>
-      <ymax>-3703260.74769901391118765</ymax>
+      <xmin>12841541.52763113006949425</xmin>
+      <ymin>-3953480.56491192011162639</ymin>
+      <xmax>13039485.12606904655694962</xmax>
+      <ymax>-3822220.77311136806383729</ymax>
     </extent>
     <rotation>0</rotation>
     <projections>1</projections>
@@ -200,6 +200,7 @@
       <variableValues type="QStringList"/>
     </Variables>
     <WMSContactPerson type="QString"></WMSContactPerson>
+    <WMSOnlineResource type="QString"></WMSOnlineResource>
     <Bookmarks>
       <Row-0>
         <Project type="QString">sirivan_proj.qgs</Project>
@@ -212,7 +213,6 @@
       </Row-0>
       <count type="int">1</count>
     </Bookmarks>
-    <WMSOnlineResource type="QString"></WMSOnlineResource>
     <WMSUseLayerIDs type="bool">false</WMSUseLayerIDs>
     <WMSContactOrganization type="QString"></WMSContactOrganization>
     <WMSKeywordList type="QStringList">
@@ -231,8 +231,8 @@
       <DegreeFormat type="QString">D</DegreeFormat>
     </PositionPrecision>
     <WCSUrl type="QString"></WCSUrl>
-    <WMSServiceCapabilities type="bool">false</WMSServiceCapabilities>
     <WMSContactPhone type="QString"></WMSContactPhone>
+    <WMSServiceCapabilities type="bool">false</WMSServiceCapabilities>
     <WMSServiceAbstract type="QString"></WMSServiceAbstract>
     <WMSContactPosition type="QString"></WMSContactPosition>
     <WMSAddWktGeometry type="bool">false</WMSAddWktGeometry>
