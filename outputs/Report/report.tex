@@ -1,0 +1,69 @@
+% Based on simple latex report template from %http://www.cs.technion.ac.il/~yogi/Courses/CS-Scientific-Writing/examples/simple/simple.htm
+
+\title{ACCESS-Fire report}
+
+\author{
+        Jesse Greenslade\\
+          \and
+        Mika Peace\\
+        Bureau of Meteorology\\
+          \and
+        Harvey Ye\\
+          \and
+        Jeff Kepert\\
+          \and
+        Kevin Tory\\
+}
+\date{\today}
+
+\documentclass[12pt]{article}
+
+\begin{document}
+\maketitle
+\tableofcontents
+
+
+\begin{abstract}
+This is the abstract \ldots
+\end{abstract}
+
+\section{Introduction} 
+  \label{intro}
+
+  Introduction to project and model
+
+  \paragraph{Outline}
+    The remainder of this article is organized as follows...
+  
+\section{Model} 
+  \label{model}
+
+\section{Pyrocumulonimbus}
+  \label{pcb}
+  
+  \paragraph{Formation}
+    General hand wavey physics etc.
+     
+  \paragraph{Model formation}
+    Details regarding how PCB is found/examined in model output.
+    Story about how the parameters affect model PCB formation.
+  
+    Some stuff about vorticity and other metrics?
+    
+  \paragraph{PCB Formation Threshold}
+    Kevin's PFT - point to his publication.
+    Calculation within model output
+    Summary showing that when fire spreads fast the output is higher.
+    High output coinciding with low PFT is exactly when PCB occurs.
+  
+  
+
+\section{Ember storm}
+  \label{emberstorm}
+
+
+\bibliographystyle{abbrv}
+\bibliography{firebib}
+
+\end{document}
+This is never printed

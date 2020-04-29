@@ -14,3 +14,11 @@ figures
 
 # ignore fortran code (it's Kevin's, property of CSIRO)
 utilities/fortran
+
+# ignore latex trash
+**.aux
+**.bbl
+**.blg
+**.gz
+**.toc
+

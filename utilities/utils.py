@@ -339,6 +339,10 @@ def vorticity(u,v,lats,lons):
     F = v_lon + u_lat
     E = u_lon - v_lat
     OW = zeta**2 - (E**2 + F**2)
-    OW_norm = OW/(zeta**2)
-    OWZ = OW/zeta
+    # ignore div by zero warning
+    with np.errstate(divide='ignore',invalid='ignore'):
+        zetanan = np.copy(zeta)
+        zetanan[np.isclose(zeta,0)]=np.NaN
+        OW_norm = OW/(zetanan**2)
+        OWZ = OW/zetanan
     return zeta, OW_norm, OWZ
