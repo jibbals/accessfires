@@ -248,10 +248,12 @@ def vorticity_layers(model_run="waroona_run2", hour=16, levels=[3,5,10,20,30,40]
     ff, = fio.read_fire(model_run, dtimes, extent=extent, HSkip=HSkip)
     
     # constant colorbar for vorticity
-    cmap="PuOr"
+    cmap1="PuOr"
+    cmap2="viridis"
+    cmap3="viridis"
     contours1=np.linspace(-1*vorticity_max,vorticity_max,50)
-    #contours2=np.linspace()
-    #contours3=np.linspacE()
+    contours2=np.linspace(0,1,50)
+    contours3=np.linspace(0,10,50)
     
     # streamplot density of lines
     density_x,density_y = .5,.3
@@ -274,10 +276,15 @@ def vorticity_layers(model_run="waroona_run2", hour=16, levels=[3,5,10,20,30,40]
                 #metric[~np.isfinite(metric)] = np.NaN
                 
                 if jj == 0:
-                    cs1 = plt.contourf(lon,lat, metric, contours1, cmap=cmap, extend='both')
-                else:
-                    print("DEBUG:",metric.shape,np.nanmin(metric),np.nanmax(metric))
-                    cs = plt.contourf(lon,lat, metric, cmap=cmap, extend='both')
+                    cs1 = plt.contourf(lon,lat, metric, contours1, cmap=cmap1, extend='both')
+                elif jj == 1:
+                    print("DEBUG1:",metric.shape,np.nanmin(metric),np.nanmax(metric))
+                    metric[metric<0]=np.NaN
+                    cs2 = plt.contourf(lon,lat, metric, contours2, cmap=cmap2, extend='max')
+                elif jj == 2:
+                    print("DEBUG2:",metric.shape,np.nanmin(metric),np.nanmax(metric))
+                    metric[metric<0]=np.NaN
+                    cs3 = plt.contourf(lon,lat, metric, contours3, cmap=cmap3, extend='max')
             
                 # show winds
                 plt.streamplot(lon,lat,Ui,Vi, color='k', 
@@ -303,18 +310,29 @@ def vorticity_layers(model_run="waroona_run2", hour=16, levels=[3,5,10,20,30,40]
         fig.subplots_adjust(hspace=0.1)
         
         # add colourbar for vorticity:
-        cbar_ax = fig.add_axes([0.08, 0.05, 0.2, 0.05])# X Y Width Height
-        fig.colorbar(cs1, cax=cbar_ax, orientation='horizontal',
-                     format=matplotlib.ticker.ScalarFormatter(), 
-                     pad=0)
+        cbar_ax = fig.add_axes([0.1, 0.05, 0.2, 0.05])# X Y Width Height
+        cb1 = fig.colorbar(cs1, cax=cbar_ax, orientation='horizontal',
+                           format=matplotlib.ticker.ScalarFormatter(), 
+                           pad=0)
+        
+        # add colourbar for normalised metrics:
+        cbar_ax2 = fig.add_axes([0.4, 0.05, 0.2, 0.05])# X Y Width Height
+        cb2 = fig.colorbar(cs2, cax=cbar_ax2, orientation='horizontal',
+                           format=matplotlib.ticker.ScalarFormatter(), 
+                           pad=0)
         
         # add colourbar for vorticity:
-        #cbar_ax = fig.add_axes([0.905, 0.4, 0.01, 0.2])# X Y Width Height
-        #fig.colorbar(cs, cax=cbar_ax, format=matplotlib.ticker.ScalarFormatter(), pad=0)
+        cbar_ax3 = fig.add_axes([0.7, 0.05, 0.2, 0.05])# X Y Width Height
+        cb3 = fig.colorbar(cs3, cax=cbar_ax3, orientation='horizontal',
+                           format=matplotlib.ticker.ScalarFormatter(), 
+                           pad=0)
         
-        # add colourbar for vorticity:
-        #cbar_ax = fig.add_axes([0.905, 0.4, 0.01, 0.2])# X Y Width Height
-        #fig.colorbar(cs, cax=cbar_ax, format=matplotlib.ticker.ScalarFormatter(), pad=0)
+        tv1 = [-vorticity_max, 0, vorticity_max]
+        tv2 = [0,0.5,1]
+        tv3 = [0,5,10]
+        for cb,tv in zip([cb1,cb2,cb3],[tv1,tv2,tv3]):
+            cb.set_ticks(list(tv))
+            cb.ax.set_xticklabels(list(tv))
         
         # save figure
         fio.save_fig(model_run=model_run, script_name=_sn_,pname=dtime,
@@ -331,7 +349,7 @@ if __name__ == '__main__':
         extent=None
         SI_PCB = [149.5,150.2,-32.15,-31.95] # lon0,lon1,lat0,lat1
         Waroona = plotting._extents_['waroona']
-        for hour in np.arange(16,22):
+        for hour in np.arange(16,18):
             vorticity_layers("waroona_run1",
                              hour=hour,
                              extent=Waroona)

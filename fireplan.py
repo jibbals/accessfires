@@ -12,6 +12,9 @@ matplotlib.use('Agg',warn=False)
 import matplotlib.pyplot as plt
 from matplotlib import patheffects, colors
 import numpy as np
+# for legend creation:
+from matplotlib.lines import Line2D
+
 
 import iris
 
@@ -178,36 +181,91 @@ def fireplan_summary(model_run='waroona_run1'):
     
     fio.save_fig(model_run, _sn_, 'fire_spread', plt)
     
+    
+def fireplan_comparison(model_runs=['waroona_old','waroona_run1','waroona_run2','waroona_run3'],
+                        colors = ['red','orange','teal','magenta'],
+                        extent=plotting._extents_['waroona'],
+                        mapname='waroona_map.tiff',
+                        figname='waroona_firespread'):
+    """
+    compare fire spread between multiple runs
+    """
+    
+    # first pull tiff image into memory
+    fig = plt.figure(figsize=[14,10])
+    fig,ax,proj = plotting.map_tiff_qgis(file=mapname,extent=extent,fig=fig)
+    # firefront coord system is lats and lons
+    crs_data = ccrs.PlateCarree()
+    legend = []
+    
+    # for each model run, extract last fire front
+    for mr, color in zip(model_runs,colors):
+        FF, = fio.read_fire(model_run=mr,
+                            dtimes=None,
+                            extent=extent,
+                            firefront=True,)
+        lon,lat=FF.coord('longitude').points,FF.coord('latitude').points
+        print("DEBUG:",FF.summary(shorten=True))
+        # last firefront
+        FFlast = FF[-1].data
+        # first:
+        firstind = np.where(np.min(FF.data,axis=(1,2))<0)[0][0]
+        FFfirst = FF[firstind].data
+        # contour the firefronts
+        plt.contour(lon, lat, FFfirst.T, np.array([0]),
+                    colors=color, 
+                    linewidths=2,
+                    transform=crs_data, 
+                    alpha=0.5)
+        
+        plt.contour(lon, lat, FFlast.T, np.array([0]),
+                    colors=color, 
+                    linewidths=2,
+                    alpha=0.75,
+                    transform=crs_data)
+        legend.append(Line2D([0],[0],color=color,lw=2))
+    
+    # Make/Add legend
+    ax.legend(legend, model_runs)
+    plt.tight_layout()
+    fio.save_fig('project', _sn_, figname, plt)
+    
 
 if __name__=='__main__':
     ### Run the stuff
     
+    ##fireplan comparison
+    if True:
+        fireplan_comparison()
+    
+    
     ## Just create a fireplan figure:
-    fireplanruns = ['sirivan_run2_hr','waroona_old','waroona_run1','sirivan_run1','waroona_run3','waroona_run2']
+    if False:
+        fireplanruns = ['sirivan_run2_hr','waroona_old','waroona_run1','sirivan_run1','waroona_run3','waroona_run2']
+        
+        si_r2_hr = 'sirivan_run2_hr'
+        si_r1 = 'sirivan_run1'
+        
+        extent = plotting._extents_['sirivans'] # synoptic extent
     
-    si_r2_hr = 'sirivan_run2_hr'
-    si_r1 = 'sirivan_run1'
-    
-    extent = plotting._extents_['sirivans'] # synoptic extent
-
-    ## Plot fireplan for high res run
-    # read all the fire data
-    ff, = fio.read_fire(model_run=si_r2_hr, dtimes=None,
-                        extent=extent, firefront=True,
-                        HSkip=5)
-    
-    fig,ax,proj = fireplan(ff, show_cbar=True, cbar_XYWH=[.18,.3,.2,.02])
-    fio.save_fig(si_r2_hr, _sn_, 'fireplan_hr.png', plt)
-    
-    ## Plot fireplan for sirivan original run
-    # read all the fire data
-    ff, = fio.read_fire(model_run=si_r1, dtimes=None,
-                        extent=extent, firefront=True,
-                        HSkip=5)
-    
-    # first plot just the fireplan on it's own
-    fig,ax,proj = fireplan(ff, show_cbar=True, cbar_XYWH=[.18,.3,.2,.02])
-    fio.save_fig(si_r1, _sn_, 'fireplan_hr.png', plt)
+        ## Plot fireplan for high res run
+        # read all the fire data
+        ff, = fio.read_fire(model_run=si_r2_hr, dtimes=None,
+                            extent=extent, firefront=True,
+                            HSkip=5)
+        
+        fig,ax,proj = fireplan(ff, show_cbar=True, cbar_XYWH=[.18,.3,.2,.02])
+        fio.save_fig(si_r2_hr, _sn_, 'fireplan_hr.png', plt)
+        
+        ## Plot fireplan for sirivan original run
+        # read all the fire data
+        ff, = fio.read_fire(model_run=si_r1, dtimes=None,
+                            extent=extent, firefront=True,
+                            HSkip=5)
+        
+        # first plot just the fireplan on it's own
+        fig,ax,proj = fireplan(ff, show_cbar=True, cbar_XYWH=[.18,.3,.2,.02])
+        fio.save_fig(si_r1, _sn_, 'fireplan_hr.png', plt)
 
     ## run fireplan and summary for all runs
     #for mr in fireplanruns:

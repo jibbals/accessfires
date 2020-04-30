@@ -437,6 +437,7 @@ def read_fire(model_run='waroona_run1',
               HSkip=None):
     '''
     Read fire output cubes matching dtimes time dim
+    output like [time,lon,lat]
     '''
     ## If no fire exists for model run, return None
     if not model_outputs[model_run]['hasfire']:
