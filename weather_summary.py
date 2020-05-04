@@ -22,7 +22,8 @@ from utilities import utils, plotting, fio, constants
 _sn_ = 'weather_summary'
 __cloud_thresh__ = constants.cloud_threshold
 
-def plot_weather_summary(U,V,W, height, lat, lon, extentname, Q=None, FF=None):
+def plot_weather_summary(U,V,W, height, lat, lon, extentname, 
+                         Q=None, FF=None, Streamplot=True):
     '''
     Show horizontal slices of horizontal and vertical winds averaged between 
     several vertical levels. Also shows clouds (Q) and fires (FF) with contour outline.
@@ -58,26 +59,39 @@ def plot_weather_summary(U,V,W, height, lat, lon, extentname, Q=None, FF=None):
         Vr = np.mean(Vi, axis=0)
         Sr = np.mean(Si, axis=0)
         
-        # value skip so vectors aren't so dense
-        n_y, n_x = Ur.shape
-        vsv = n_y // 16; vsu = n_x // 16 # about 16x16
-        skip = (slice(None,None,vsv),slice(None,None,vsu))
-        
-        Uvs,Vvs = Ur[skip], Vr[skip]
-        
-        # Normalize the arrows:
-        
-        Uvs = Uvs / np.sqrt(Uvs**2 + Vvs**2);
-        Vvs = Vvs / np.sqrt(Uvs**2 + Vvs**2);
-        
+        # wind speed contourf
         plt.contourf(lon, lat, Sr, 10)
+        plt.colorbar(ticklocation=ticker.MaxNLocator(5),pad=0)
+        
         if extentname is not None:
             plotting.map_add_locations_extent(extentname, hide_text=True)
         
-        plt.colorbar(ticklocation=ticker.MaxNLocator(5),pad=0)
-        plt.quiver(lon[::vsu], lat[::vsv], Uvs, Vvs, scale=30)
+        if Streamplot:
+            # how dense is streamplot
+            density_x = 0.6
+            density_y = 0.5
+            #streamplot for horizontal winds
+            plt.streamplot(lon,lat,Ur,Vr, 
+                           color='k', 
+                           density=(density_x, density_y))
+        else:
+            # value skip so vectors aren't so dense
+            n_y, n_x = Ur.shape
+            vsv = n_y // 16; vsu = n_x // 16 # about 16x16
+            skip = (slice(None,None,vsv),slice(None,None,vsu))    
+            Uvs,Vvs = Ur[skip], Vr[skip]
+        
+            # Normalize the arrows:
+            Uvs = Uvs / np.sqrt(Uvs**2 + Vvs**2);
+            Vvs = Vvs / np.sqrt(Uvs**2 + Vvs**2);
+            
+            # quiver plot
+            plt.quiver(lon[::vsu], lat[::vsv], Uvs, Vvs, scale=30)
+        
+        # remove x and y ticks
         plt.xticks([],[])
         plt.yticks([],[])
+        # add ylabel
         plt.ylabel("%.0f - %.0f m"%(height[row][0], height[row][-1]),fontsize=13)
         if ii==0:
             plt.title('horizontal winds (m/s)')
@@ -100,10 +114,7 @@ def plot_weather_summary(U,V,W, height, lat, lon, extentname, Q=None, FF=None):
                          extend='both',)
         
         if FF is not None:
-            with warnings.catch_warnings():
-            # ignore warning when there are no fires:
-                warnings.simplefilter('ignore')
-                plt.contour(lon,lat,np.transpose(FF),np.array([0]), colors='red')
+            plotting.map_fire(FF, lat, lon)
         
         plt.xticks([],[])
         plt.yticks([],[])
@@ -155,7 +166,7 @@ def weather_summary_model(model_version='waroona_run1',
         lon = w.coord('longitude').points
         height = w.coord('level_height').points
         dtimes = utils.dates_from_iris(u)
-        
+        # read fire front
         ff, = fio.read_fire(model_version, dtimes, extent=extent, HSkip=HSkip)
         
         # for each time slice create a weather summary plot
@@ -168,6 +179,7 @@ def weather_summary_model(model_version='waroona_run1',
                 qci = qc[i].data.data
             if ff is not None:
                 FF = ff[i].data.data
+            
             plot_weather_summary(ui, vi, wi, height, lat, lon, 
                                  extentname=extentname,
                                  Q = qci, FF=FF)
@@ -185,13 +197,11 @@ if __name__=='__main__':
     #weather_summary_model(model_version='waroona_run2uc')
     
     ## run zoomed in
-    #weather_summary_model('sirivan_run1',zoom_in=plotting._extents_['sirivanz'])
     
-    #weather_summary_model('waroona_run2',)#fdtimes=[datetime(2016,1,6,7)])
-    
-    #zoom_in = plotting._extents_['sirivans']
-    zoom_in=None
-    weather_summary_model('sirivan_run2_hr',zoom_in=zoom_in,HSkip=5)#fdtimes=[datetime(2016,1,6,7)])
+    zoom_in = plotting._extents_['sirivans']
+    zoom_in = None # or not
+    weather_summary_model('waroona_run3',zoom_in=zoom_in,HSkip=None, 
+                          fdtimes=[datetime(2016,1,6,13)])
 
     print("INFO: weather_summary.py done")
 

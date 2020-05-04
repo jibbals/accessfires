@@ -269,7 +269,6 @@ def vorticity_layers(model_run="waroona_run2", hour=16, levels=[3,5,10,20,30,40]
             zi,OWi,OWZi = utils.vorticity(Ui,Vi,lat,lon)
             
             # plot vorticity (units will be wrong: dims are degrees not metres)
-            #print("DEBUG:",zi.shape, Vi.shape, Ui.shape, u.shape, v.shape, len(lat), len(lon))
             for jj, metric in enumerate([zi,OWi,OWZi]):
                 plt.subplot(len(levels),3,ii*3+jj+1)
                 

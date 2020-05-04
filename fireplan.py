@@ -225,6 +225,11 @@ def fireplan_comparison(model_runs=['waroona_old','waroona_run1','waroona_run2',
                     transform=crs_data)
         legend.append(Line2D([0],[0],color=color,lw=2))
     
+    if 'waroona' in model_runs[0]:
+        plotting.map_add_nice_text(ax,
+                                   [plotting._latlons_['waroona'],plotting._latlons_['yarloop']],
+                                   texts=['Waroona','Yarloop'], fontsizes=14)
+    
     # Make/Add legend
     ax.legend(legend, model_runs)
     plt.tight_layout()

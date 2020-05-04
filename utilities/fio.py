@@ -753,7 +753,7 @@ def read_model_run(model_version, fdtime=None, subdtimes=None, extent=None,
     if add_winds:
         # wind speeds need to be interpolated onto non-staggered latlons
         u1, v1 = allcubes.extract(['x_wind','y_wind'])
-
+        
         ### DESTAGGER u and v using iris interpolate
         ### (this will trigger the delayed read)
         # u1: [t,z, lat, lon1]
@@ -762,6 +762,9 @@ def read_model_run(model_version, fdtime=None, subdtimes=None, extent=None,
                            iris.analysis.Linear())
         v = v1.interpolate([('latitude',u1.coord('latitude').points)],
                            iris.analysis.Linear())
+        
+        assert np.all(u.shape == qc.shape), "Shape of wind vectors is wrong"
+        
         # add standard names for these altered variables:
         iris.std_names.STD_NAMES['u'] = {'canonical_units': 'm s-1'}
         iris.std_names.STD_NAMES['v'] = {'canonical_units': 'm s-1'}

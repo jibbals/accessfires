@@ -21,8 +21,22 @@ import cartopy.crs as ccrs
 
 from utilities import utils, plotting, fio
 
-si = fio.read_sirivan_run1(datetime(2017,2,11,21))
-print(si)
+fdtime=datetime(2016,1,5,15)
+HSkip=None
+extent=plotting._extents_['waroona']
+
+w1 = fio.read_model_run('waroona_run1',fdtime=fdtime,
+                        extent=extent,
+                        add_winds=True, HSkip=HSkip)
+print(w1)
+print(w1[0].shape)
+
+ff, = fio.read_fire('waroona_run1',dtimes=[fdtime],
+                    extent=extent,
+                    HSkip=HSkip)
+
+print(ff)
+print(ff.shape)
 
 ## show tiff from qgis
 #

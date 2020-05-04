@@ -17,6 +17,7 @@
   
   
   \subsection{Model runs}
+    \label{model:runs}
     Over the course of the project the ACCESS-Fire model has been run and updated multiple times, over two regions where large scale forest fires occurred.
     The model runs in a nested fashion, with three to four nests so that the highest resolution possible is produced in a reasonable manner at the site of the fires (e.g. Figure \ref{fig:model:nests}).
     
@@ -26,13 +27,13 @@
     
     \begin{figure}
       \includegraphics[width=\linewidth]{../../figures/project/Waroona_Uarbry.png}
-      \caption{Three nests run by ACCESS-Fire model are shown as red rectangles. 
+      \caption{Three nests run by ACCESS-Fire model are shown as black\/red rectangles. 
       The outermost nest has resolution of approximately 3.5 km by 3.5 km, 
       The intermediary Nest is at 1.0 km by 1.0 km, and the smallest nest (red) is at 0.3 km by 0.3 km.
       A fourth nest is sometimes added 
       %taking up the same space as Nest 3 but 
       with .1 km by .1 km resolution.
-      Fire coupling is enabled only within the higher resolution nest.}
+      Fire coupling is enabled only within the higher resolution (red) nests.}
       \label{fig:model:nests}
     \end{figure}
     
@@ -95,7 +96,12 @@
     
     
   \subsection{Modelled Weather}
+    \label{model:weather_summary}
     
+    Weather is examined at various scales by sub-selecting extents and vertical levels, then viewing horizontal and vertical winds, cloud content, and other available metrics. This section outlines in chronological order the overall weather in the latest model run for each site.
+    
+    
+    Figure \ref{fig:model:weather_summary_eg} shows a synoptic overview at one point in time over the Waroona fire, with clear updraught and cloud activity just down-wind of the firefront.
     
     \begin{figure}
       \includegraphics[width=\linewidth]{../../figures/waroona_run3/weather_summary/fig_201601061010.png}
@@ -105,6 +111,8 @@
       Cloud content is summed within each vertical bin, and the areas marked have at least 0.1 gkg$^{-1}$ of water and ice.}
       \label{fig:model:weather_summary_eg}
     \end{figure}
-        
+    
+    
+  
   \subsection{Data flow}
     \textbf{TODO: Data flow diagram for project}
