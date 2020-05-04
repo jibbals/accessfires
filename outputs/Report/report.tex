@@ -19,26 +19,28 @@
 \input{preamble}
 
 \begin{document}
-\maketitle
-\tableofcontents
-
-\begin{abstract}
-This is the abstract \ldots
-\end{abstract}
-
-\include{sec_Intro}
-
-\include{sec_Model}
-
-\include{sec_PCB}
-
-\include{sec_ember}
-
+  \maketitle
+  \tableofcontents
   
-
-
-\bibliographystyle{abbrv}
-\bibliography{firebib}
+  \begin{abstract}
+  This is the abstract \ldots
+  \end{abstract}
+  
+  \include{sec_Intro}
+  
+  \include{sec_Model}
+  
+  \include{sec_PCB}
+  
+  \include{sec_ember}
+  
+  %% Biblatex style
+  %\printbibliography
+  
+  % Default bibliography thingy
+  \bibliographystyle{acm} % abbrv, acm ... (https://libguides.usask.ca/c.php?g=218034&p=1446425)
+  \bibliography{firebib}
 
 \end{document}
+
 This is never printed
