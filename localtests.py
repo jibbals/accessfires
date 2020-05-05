@@ -60,15 +60,38 @@ if localtime:
 
 ## Read Temperature:
 # just want surface for most of these, lets just take bottom two rows:
-surf_constraint = iris.Constraint(model_level_number = lambda cell: cell<=2)
-cubes=fio.read_model_run(model_run, extent=extent, constraints=surf_constraint, 
-                         add_RH=True)
-# just surface air temp averaged spatially
-ctimes = utils.dates_from_iris(cubes[0])
-T,RH = cubes.extract(["air_temperature",'relative_humidity'])
+# surf_constraint = iris.Constraint(model_level_number = lambda cell: cell<=2)
+#cubes=fio.read_model_run(model_run, extent=extent, constraints=surf_constraint, 
+#                         add_RH=True)
 
-T = np.mean(T[:,0,:,:].data.data, axis=(1,2))
-RH = np.mean(RH[:,0,:,:].data.data, axis=(1,2))
+# READ EVERYTHING, SUBSET, CALC DESIRED METRICS, PLOT METRICS
+cubes = fio.read_model_run(model_run, extent=extent)
+ctimes = utils.dates_from_iris(cubes[0])
+
+## get temperature, RH
+q,T = cubes.extract(['specific_humidity','air_temperature'])
+# compute RH from specific and T in kelvin
+T.convert_units('K')
+# just want surface for Temp and RH
+q = q[:,0,:,:]
+T = T[:,0,:,:].data.data
+RH = utils.relative_humidity_from_specific(q.data.data, T)
+RH = np.mean(RH, axis=(1,2))
+T = np.mean(T, axis=(1,2))
+
+## get wind speed/ wind dir
+u, v = cubes.extract(['x_wind','y_wind'])
+u=u[:,0,:,:]
+v=v[:,0,:,:]
+# DESTAGGER u and v using iris interpolate
+u = u.interpolate([('longitude',v.coord('longitude').points)],
+                    iris.analysis.Linear())
+v = v.interpolate([('latitude',u.coord('latitude').points)],
+                    iris.analysis.Linear())
+ws = np.mean(utils.wind_speed_from_uv_cubes(u,v).data.data, axis=(1,2))
+# mean wind direction based on mean u,v
+u_mean, v_mean = np.mean(u.data.data,axis=(1,2)) , np.mean(v.data.data,axis=(1,2))
+#wd = utils.wind_dir_from_uv(u_mean,v_mean)
 
 #### PLOTTING PART
 
@@ -79,17 +102,18 @@ def make_patch_spines_invisible(ax):
         sp.set_visible(False)
 
 # figure and multiple y axes for time series
-fig = plt.figure(figsize=[12,5])
-ax_fp = plt.gca() # firepower axis
+fig, axes = plt.subplots(2,1,figsize=[12,8], sharex=True)
+ax_fp = axes[0] # firepower axis
 color_fp = "orange"
 ax_T = ax_fp.twinx() # Temperature
 color_T = "red"
 ax_RH = ax_fp.twinx() # Rel Humid
 color_RH = "magenta"
-#ax_ws = ax_fp.twinx() # Wind speed
+ax_ws = axes[1] # Wind speed
+color_ws = 'chartreuse'
 
 # offsets for extra y axes, and make just the one spine visible
-ax_RH.spines["right"].set_position(("axes", 1.1))
+ax_RH.spines["right"].set_position(("axes", 1.07))
 make_patch_spines_invisible(ax_RH)
 ax_RH.spines["right"].set_visible(True)
 
@@ -108,23 +132,41 @@ plt.sca(ax_RH)
 line_RH, = plt.plot_date(ctimes, RH, '-',
                          color=color_RH, label="RH",)
 
-ax_fp.set_xlabel("Time")
+## Wind speed, wind speed stdev, wind dir quiver
+plt.sca(ax_ws)
+line_ws, = plt.plot_date(ctimes, ws, '*',
+                         color=color_ws, label="wind speed",)
+wdnorm = np.sqrt(u_mean**2 + v_mean**2)
+plt.quiver(ctimes, ws, u_mean/wdnorm, v_mean/wdnorm, 
+           pivot='mid', 
+           alpha=.6, 
+           headwidth=2, headlength=2, headaxislength=2)
+
+
+# top row:
 ax_fp.set_ylabel("W/m2")
 ax_fp.yaxis.label.set_color(color_fp)
-ax_T.set_ylabel("Temperature")
+ax_T.set_ylabel("Temperature (C)")
 ax_T.yaxis.label.set_color(color_T)
-ax_RH.set_ylabel("RH")
+ax_RH.set_ylabel("RH (frac)")
 ax_RH.yaxis.label.set_color(color_RH)
-#ax_RH.set_ylabel("RH")
 
+# bottom row:
+ax_ws.set_ylabel("wind speed (m/s)")
+ax_ws.yaxis.label.set_color(color_ws)
+ax_ws.set_xlabel("Time")
 
 ## Plot periphery
-plt.title("Surface summary over time")
+axes[0].set_title("Surface summary over time")
 lines = [line_pft, line_fp, line_T, line_RH]
 labels = [l.get_label() for l in lines]
 ax_fp.legend(lines, labels, loc='best')
 #plt.suptitle(model_run,y=0.9)
-        
+
+lines2 = [line_ws,]
+labels2 = [l.get_label() for l in lines2]
+ax_ws.legend(lines2,labels2, loc='best')
+
 # format x-ticks date times
 ax_fp.xaxis.set_major_locator(mdates.HourLocator(interval=3))
 ax_fp.xaxis.set_minor_locator(mdates.HourLocator())

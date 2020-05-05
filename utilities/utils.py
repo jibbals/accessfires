@@ -346,3 +346,25 @@ def vorticity(u,v,lats,lons):
         OW_norm = OW/(zetanan**2)
         OWZ = OW/zetanan
     return zeta, OW_norm, OWZ
+
+def wind_dir_from_uv(u,v):
+    """
+        input u and v cubes, to have trig applied to them
+        returns wind_dir (data array):
+            met wind source direction in degrees clockwise from due north
+    """
+    #wind_dir_rads = iris.analysis.maths.apply_ufunc(np.arctan2,v,u)
+    wind_dir_rads = np.arctan2(v,u)
+    # this is anticlockwise from directly east
+    # meteorologicaly wind dir: 0 is due north, + is clockwise
+    ## this points to the direction which the wind is GOING
+    # wind_dir = (-1*wind_dir_rads.data*180/np.pi+90)%360
+    # met standard points to where the wind is coming from
+    wind_dir = (-1*wind_dir_rads*180/np.pi - 90) % 360
+    return wind_dir
+
+def wind_speed_from_uv_cubes(u,v):
+    """
+    returns wind direction as a cube
+    """
+    return iris.analysis.maths.apply_ufunc(np.hypot,u,v)

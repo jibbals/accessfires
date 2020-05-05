@@ -765,27 +765,19 @@ def read_model_run(model_version, fdtime=None, subdtimes=None, extent=None,
         v = v1.interpolate([('latitude',u1.coord('latitude').points)],
                            iris.analysis.Linear())
         
-        assert np.all(u.shape == qc.shape), "Shape of wind vectors is wrong"
-        
         # add standard names for these altered variables:
         iris.std_names.STD_NAMES['u'] = {'canonical_units': 'm s-1'}
         iris.std_names.STD_NAMES['v'] = {'canonical_units': 'm s-1'}
         u.standard_name='u'
         v.standard_name='v'
         # Get wind speed cube using hypotenuse of u,v
-        s = iris.analysis.maths.apply_ufunc(np.hypot,u,v)
+        s = utils.wind_speed_from_uv_cubes(u,v)
         s.units = 'm s-1'
         s.var_name='s' # s doesn't come from a var with a std name so can just use var_name
         
         # Get wind direction using arctan of y/x
-        wind_dir_rads = iris.analysis.maths.apply_ufunc(np.arctan2,v,u)
-        # this is anticlockwise from directly east
-        #wind_dir_math = (wind_dir_rads.data * 180/np.pi)%360
-        # meteorologicaly wind dir: 0 is due north, + is clockwise
-        # this points to the direction which the wind is GOING
-        #wind_dir = (-1*wind_dir_rads.data*180/np.pi+90)%360
-        # met standard points to where the wind is coming from
-        wind_dir = (-1*wind_dir_rads.data*180/np.pi - 90) % 360
+        wind_dir = utils.wind_dir_from_uv(u.data,v.data)
+        
         wdcube = iris.cube.Cube(wind_dir,
                                 var_name='wind_direction',
                                 units='degrees',
