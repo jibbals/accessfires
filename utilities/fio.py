@@ -500,7 +500,7 @@ def _set_hskip_for_hr_(model_version,HSkip):
 
 def read_model_run(model_version, fdtime=None, subdtimes=None, extent=None,
                    add_topog=True, add_z=False, add_winds=False, add_theta=False,
-                   add_dewpoint=False, add_RH=False, HSkip=None):
+                   add_dewpoint=False, add_RH=False, HSkip=None, constraints=None):
     '''
     Read output from particular model run into cubelist, generally concatenates
     along the time dimension.
@@ -598,10 +598,12 @@ def read_model_run(model_version, fdtime=None, subdtimes=None, extent=None,
         for dtime in fdtimes:
             slv,ro1,th1,th2 = read_standard_run(dtime, 
                                                 mv=model_version, 
-                                                HSkip=HSkip)
+                                                HSkip=HSkip,
+                                                constraints=constraints)
 
             # Remove specific humidity from slv, since we get the whole array from th1
-            slv.remove(slv.extract('specific_humidity')[0])
+            if len(slv.extract('specific_humidity')) > 0:
+                slv.remove(slv.extract('specific_humidity')[0])
 
             if allcubes is None:
                 allcubes=slv
