@@ -235,7 +235,8 @@ def map_fire(ff,lats,lons):
     """   """
     # only plot if there is fire
     if np.sum(ff<0) > 0:
-        plt.contour(lons,lats,np.transpose(ff),np.array([0]), colors='red')
+        plt.contour(lons,lats,np.transpose(ff),np.array([0]), colors='red',
+                    transform=ccrs.PlateCarree())
 
 
 def map_tiff_qgis(file='sirivan_map.tiff', extent=None, show_grid=False,
@@ -491,8 +492,8 @@ def map_satellite(extent = _extents_['waroona'],
     if extent[0] > 130:
         locname='sirivan'
         
-    return map_tiff(locname, fig=fig, subplot_row_col_n=subplot_row_col_n,
-                    extent=subplot_extent)
+    return map_tiff_gsky(locname, fig=fig, subplot_row_col_n=subplot_row_col_n,
+                         extent=subplot_extent)
 
 def map_add_nice_text(ax, latlons, texts=None, markers=None, 
                       fontsizes=12, fontcolors='wheat', 

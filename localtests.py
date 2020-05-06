@@ -13,6 +13,7 @@ Created on Mon Aug  5 13:55:32 2019
 
 import numpy as np
 from matplotlib import pyplot as plt
+from matplotlib import patches
 import matplotlib.dates as mdates
 from datetime import datetime, timedelta
 import iris # so we can add level number constraint
@@ -25,13 +26,19 @@ from utilities import utils, plotting, fio
 
 model_run='waroona_run1'
 extentname=model_run.split('_')[0]
+# zoomed extent for analysis
+extentnamez = extentname + 'z'
 HSkip=None
-extent=plotting._extents_[extentname]
+extent=plotting._extents_[extentnamez]
 localtime = False
+proj_latlon = ccrs.PlateCarree() # lat,lon projection
 
 ## read all the fire data, and lats/lons
-sh, = fio.read_fire(model_run=model_run, dtimes=None,
-                    extent=extent, firefront=False, sensibleheat=True)
+ff,sh, = fio.read_fire(model_run=model_run, dtimes=None,
+                    extent=extent, firefront=True, sensibleheat=True)
+ff=ff[-1] # just final firefront is needed
+
+
 lons,lats = sh.coord('longitude').points, sh.coord('latitude').points
 assert sh is not None, "Missing sensible heat file"
 # datetimes list, convert to local time if desired
@@ -88,12 +95,17 @@ u = u.interpolate([('longitude',v.coord('longitude').points)],
                     iris.analysis.Linear())
 v = v.interpolate([('latitude',u.coord('latitude').points)],
                     iris.analysis.Linear())
-ws = np.mean(utils.wind_speed_from_uv_cubes(u,v).data.data, axis=(1,2))
+ws_all = utils.wind_speed_from_uv_cubes(u,v).data.data
+ws_q1 = np.quantile(ws_all, 0.25, axis=(1,2))
+ws_q3 = np.quantile(ws_all, 0.75, axis=(1,2))
+ws = np.mean(ws_all, axis=(1,2))
 # mean wind direction based on mean u,v
 u_mean, v_mean = np.mean(u.data.data,axis=(1,2)) , np.mean(v.data.data,axis=(1,2))
 #wd = utils.wind_dir_from_uv(u_mean,v_mean)
 
-#### PLOTTING PART
+#######################
+#### PLOTTING PART ####
+#######################
 
 def make_patch_spines_invisible(ax):
     ax.set_frame_on(True)
@@ -102,15 +114,43 @@ def make_patch_spines_invisible(ax):
         sp.set_visible(False)
 
 # figure and multiple y axes for time series
-fig, axes = plt.subplots(2,1,figsize=[12,8], sharex=True)
-ax_fp = axes[0] # firepower axis
+fig = plt.figure(figsize=[12,12])
+dx,dy = extent[1]-extent[0], extent[3]-extent[2]
+extentplus = np.array(extent)+np.array([-0.3*dx,0.3*dx,-0.2*dy,0.2*dy])
+
+# map with extent shown
+fig, ax_map, proj = plotting.map_tiff_qgis(file="%s_map.tiff"%extentname, 
+                                           fig=fig,
+                                           extent=list(extentplus), 
+                                           subplot_row_col_n = [3,1,1],
+                                           locnames=[extentname,]
+                                           )
+# Add rectangle
+botleft = extent[0],extent[2]
+ax_map.add_patch(patches.Rectangle(xy=botleft,
+                                   width=dx,
+                                   height=dy,
+                                   #facecolor=None,
+                                   fill=False,
+                                   edgecolor='blue',
+                                   linewidth=2,
+                                   #linestyle='-',
+                                   alpha=0.6, 
+                                   transform=proj_latlon))
+
+# add fire outline
+plt.sca(ax_map)
+plotting.map_fire(ff.data, lats, lons)
+
+
+ax_fp = plt.subplot(3,1,2) # firepower axis
 color_fp = "orange"
 ax_T = ax_fp.twinx() # Temperature
 color_T = "red"
 ax_RH = ax_fp.twinx() # Rel Humid
 color_RH = "magenta"
-ax_ws = axes[1] # Wind speed
-color_ws = 'chartreuse'
+ax_ws = plt.subplot(3,1,3, sharex=ax_fp) # Wind speed
+color_ws = 'black'
 
 # offsets for extra y axes, and make just the one spine visible
 ax_RH.spines["right"].set_position(("axes", 1.07))
@@ -134,13 +174,21 @@ line_RH, = plt.plot_date(ctimes, RH, '-',
 
 ## Wind speed, wind speed stdev, wind dir quiver
 plt.sca(ax_ws)
-line_ws, = plt.plot_date(ctimes, ws, '*',
+line_ws, = plt.plot_date(ctimes, ws, 'o',
                          color=color_ws, label="wind speed",)
+# add quartiles
+plt.plot_date(ctimes, ws_q1, 'v', 
+              color=color_ws)
+plt.plot_date(ctimes, ws_q3, '^', 
+              color=color_ws)
+
 wdnorm = np.sqrt(u_mean**2 + v_mean**2)
 plt.quiver(ctimes, ws, u_mean/wdnorm, v_mean/wdnorm, 
            pivot='mid', 
-           alpha=.6, 
-           headwidth=2, headlength=2, headaxislength=2)
+           alpha=.8, 
+           color='chartreuse',
+           headwidth=3, headlength=2, headaxislength=2,
+           width=.004)
 
 
 # top row:
@@ -157,7 +205,6 @@ ax_ws.yaxis.label.set_color(color_ws)
 ax_ws.set_xlabel("Time")
 
 ## Plot periphery
-axes[0].set_title("Surface summary over time")
 lines = [line_pft, line_fp, line_T, line_RH]
 labels = [l.get_label() for l in lines]
 ax_fp.legend(lines, labels, loc='best')
@@ -171,5 +218,7 @@ ax_ws.legend(lines2,labels2, loc='best')
 ax_fp.xaxis.set_major_locator(mdates.HourLocator(interval=3))
 ax_fp.xaxis.set_minor_locator(mdates.HourLocator())
 ax_fp.xaxis.set_major_formatter(mdates.DateFormatter("%H:%M"))
+
+ax_map.set_title("Surface area-average over time")
 fig.tight_layout(rect=[0,0,.99,1]) # left, bottom, right, top
 fio.save_fig("test", "localtests", 'timeseries.png',plt=plt)
