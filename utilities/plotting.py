@@ -48,7 +48,7 @@ _extents_               = {}
 _latlons_               = {}
 
 # Waroona locations
-_extents_['waroona']    = [115.775,116.2, -33.05,-32.7] # local
+_extents_['waroona']    = [115.76,116.2, -33.05,-32.7] # local
 _extents_['waroonas']   = [112,120,-34.5,-31] # synoptic
 _extents_['waroonaz']    = [115.88, 116.19, -32.92,-32.83] # zoom in on fire
 ## Nests centre: -32.9, 116.1
