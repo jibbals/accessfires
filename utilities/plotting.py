@@ -239,7 +239,7 @@ def map_fire(ff,lats,lons):
                     transform=ccrs.PlateCarree())
 
 
-def map_tiff_qgis(file='sirivan_map.tiff', extent=None, show_grid=False,
+def map_tiff_qgis(file='sirivan.tiff', extent=None, show_grid=False,
                   locnames=None,
                   fig=None, subplot_row_col_n=[1,1,1], subplot_axes=None):
     """

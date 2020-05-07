@@ -24,7 +24,7 @@ import cartopy.crs as ccrs
 
 from utilities import utils, plotting, fio
 
-model_run='waroona_run1'
+model_run='waroona_run3'
 extentname=model_run.split('_')[0]
 # zoomed extent for analysis
 extentnamez = extentname + 'z'
@@ -119,7 +119,7 @@ dx,dy = extent[1]-extent[0], extent[3]-extent[2]
 extentplus = np.array(extent)+np.array([-0.3*dx,0.3*dx,-0.2*dy,0.2*dy])
 
 # map with extent shown
-fig, ax_map, proj = plotting.map_tiff_qgis(file="%s_map.tiff"%extentname, 
+fig, ax_map, proj = plotting.map_tiff_qgis(file="%s.tiff"%extentname, 
                                            fig=fig,
                                            extent=list(extentplus), 
                                            subplot_row_col_n = [3,1,1],

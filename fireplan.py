@@ -185,7 +185,7 @@ def fireplan_summary(model_run='waroona_run1'):
 def fireplan_comparison(model_runs=['waroona_old','waroona_run1','waroona_run2','waroona_run3'],
                         colors = ['red','orange','teal','magenta'],
                         extent=plotting._extents_['waroona'],
-                        mapname='waroona_map.tiff',
+                        mapname='waroona.tiff',
                         figname='waroona_firespread'):
     """
     compare fire spread between multiple runs

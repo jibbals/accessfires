@@ -194,14 +194,13 @@ def weather_summary_model(model_version='waroona_run1',
 if __name__=='__main__':
     
     ## run for all of waroona_run2 datetimes
-    #weather_summary_model(model_version='waroona_run2uc')
+    weather_summary_model(model_version='waroona_run3')
     
     ## run zoomed in
-    
-    zoom_in = plotting._extents_['sirivans']
-    zoom_in = None # or not
-    weather_summary_model('waroona_run3',zoom_in=zoom_in,HSkip=None, 
-                          fdtimes=[datetime(2016,1,6,13)])
+    #zoom_in = plotting._extents_['sirivans']
+    #zoom_in = None # or not
+    #weather_summary_model('waroona_run3',zoom_in=zoom_in,HSkip=None, 
+    #                      fdtimes=[datetime(2016,1,6,13)])
 
     print("INFO: weather_summary.py done")
 
