@@ -560,6 +560,12 @@ def map_topography(extent, topog,lat,lon,title="Topography", cbar=True):
                         title=title, clevs=clevs, cmap=cmaptr, 
                         clabel="m", cbar=cbar, cbarform=tick.ScalarFormatter())
 
+def make_patch_spines_invisible(ax):
+    ax.set_frame_on(True)
+    ax.patch.set_visible(False)
+    for sp in ax.spines.values():
+        sp.set_visible(False)
+
 def scale_bar(ax, proj, length, location=(0.5, 0.05), linewidth=3,
               units='km', m_per_unit=1000):
     """

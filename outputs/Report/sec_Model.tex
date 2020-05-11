@@ -100,15 +100,26 @@
     
     Weather is examined at various scales by sub-selecting extents and vertical levels, then viewing horizontal and vertical winds, cloud content, and other available metrics. This section outlines in chronological order the overall weather in the latest model run for each site.
     
-    \paragraph{The Waroona} simulation starts 1 hour before midnight, and winds from ESE near the surface form horizontal rolls for several hours (Figure TODO). Fire ignition occurs after about 5 hours (4AM), and progresses westwards in the easterly winds. 
-    The fire is seen to influence vertical motion a long way down-wind, before clear East-West oriented horizontal rolls occur in the vertical motion around midday (Figure TODO). 
+    \paragraph{The Waroona} simulation starts 1 hour before midnight, Figure TODO shows the near-fire surface weather metrics over the first 24 hours.
+    Winds from ESE near the surface form horizontal rolls for several hours (Figure TODO). Fire ignition occurs after about 5 hours (4AM), and progresses westwards in the easterly winds. 
+    The fire is seen to influence vertical motion a long way down-wind, before clear East-West oriented horizontal rolls occur in the vertical motion around midday. 
     At about 2 in the afternoon, some westward winds occur at the base of the escarpment, causing updraughts and disrupting the horizontal rolls.
     Coincidentally the vertical motion near the fire front can be seen to have pushed into the upper troposphere leading to heightened cloud activity (Figure \ref{fig:model:weather_summary_updraught}), This feature is discussed more in Section \ref{pcb}.
     Easterly winds re-establish dominance by 7PM, getting stronger especially down the escarpment until the end of the simulation.
     The fire spreads down the escarpment on this first evening exactly when these winds pick up, this feature is discussed in more detail in Section \ref{emberstorm}.
     % Initial weather, horizontal rolls, ignition, spread and PCB, evening downslope run.
     
-    
+    \begin{figure}
+      \includegraphics[width=\linewidth]{../../figures/waroona_run3/weather_summary/timeseries.png}
+      \caption{%
+        Top panel shows a top down satellite view near Waroona, with the fire outline after 24 hours shown in red. A blue rectangle shows the area that is averaged at each time step shown in the bottom two panels.
+        The second panel shows several parameters over time, on 3 different y-axes, firepower and PFT share the left y-axis, cloud cover fraction and RH share the right-most y-axis.
+        "Cloud cover" marks the fraction of the blue rectangle (top panel) where more than 0.1 g\/kg ice and water content in air occurs. 
+        The blue circles are filled when the heaviest 25\% of total cloud content occurs, and half filled for the second highest 25\%.
+        The third panel shows surface mean wind speed and direction, including grey shading within the inter-quartile range and a triangle shows the maximum wind speed.
+        }
+      \label{fig:model:weather_summary_timeseries}
+    \end{figure}
     
     \begin{figure}
       \includegraphics[width=\linewidth]{../../figures/waroona_run3/weather_summary/fig_201601060600.png}
@@ -119,6 +130,7 @@
       \label{fig:model:weather_summary_updraught}
     \end{figure}
     
+    \paragraph{The Sir Ivan} simulation starts... TODO
     
   
   \subsection{Data flow}
