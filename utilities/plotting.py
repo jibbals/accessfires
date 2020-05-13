@@ -231,12 +231,19 @@ def map_contourf(extent, data, lat,lon, title="",
     plt.xticks([]); plt.yticks([])
     return cs, cb
 
-def map_fire(ff,lats,lons):
-    """   """
+def map_fire(ff,lats,lons, transform=True):
+    """   
+        Plot fire outline onto either an XY grid or geoaxes (eg from map_tiff)
+        if mapping latlons onto geoaxes transform needs to be True
+    """
     # only plot if there is fire
     if np.sum(ff<0) > 0:
-        plt.contour(lons,lats,np.transpose(ff),np.array([0]), colors='red',
-                    transform=ccrs.PlateCarree())
+        if transform:
+            plt.contour(lons,lats,np.transpose(ff),np.array([0]), colors='red',
+                        transform=ccrs.PlateCarree())
+        else:
+            plt.contour(lons,lats,np.transpose(ff),np.array([0]), colors='red')
+                        
 
 
 def map_tiff_qgis(file='sirivan.tiff', extent=None, show_grid=False,
@@ -673,7 +680,7 @@ def transect(data, z, lat, lon, start, end, npoints=100,
     
     # put it red where the fire is burnt
     if ff is not None:
-        ffslice = utils.cross_section(ff, lat, lon, start, end, 
+        ffslice = utils.cross_section(ff.T, lat, lon, start, end, 
                                       npoints=npoints)
         burnt = np.copy(slicetopog)
         interp=False

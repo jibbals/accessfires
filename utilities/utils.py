@@ -73,6 +73,8 @@ def cross_section(data,lats,lons,start,end,npoints=None):
   # Interpolate data along slice (in model height coordinate). Note that the
   # transpose is needed because RectBivariateSpline assumes the axis order (x,y)
   slicedata = np.tile(np.nan, [nz, npoints])
+  print("DEBUG(utils):")
+  print(lons.shape, lats.shape, data.shape, slicedata.shape,)
   for k in range(0,nz):
       f = interpolate.RectBivariateSpline(lons,lats,data[k,:,:].transpose())
       slicedata[k,:] = f.ev(slicelon,slicelat)

@@ -120,7 +120,8 @@ def pcb_occurrences(model_run, times):
 
 def transect_plus_quiver(w,u,qc,topog,zth,lat,lon,start,end,ztop,contours,
                          ff=None, 
-                         npoints=100,nquivers=13):
+                         npoints=100,nquivers=13,
+                         showcolorbar=True):
     '''
     Show latitude following transect with horizontal and vertical winds
     must follow one latitude to allow vertical wind to be accounted for in quivers
@@ -131,7 +132,7 @@ def transect_plus_quiver(w,u,qc,topog,zth,lat,lon,start,end,ztop,contours,
                                                  npoints=npoints, title='',
                                                  topog=topog, ztop=ztop,
                                                  contours=contours,
-                                                 lines=None, colorbar=True)
+                                                 lines=None, colorbar=showcolorbar)
     ## add cloud outlines
     ## Add contour where clouds occur
     qcslice = utils.cross_section(qc, lat, lon, start, end, npoints=npoints)
@@ -194,7 +195,7 @@ def map_with_transect(data,lat,lon, transect,
     
     # Add fire outline
     if ff is not None:
-        plotting.map_fire(ff,lat,lon)
+        plotting.map_fire(ff,lat,lon, transform=False)
     
     return cs,cb
 
@@ -402,7 +403,8 @@ def pyrocb(w, u, qc, z, wmean, topog, lat, lon,
     #        plt.contour(xslice,zslice,qcslice,np.array([cloud_threshold]),colors='k')
     transect_plus_quiver(w,u,qc,topog,z,lat,lon,start,end,ztop,
                          contours=clevs_vertwind,
-                         npoints=100,nquivers=13)
+                         npoints=100,nquivers=13,
+                         showcolorbar=False) # making our own colorbar
     
     plt.ylabel('height (m)')
     plt.xlabel('')
@@ -420,6 +422,9 @@ def pyrocb(w, u, qc, z, wmean, topog, lat, lon,
         plt.sca(ax3)
     
         ## Plot vert motion transect
+        print("DEBUG:")
+        print(w.shape, z.shape, lat.shape, lon.shape, startx, endx,
+              ff.shape)
         wslicex,xslicex,zslicex = plotting.transect_w(w, z, lat, lon, 
                                                       startx, endx,
                                                       title='',
@@ -679,7 +684,7 @@ if __name__ == '__main__':
         sample_showing_grid(model_run="sirivan_run2_hr", extentname='sirivans', HSkip=8)
 
     ## New zoomed, moving pyrocb plotting
-    if True:
+    if False:
         mr = 'sirivan_run2_hr'
         xlen=.4 # degrees of longitude for transect length
         hours=sirivan_good_half # run half the hours
@@ -688,9 +693,9 @@ if __name__ == '__main__':
                       xlen=xlen)
     
     ## Run sample for waroona_run2
-    if False:
+    if True:
         for hour in waroona_second_half:
-            pyrocb_model_run('waroona_run3', dtime=hour)
+            pyrocb_model_run('waroona_run1', dtime=hour)
     
     ### These are the first pyrocb plots I made (3 transects, not moving)
     if False:
