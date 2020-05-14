@@ -255,7 +255,7 @@ def cloud_system(model_run='waroona_run2', hour=20,
         
         ## volume plot showing vertical motion 
         wmax = 6
-        wmin = 2
+        wmin = 2.5
         vm_ind = np.sum(levh<vert_motion_height)
         up_volume = go.Volume(
             x=X[:,:,:vm_ind].flatten(), 
@@ -310,10 +310,12 @@ def cloud_system(model_run='waroona_run2', hour=20,
         ## title, lables
         layoutargs = dict(
             #title=cubetime.strftime('Clouds %Y%m%d%H%M(UTC)'),
-            title={"text":cubetime.strftime('Clouds %Y%m%d%H%M(UTC)'),
+            title={"text":cubetime.strftime(model_run+' %Y%m%d%H%M(UTC)'),
                    "yref": "paper",
-                   "y" : 1,
-                   "yanchor" : "bottom"},
+                   "y" : 0.775,
+                   "x" : 0.3,
+                   "yanchor" : "bottom",
+                   "xanchor" : "left",},
             font=dict(
                     family="Courier New, monospace",
                     size=18,
@@ -352,7 +354,18 @@ if __name__=='__main__':
     
     
     if True:
-        
+        for hour in [13]:
+            cloud_system(model_run='waroona_run1',
+                         hour = hour,
+                         extent = wider_waroona,
+                         HSkip = 3,
+                         top_height = 13500,
+                         #theta_height=1250,
+                         #theta_min=sirivan_theta_min,
+                         #theta_max=sirivan_theta_max,
+                         send_to_browser=True,)
+    
+    if False:
         # Save a bunch of images
         for hour in [7]:#range(15,24):
             

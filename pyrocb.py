@@ -422,9 +422,6 @@ def pyrocb(w, u, qc, z, wmean, topog, lat, lon,
         plt.sca(ax3)
     
         ## Plot vert motion transect
-        print("DEBUG:")
-        print(w.shape, z.shape, lat.shape, lon.shape, startx, endx,
-              ff.shape)
         wslicex,xslicex,zslicex = plotting.transect_w(w, z, lat, lon, 
                                                       startx, endx,
                                                       title='',
@@ -558,9 +555,9 @@ def moving_pyrocb(model_run='waroona_run3', hours = None,
             
             ## Transect of vert motion
             plt.subplot(3,1,2)
-            print("DEBUG:")
-            print(np.shape(fire))
-            print(np.shape(wi), np.shape(ui), np.shape(qci), np.shape(topog), np.shape(lat), np.shape(lon))
+            #print("DEBUG:")
+            #print(np.shape(fire))
+            #print(np.shape(wi), np.shape(ui), np.shape(qci), np.shape(topog), np.shape(lat), np.shape(lon))
             transect_plus_quiver(wi,ui,qci,topog,zth,lat,lon,start,end,ztop,
                                  ff=np.transpose(fire),
                                  contours=clevs_vertwind,

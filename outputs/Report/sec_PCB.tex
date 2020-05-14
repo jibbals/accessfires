@@ -37,7 +37,9 @@
     Strong cylindrical upward motion and cloud formation over the fire front can be considered clear evidence of PCB.
     To home in on where PCB occur, I zoom to a subset of the horizontal region that surrounds the fire. Horizontal model slices (at varying altitudes) of vertical wind motion and total cloud content show wind and cloud structures above the fire zone (Figure \ref{fig:pcb:waroona:vert_motion_slices}).
     A clear cylindrical plume occurs from around 5~km altitude all the way up to the stratosphere ($\sim 15$~km).
+    Cross sections show a strong internal updraft surrounded by downdrafts throughout the troposphere (Figure \ref{fig:pcb:waroona:pcb_transects}).
     
+
     \begin{figure}
       \includegraphics[width=\linewidth]{../../figures/waroona_run3/vert_motion_slices/fig_201601060630.png}
       \caption{%
@@ -48,10 +50,33 @@
       \label{fig:pcb:waroona:vert_motion_slices}
     \end{figure}
     
+    \begin{figure}
+      \includegraphics[width=\linewidth]{../../figures/waroona_run3/pyrocb/fig_201601060630.png}
+      \caption{%
+        Top panel: top-down view showing the firefront (red contour) and vertical motion near Waroona.
+        Bottom panels: transects (over dashed lines in Top panel) showing vertical motion, cloud content (black contour on 0.1 g\/kg ice and water content) and winds.
+      }
+      \label{fig:pcb:waroona:pcb_transects}
+    \end{figure}
 
-    
+    Visualisation in three dimensions gives a much clearer view of the PCB formation and scale. 
+    Figures X to Y TODO show the PCB on model levels, with heat, vertical motion, and topography represented at roughly the time of formation and the peak of the storm activity.
+    The front produces enough heat to form a huge plume that punches up into the upper troposphere, entraining moisture and leading to very strong mixing and winds locally.
 
   
   \subsection{Sir Ivan}
     \label{pcb:sirivan}
     
+    The simulation over Sir Ivan showed that weather was generally unfavourable to PCB formation until about 3PM, when the PFT dropped by a couple of orders of magnitude (Fig \ref{fig:pcb:sirivan:pft_series}).
+    The Sir Ivan fire covered a large area, and the conditions upwind of the fire ignition are not fully representative of those near the fire front, and from other model output we see that a PCB occurs at around 5PM lasting on the order of an hour.
+    Figure TODO shows the location and dynamics of the PCB, which stretched up to the top of the troposphere, driving turbulent wind conditions and cloud formation locally.
+    
+    \begin{figure}
+      \centering
+      \includegraphics[width=1\linewidth]{../../figures/sirivan_run1/PFT_work/comparison/firepower}
+      \caption{%
+        Time series for 24 hours of simulation firepower and PFT.
+        PFT calculated for a vertical column approximately 1~km upwind of the fir ignition.
+        }
+      \label{fig:pcb:sirivan:pft_series}
+    \end{figure}
