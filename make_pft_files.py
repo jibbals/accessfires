@@ -224,7 +224,7 @@ if __name__=='__main__':
     Hskip=6
     #['sirivan_run1','waroona_run1','waroona_run2','waroona_run2uc']:#,'waroona_old']:
 
-    for mr in ['waroona_run3']:
+    for mr in ['sirivan_run3_hr']:
     # let's time how long it takes
         start = timer()
         extentname=mr.split('_')[0]

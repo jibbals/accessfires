@@ -74,6 +74,7 @@ model_outputs = {
             'origdir':'/scratch/en0/hxy548/cylc-run/au-aa860/share/cycle/20170211T2100Z/sirivan/0p1/ukv_os38/um/',
             'origfiredir':'/g/data/en0/hxy548/fire_vars/sirivan/0p1/'},
         ## New waroona run (on GADI) by harvey in Feb 2020
+        ## Day 2 run on May 18th, 12 hour gap exists after the end of day 1
         'waroona_run3':{
             'path':'data/waroona_run3/',
             'topog':'umnsaa_2016010515_slv.nc',
@@ -82,6 +83,9 @@ model_outputs = {
             'path_firefront':'fire/firefront.CSIRO_new_gadi.20160105T1500Z.nc',
             'path_fireflux':'fire/sensible_heat.CSIRO_new_gadi.20160105T1500Z.nc',
             'path_firespeed':'fire/fire_speed.CSIRO_new_gadi.20160105T1500Z.nc',
+            'path_firefront2':'fire/firefront.CSIRO_gadi.20160107T0300Z.nc',
+            'path_fireflux2':'fire/sensible_heat.CSIRO_gadi.20160107T0300Z.nc',
+            'path_firespeed2':'fire/fire_speed.CSIRO_gadi.20160107T0300Z.nc',
             'run':'Run 6 Feb 2020',
             'origdir':'/scratch/en0/hxy548/cylc-run/au-aa799/share/cycle/20160105T1500Z/waroona/0p3/ukv_os38/um/',
             'origfiredir':'/g/data/en0/hxy548/fire_vars/waroona/0p3/'}, 
@@ -434,6 +438,8 @@ def read_fire(model_run='waroona_run1',
               firefront=True,
               sensibleheat=False,
               firespeed=False,
+              day1=True,
+              day2=False,
               HSkip=None):
     '''
     Read fire output cubes matching dtimes time dim
@@ -446,12 +452,52 @@ def read_fire(model_run='waroona_run1',
     
     ## Set hskip automatically for high res output
     HSkip = _set_hskip_for_hr_(model_run,HSkip)
+    
+    ## if reading both days, read one at a time and combine
+    if day1 and day2:
+        cubelist1=read_fire(
+            model_run=model_run,
+            dtimes=dtimes, 
+            constraints=constraints,
+            extent=extent,
+            firefront=firefront,
+            sensibleheat=sensibleheat,
+            firespeed=firespeed,
+            day1=True,
+            day2=False,
+            HSkip=HSkip,
+            )
+        cubelist2=read_fire(
+            model_run=model_run,
+            dtimes=dtimes, 
+            constraints=constraints,
+            extent=extent,
+            firefront=firefront,
+            sensibleheat=sensibleheat,
+            firespeed=firespeed,
+            day1=False,
+            day2=True,
+            HSkip=HSkip,
+            )
+        ret_cubes = iris.cube.CubeList()
+        for [item1, item2] in zip(cubelist1, cubelist2):
+
+            cubelist = iris.cube.CubeList([item1,item2])
+            iris.util.unify_time_units(cubelist)
+            iris.experimental.equalise_cubes.equalise_attributes(cubelist)
+            items = cubelist.concatenate()
+            if len(items) > 1:
+                print(items)
+                assert False, "Concatenate didn't work"
+            ret_cubes.append(items[0])
+        return ret_cubes
 
     ## otherwise read fire paths and return fire cubes
     ddir        = model_outputs[model_run]['path']
-    ffpath      = ddir+model_outputs[model_run]['path_firefront']
-    fluxpath    = ddir+model_outputs[model_run]['path_fireflux']
-    fspath      = ddir+model_outputs[model_run]['path_firespeed']
+    day2str = '2' if day2 else ''
+    ffpath      = ddir+model_outputs[model_run]['path_firefront'+day2str]
+    fluxpath    = ddir+model_outputs[model_run]['path_fireflux'+day2str]
+    fspath      = ddir+model_outputs[model_run]['path_firespeed'+day2str]
     
     if extent is not None:
         constraints = _constraints_from_extent_(extent,constraints)

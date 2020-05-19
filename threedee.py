@@ -343,8 +343,8 @@ if __name__=='__main__':
     # lon0,lon1,lat0,lat1
     sirivan_run1_PCB = [149.5,150.2,-32.15,-31.75] 
     # sirivan gets hot near the surface
-    sirivan_theta_min = 322
-    sirivan_theta_max = 330
+    sirivan_theta_min = 324
+    sirivan_theta_max = 333
     # check downslope stuff!
     if False:
         overfire=[116.09, 116.19, -32.91,-32.84]
@@ -353,21 +353,21 @@ if __name__=='__main__':
                       HSkip=None)
     
     
-    if True:
-        for hour in [13]:
-            cloud_system(model_run='waroona_run1',
+    if False:
+        for hour in [14]:
+            cloud_system(model_run='waroona_run3',
                          hour = hour,
                          extent = wider_waroona,
-                         HSkip = 3,
+                         HSkip = 4,
                          top_height = 13500,
                          #theta_height=1250,
                          #theta_min=sirivan_theta_min,
                          #theta_max=sirivan_theta_max,
                          send_to_browser=True,)
     
-    if False:
+    if True:
         # Save a bunch of images
-        for hour in [7]:#range(15,24):
+        for hour in [10]:#range(15,24):
             
             #theta_min=311
             #theta_max=320
@@ -375,7 +375,7 @@ if __name__=='__main__':
             cloud_system(model_run='sirivan_run1',
                         hour = hour,
                         extent=sirivan_run1_PCB,
-                        HSkip=3,
+                        HSkip=4,
                         top_height=13500,
                         theta_height=1250,
                         theta_min=sirivan_theta_min,

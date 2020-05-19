@@ -48,7 +48,8 @@ _extents_               = {}
 _latlons_               = {}
 
 # Waroona locations
-_extents_['waroona']    = [115.76,116.2, -33.05,-32.7] # local
+_extents_['waroona']    = [115.76,116.2, -33.05,-32.7] # local (first day of burn, escarp covered)
+_extents_['waroonaf']    = [115.6,116.21, -33.2,-32.75] # full fire area + a little bit
 _extents_['waroonas']   = [112,120,-34.5,-31] # synoptic
 _extents_['waroonaz']    = [115.88, 116.19, -32.92,-32.83] # zoom in on fire
 ## Nests centre: -32.9, 116.1
@@ -246,7 +247,7 @@ def map_fire(ff,lats,lons, transform=True):
                         
 
 
-def map_tiff_qgis(file='sirivan.tiff', extent=None, show_grid=False,
+def map_tiff_qgis(fname='sirivan.tiff', extent=None, show_grid=False,
                   locnames=None,
                   fig=None, subplot_row_col_n=[1,1,1], subplot_axes=None):
     """
@@ -267,7 +268,7 @@ def map_tiff_qgis(file='sirivan.tiff', extent=None, show_grid=False,
     """
     gdal.UseExceptions()
     
-    path_to_tiff = "data/QGIS/"+file
+    path_to_tiff = "data/QGIS/"+fname
     
     if subplot_row_col_n is None:
         subplot_row_col_n = [1,1,1]
