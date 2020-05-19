@@ -263,9 +263,10 @@ def weather_series(model_run='waroona_run1',
     qc_sum = qc.collapsed('model_level_number', iris.analysis.SUM)
     qc_frac = np.sum(qc_sum.data > qc_thresh, axis=(1,2))/(len(clats)*len(clons))
     qc_weight = qc_sum.collapsed(['longitude','latitude'], iris.analysis.SUM)
-    qc_weight = qc_weight.data/np.max(qc_weight.data)
-    qc_heavy = qc_weight>0.75
-    qc_mid = (qc_weight > 0.5) * (qc_weight < 0.75)
+    qc_q3 = np.percentile(qc_weight.data, 0.75)
+    qc_q2 = np.percentile(qc_weight.data, 0.5)
+    qc_heavy = qc_weight>qc_q3
+    qc_mid = (qc_weight > qc_q2) * (qc_weight < qc_q3)
     RH = utils.relative_humidity_from_specific(q.data.data, T)
     RH = np.mean(RH, axis=(1,2))
     T = np.mean(T, axis=(1,2))

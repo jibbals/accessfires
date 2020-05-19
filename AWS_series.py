@@ -124,7 +124,12 @@ def combine_site_and_model(AWS='wagerup', model_run='waroona_run1',
     
     arguments
     ---------
-    groupbystr: string, make all columns binned (by '30Min' for example)
+        groupbystr: string, make all columns binned ('30Min' by default)
+        
+    returns:
+        df, subplots
+            df: dataframe
+            subplots: dictionary of metadata for plotting 
     """
     lat,lon = plotting._latlons_[AWS]
     extent = [lon-.02, lon+.02, lat-.02, lat+.02] # just grab real close to latlon
@@ -336,6 +341,28 @@ def compare_site_to_model(AWS='wagerup',
     
     return df_agg, subplots
     
+def plot_model_vs_data(df, colours=['maroon','k'], labels=['model','AWS']):
+    """
+    Show timeseries of model data superimposed on some other data
+    
+    INPUTS:
+        df: dataframe containing: 
+        dates: list of datetimes to be x axis
+        colours: colours for model, meas
+        labels: labels for model, meas
+    """
+    
+    print("TODO")
+    
+    #df,subplots = AWS_series.combine_site_and_model()
+
+    ### Site vs measurements 
+    ## Show extent and weather station locations
+    ## Read site and model using dataframe to aggregate on time:
+    ## extract wd and ws arrays for comparison
+    ## subplot for each site (argument list)
+
+
 if __name__=='__main__':
     d0,dN = datetime(2016,1,4,10), datetime(2016,1,7,10)
     summary_wagerup(d0,dN,UTC=False)
