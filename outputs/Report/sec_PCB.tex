@@ -51,7 +51,7 @@
     \end{figure}
     
     \begin{figure}
-      \includegraphics[width=\linewidth]{../../figures/waroona_run3/pyrocb/fig_201601060630.png}
+      \includegraphics[width=\linewidth,height=\textheight]{../../figures/waroona_run3/pyrocb/fig_201601060630.png}
       \caption{%
         Top panel: top-down view showing the firefront (red contour) and vertical motion near Waroona.
         Bottom panels: transects (over dashed lines in Top panel) showing vertical motion, cloud content (black contour on 0.1 g\/kg ice and water content) and winds.
@@ -60,8 +60,21 @@
     \end{figure}
 
     Visualisation in three dimensions gives a much clearer view of the PCB formation and scale. 
-    Figures X to Y TODO show the PCB on model levels, with heat, vertical motion, and topography represented at roughly the time of formation and the peak of the storm activity.
+    Figure \ref{fig:pcb:waroona:pcb_3d} shows the PCB on model levels, with heat, vertical motion, and topography represented at roughly the time of formation and the peak of the storm activity.
     The front produces enough heat to form a huge plume that punches up into the upper troposphere, entraining moisture and leading to very strong mixing and winds locally.
+
+    \begin{figure}
+      \centering
+      \includegraphics[width=1\linewidth]{../../figures/project/threedee/waroona_run3_pcb.png}
+      \caption{%
+        Three dimensional representation of meteorology near the fire over Waroona, at four times (one time per panels), with x, y, and z dimensions being longitude, latitude, and altitude above ground level respectively.
+        Purple to yellow volumes show cloud content (0.1 g\/kg threshold).
+        Red and blue volumes show vertical motion between 3-6 m\/s up to 2~km altitude above ground level.
+        Near the surface a black-red-yellow volume may be visible if potential temperature is greater than 311~K, this shows where the fire is releasing the most heat.
+        Altitude zero shows a teal to brown filled contour surface coloured by ground level altitude.
+        }
+      \label{fig:pcb:waroona:pcb_3d}
+    \end{figure}
 
   
   \subsection{Sir Ivan}
@@ -69,7 +82,7 @@
     
     The simulation over Sir Ivan showed that weather was generally unfavourable to PCB formation until about 3PM, when the PFT dropped by a couple of orders of magnitude (Fig \ref{fig:pcb:sirivan:pft_series}).
     The Sir Ivan fire covered a large area, and the conditions upwind of the fire ignition are not fully representative of those near the fire front, and from other model output we see that a PCB occurs at around 5PM lasting on the order of an hour.
-    Figure TODO shows the location and dynamics of the PCB, which stretched up to the top of the troposphere, driving turbulent wind conditions and cloud formation locally.
+    Figure \ref{fig:pcb:sirivan:pcb_transects} shows the location and dynamics of the PCB, which stretched up to the top of the troposphere, driving turbulent wind conditions and cloud formation locally.
     
     \begin{figure}
       \centering
@@ -79,4 +92,28 @@
         PFT calculated for a vertical column approximately 1~km upwind of the fir ignition.
         }
       \label{fig:pcb:sirivan:pft_series}
+    \end{figure}
+
+
+    \begin{figure}
+      \centering
+      \includegraphics[width=1\linewidth]{../../figures/sirivan_run1/pyrocb/fig_201702120701.png}
+      \caption{%
+        Top panel: top-down view showing the firefront (red contour) and vertical motion near Sir Ivan.
+        Bottom panels: transects (over dashed lines in Top panel) showing vertical motion, cloud content (black contour on 0.1 g\/kg ice and water content), and winds.
+        }
+      \label{fig:pcb:sirivan:pcb_transects}
+    \end{figure}
+    
+    Sir is at higher altitude, and latitude, and had a larger burn area.
+    Figure \ref{fig:pcb:sirivan_pcb_3d} shows PCB formation in three dimensions.
+    TODO more story here?
+    
+    \begin{figure}
+      \centering
+      \includegraphics[width=1\linewidth]{../../figures/sirivan_run1/threedee/pcb/pcb_201702120701}
+      \caption{%
+        TODO: Placeholder until sirivan\_run3 gives output - then I'll make 2x2 version of this showing pcb creation.
+        }
+      \label{fig:pcb:sirivan_pcb_3d}
     \end{figure}
