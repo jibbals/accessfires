@@ -691,8 +691,8 @@ if __name__ == '__main__':
     
     ## Run sample for waroona_run2
     if True:
-        for hour in waroona_second_half:
-            pyrocb_model_run('waroona_run3', dtime=hour)
+        for hour in sirivan_good_half:
+            pyrocb_model_run('sirivan_run1', dtime=hour)
     
     ### These are the first pyrocb plots I made (3 transects, not moving)
     if False:

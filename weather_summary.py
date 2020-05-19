@@ -430,7 +430,7 @@ if __name__=='__main__':
     #weather_summary_model(model_version='waroona_run3')
     
     ## Run timeseries
-    weather_series()
+    weather_series('sirivan_run1')
     
     ## run zoomed in
     #zoom_in = plotting._extents_['sirivans']

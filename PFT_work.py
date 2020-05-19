@@ -301,15 +301,14 @@ if __name__ == '__main__':
     #firepower_comparison()
 
     ## Summary figure for PFT at a site for one output hour
-    for mr in ['sirivan_run1','sirivan_run1_hr']:
-        #['waroona_run3', 'waroona_run1']:
-        dtimes = fio.model_outputs[mr]['filedates']
-        for hour in np.arange(5,20):
-            model_run_PFT_summary(model_run=mr, hour=dtimes[hour])
+    if False:
+        for mr in ['sirivan_run1','sirivan_run1_hr']:
+            #['waroona_run3', 'waroona_run1']:
+            dtimes = fio.model_outputs[mr]['filedates']
+            for hour in np.arange(5,20):
+                model_run_PFT_summary(model_run=mr, hour=dtimes[hour])
     
-    #['waroona_run2','waroona_run2uc','waroona_run1','waroona_old']:
-    #for mr in ['waroona_run3']:
-    #    dtimes = fio.model_outputs[mr]['filedates']
-    #    for dtime in dtimes:
-    #        model_run_PFT_summary(model_run=mr, hour=dtime)
+    
+    if True:
+        firepower_comparison(['sirivan_run1',])
     
