@@ -254,6 +254,10 @@ def weather_series(model_run='waroona_run1',
     
     ## get temperature, RH, cloud
     q,T,qc = cubes.extract(['specific_humidity','air_temperature','qc'])
+    
+    index_500m = np.argmin(np.abs(q.coord('level_height').points - 500))
+    assert index_500m > 0, "Index500 didn't work = %d"%index_500m
+    
     clats, clons = q.coord('latitude').points, q.coord('longitude').points
     # compute RH from specific and T in kelvin
     T.convert_units('K')
@@ -262,32 +266,52 @@ def weather_series(model_run='waroona_run1',
     T = T[:,0,:,:].data.data
     qc_sum = qc.collapsed('model_level_number', iris.analysis.SUM)
     qc_frac = np.sum(qc_sum.data > qc_thresh, axis=(1,2))/(len(clats)*len(clons))
-    qc_weight = qc_sum.collapsed(['longitude','latitude'], iris.analysis.SUM)
-    qc_q3 = np.percentile(qc_weight.data, 0.75)
-    qc_q2 = np.percentile(qc_weight.data, 0.5)
-    qc_heavy = qc_weight>qc_q3
+    qc_weight = qc_sum.collapsed(['longitude','latitude'], iris.analysis.SUM).data
+    #qc_weight[qc_weight <= 0.0001] = np.NaN # take out zeros
+    qc_q3 = np.nanpercentile(qc_weight, 75)
+    qc_q2 = np.nanpercentile(qc_weight, 50)
+    qc_heavy = qc_weight > qc_q3
     qc_mid = (qc_weight > qc_q2) * (qc_weight < qc_q3)
+    #qc_weight[np.isnan(qc_weight)] = 0.0 # return the zeros
     RH = utils.relative_humidity_from_specific(q.data.data, T)
     RH = np.mean(RH, axis=(1,2))
     T = np.mean(T, axis=(1,2))
     
     ## get wind speed/ wind dir
     u, v = cubes.extract(['x_wind','y_wind'])
-    u=u[:,0,:,:]
-    v=v[:,0,:,:]
+    
+    ## wind speed at 10m is output by the fire model
+    u0=u[:,0,:,:]
+    v0=v[:,0,:,:]
+    u500=u[:,index_500m,:,:]
+    v500=v[:,index_500m,:,:]
+    
     # DESTAGGER u and v using iris interpolate
-    u = u.interpolate([('longitude',v.coord('longitude').points)],
+    u0 = u0.interpolate([('longitude',v.coord('longitude').points)],
                         iris.analysis.Linear())
-    v = v.interpolate([('latitude',u.coord('latitude').points)],
+    v0 = v0.interpolate([('latitude',u.coord('latitude').points)],
                         iris.analysis.Linear())
-    ws_all = utils.wind_speed_from_uv_cubes(u,v).data.data
-    ws_q1 = np.quantile(ws_all, 0.25, axis=(1,2))
-    ws_q3 = np.quantile(ws_all, 0.75, axis=(1,2))
-    ws_max = np.max(ws_all, axis=(1,2))
-    ws = np.mean(ws_all, axis=(1,2))
+    u500 = u500.interpolate([('longitude',v.coord('longitude').points)],
+                        iris.analysis.Linear())
+    v500 = v500.interpolate([('latitude',u.coord('latitude').points)],
+                        iris.analysis.Linear())
+    ws0_all = utils.wind_speed_from_uv_cubes(u0,v0).data.data
+    ws0_q1 = np.quantile(ws0_all, 0.25, axis=(1,2))
+    ws0_q3 = np.quantile(ws0_all, 0.75, axis=(1,2))
+    ws0_max = np.max(ws0_all, axis=(1,2))
+    ws0 = np.mean(ws0_all, axis=(1,2))
+    ws500_all = utils.wind_speed_from_uv_cubes(u500,v500).data.data
+    ws500_q1 = np.quantile(ws500_all, 0.25, axis=(1,2))
+    ws500_q3 = np.quantile(ws500_all, 0.75, axis=(1,2))
+    #ws500_max = np.max(ws500_all, axis=(1,2))
+    ws500 = np.mean(ws500_all, axis=(1,2))
+    print("DEBUG: biggest diff", np.max(ws0-ws500))
     # mean wind direction based on mean u,v
-    u_mean, v_mean = np.mean(u.data.data,axis=(1,2)) , np.mean(v.data.data,axis=(1,2))
-    #wd = utils.wind_dir_from_uv(u_mean,v_mean)
+    u0_mean = np.mean(u0.data.data,axis=(1,2))
+    v0_mean = np.mean(v0.data.data,axis=(1,2))
+    u500_mean = np.mean(u500.data.data,axis=(1,2)) 
+    v500_mean = np.mean(v500.data.data,axis=(1,2))
+    #wd0 = utils.wind_dir_from_uv(u0_mean,v0_mean)
     
     #######################
     #### PLOTTING PART ####
@@ -299,7 +323,7 @@ def weather_series(model_run='waroona_run1',
     extentplus = np.array(extent)+np.array([-0.3*dx,0.3*dx,-0.2*dy,0.2*dy])
     
     # map with extent shown
-    fig, ax_map, proj = plotting.map_tiff_qgis(file="%s.tiff"%extentname, 
+    fig, ax_map, proj = plotting.map_tiff_qgis(fname="%s.tiff"%extentname, 
                                                fig=fig,
                                                extent=list(extentplus), 
                                                subplot_row_col_n = [3,1,1],
@@ -333,6 +357,8 @@ def weather_series(model_run='waroona_run1',
     color_ws = 'black'
     color_qc = "darkblue"
     color_wd = "brown"
+    ax_ws500 = ax_ws.twinx() # wind speed at 500m
+    color_ws500 = 'chocolate'
     
     # offsets for extra y axes, and make just the one spine visible
     ax_RH.spines["right"].set_position(("axes", 1.07))
@@ -368,31 +394,47 @@ def weather_series(model_run='waroona_run1',
     
     ## Wind speed, wind speed stdev, wind dir quiver
     plt.sca(ax_ws)
-    line_ws, = plt.plot_date(ctimes, ws, 'o',
-                             color=color_ws, label="wind speed (+IQR)",)
-    line_wsmax, = plt.plot_date(ctimes, ws_max, '^', 
-                                color=color_ws, label="max wind speed")
+    line_ws, = plt.plot_date(ctimes, ws0, 'o',
+                             color=color_ws, label="10m wind speed (+IQR)",)
+    line_wsmax, = plt.plot_date(ctimes, ws0_max, '^', 
+                                color=color_ws, label="10m max wind speed")
+    
     # add quartiles
-    plt.fill_between(ctimes, ws_q3, ws_q1, alpha=0.6, color='grey')
-    #plt.plot_date(ctimes, ws_q1, 'v', 
-    #              color=color_ws)
-    #plt.plot_date(ctimes, ws_q3, '^', 
-    #              color=color_ws)
+    plt.fill_between(ctimes, ws0_q3, ws0_q1, alpha=0.6, color='grey')
     
     # normalize windspeed for unit length quivers
-    wdnorm = np.sqrt(u_mean**2 + v_mean**2)
+    wdnorm = np.sqrt(u0_mean**2 + v0_mean**2)
     # dont show quiver at every single point
-    qskip = 3
-    plt.quiver(ctimes[::qskip], ws_q3[::qskip], 
-               u_mean[::qskip]/wdnorm[::qskip], 
-               v_mean[::qskip]/wdnorm[::qskip], 
+    qskip = len(wdnorm)//24 # just show 24 arrows
+    plt.quiver(ctimes[::qskip], ws0_q1[::qskip], 
+               u0_mean[::qskip]/wdnorm[::qskip], 
+               v0_mean[::qskip]/wdnorm[::qskip], 
                pivot='mid', 
                alpha=.9, 
-               color=color_wd,
+               color=color_ws,
                headwidth=3, headlength=2, headaxislength=2,
                width=.004)
+    ## Same again but for 500m wind
+    plt.sca(ax_ws500)
+    line_ws500, = plt.plot_date(ctimes, ws500, '.',
+                                color=color_ws500, 
+                                label="500m wind speed (+IQR)",)
+    # add quartiles
+    plt.fill_between(ctimes, ws500_q3, ws500_q1, alpha=0.4, color=color_ws500)
     
+    # normalize windspeed for unit length quivers
+    wdnorm500 = np.sqrt(u500_mean**2 + v500_mean**2)
     
+    plt.quiver(ctimes[::qskip], ws500_q3[::qskip], 
+               u500_mean[::qskip]/wdnorm500[::qskip], 
+               v500_mean[::qskip]/wdnorm500[::qskip], 
+               pivot='mid', 
+               alpha=.7, 
+               color=color_wd,
+               headwidth=3, headlength=2, headaxislength=2,
+               width=.003)
+    
+    print("DEBUG: biggest diff", np.max(ws0-ws500), index_500m)
     # top row:
     ax_fp.set_ylabel("W/m2")
     ax_fp.yaxis.label.set_color(color_fp)
@@ -405,6 +447,8 @@ def weather_series(model_run='waroona_run1',
     ax_ws.set_ylabel("wind speed (m/s)")
     ax_ws.yaxis.label.set_color(color_ws)
     ax_ws.set_xlabel("Time")
+    ax_ws500.set_ylabel("500m wind speed (m/s)")
+    ax_ws500.yaxis.label.set_color(color_ws500)
     
     ## Plot periphery
     lines = [line_pft, line_fp, line_T, line_RH, line_qc]
@@ -412,7 +456,7 @@ def weather_series(model_run='waroona_run1',
     ax_fp.legend(lines, labels, loc='upper left')
     #plt.suptitle(model_run,y=0.9)
     
-    lines2 = [line_ws, line_wsmax]
+    lines2 = [line_ws, line_wsmax, line_ws500]
     labels2 = [l.get_label() for l in lines2]
     ax_ws.legend(lines2,labels2, loc='best')
     
@@ -431,7 +475,7 @@ if __name__=='__main__':
     #weather_summary_model(model_version='waroona_run3')
     
     ## Run timeseries
-    weather_series('sirivan_run1')
+    weather_series('waroona_run1')
     
     ## run zoomed in
     #zoom_in = plotting._extents_['sirivans']

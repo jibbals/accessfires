@@ -35,6 +35,8 @@ __VERBOSE__=True
 _topog_sirivan_ = 'data/sirivan/umnsaa_pa2017021121.nc'
 _files_sirivan_ = sorted(glob('data/sirivan/umnsaa_pc*.nc'))
 
+## Where are model outputs located
+## 10m windspeeds are destaggered compared to netcdf, and output at higher res
 model_outputs = {
         ## New high res gadi run with fuelmap applied (April 2020)
         'sirivan_run3_hr':{
@@ -45,6 +47,8 @@ model_outputs = {
             'path_firefront':'fire/firefront.CSIRO_gadi_fuelmap.20170211T2100Z.nc',
             'path_fireflux':'fire/sensible_heat.CSIRO_gadi_fuelmap.20170211T2100Z.nc',
             'path_firespeed':'fire/fire_speed.CSIRO_gadi_fuelmap.20170211T2100Z.nc',
+            'path_v10m':'fire/10m_vwind.CSIRO_gadi_fuelmap.20170211T2100Z.nc',
+            'path_u10m':'fire/10m_uwind.CSIRO_gadi_fuelmap.20170211T2100Z.nc',
             'run':'Run April 2020',
             'origdir':'/scratch/en0/hxy548/cylc-run/au-aa860/share/cycle/20170211T2100Z/sirivan/0p1/ukv_os38/um/',
             'origfiredir':'/g/data/en0/hxy548/fire_vars/sirivan/0p1/'},
@@ -83,9 +87,13 @@ model_outputs = {
             'path_firefront':'fire/firefront.CSIRO_new_gadi.20160105T1500Z.nc',
             'path_fireflux':'fire/sensible_heat.CSIRO_new_gadi.20160105T1500Z.nc',
             'path_firespeed':'fire/fire_speed.CSIRO_new_gadi.20160105T1500Z.nc',
+            'path_v10m':'fire/10m_vwind.CSIRO_new_gadi.20160105T1500Z.nc',
+            'path_u10m':'fire/10m_uwind.CSIRO_new_gadi.20160105T1500Z.nc',
             'path_firefront2':'fire/firefront.CSIRO_gadi.20160107T0300Z.nc',
             'path_fireflux2':'fire/sensible_heat.CSIRO_gadi.20160107T0300Z.nc',
             'path_firespeed2':'fire/fire_speed.CSIRO_gadi.20160107T0300Z.nc',
+            'path_v10m2':'fire/10m_vwind.CSIRO_gadi.20160107T0300Z.nc',
+            'path_u10m2':'fire/10m_uwind.CSIRO_gadi.20160107T0300Z.nc',
             'run':'Run 6 Feb 2020',
             'origdir':'/scratch/en0/hxy548/cylc-run/au-aa799/share/cycle/20160105T1500Z/waroona/0p3/ukv_os38/um/',
             'origfiredir':'/g/data/en0/hxy548/fire_vars/waroona/0p3/'}, 
@@ -124,6 +132,8 @@ model_outputs = {
             'path_firefront':'fire/firefront.CSIRO_24h.20160105T1500Z.nc',
             'path_fireflux':'fire/sensible_heat.CSIRO_24h.20160105T1500Z.nc',
             'path_firespeed':'fire/fire_speed.CSIRO_24h.20160105T1500Z.nc',
+            'path_v10m':'fire/10m_vwind.CSIRO_24h.20160105T1500Z.nc',
+            'path_u10m':'fire/10m_uwind.CSIRO_24h.20160105T1500Z.nc',
             'origdir':'/short/en0/hxy548/cylc-run/au-aa799/share/cycle/20160105T1500Z/waroona/0p3/ukv_os38/um/',
             'origfiredir':'/short/en0/hxy548/tmp/waroona/0p3/'},
         ## Old run had pyrocb but also lots of high clouds and hooked F160 bases

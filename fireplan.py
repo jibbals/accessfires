@@ -196,7 +196,7 @@ def fireplan_comparison(model_runs=['waroona_old','waroona_run1','waroona_run2',
     
     # first pull tiff image into memory
     fig = plt.figure(figsize=[14,10])
-    fig,ax,proj = plotting.map_tiff_qgis(file=mapname,extent=extent,fig=fig)
+    fig,ax,proj = plotting.map_tiff_qgis(fname=mapname,extent=extent,fig=fig)
     # firefront coord system is lats and lons
     crs_data = ccrs.PlateCarree()
     legend = []
