@@ -25,7 +25,7 @@ import cartopy.crs as ccrs
 
 from utilities import utils, plotting, fio, constants
 
-model_run='waroona_run1'
+model_run='waroona_run3'
 extentname=model_run.split('_')[0]
 # zoomed extent for analysis
 extentnamef = extentname + 'f'
@@ -35,11 +35,13 @@ localtime = False
 proj_latlon = ccrs.PlateCarree() # lat,lon projection
 qc_thresh = constants.cloud_threshold
 
+dtimes = fio.model_outputs[model_run]['filedates']
+u10,v10 = fio.read_fire(
+    model_run=model_run, 
+    extent=extent, 
+    dtimes=dtimes, 
+    firefront=False, 
+    wind=True)
 
-# READ EVERYTHING, SUBSET, CALC DESIRED METRICS, PLOT METRICS
-cubes = fio.read_model_run(model_run, extent=extent)
-ctimes = utils.dates_from_iris(cubes[0])
-    
-## get temperature, RH, cloud
-q,T,qc = cubes.extract(['specific_humidity','air_temperature','qc'])
-    
+print(u10)
+print(v10)

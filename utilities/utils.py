@@ -363,6 +363,12 @@ def wind_dir_from_uv(u,v):
     wind_dir = (-1*wind_dir_rads*180/np.pi - 90) % 360
     return wind_dir
 
+def wind_speed_from_uv(u,v):
+    """ 
+    return wind direction array
+    """
+    return np.hypot(u,v)
+
 def wind_speed_from_uv_cubes(u,v):
     """
     returns wind direction as a cube

@@ -212,7 +212,8 @@ def weather_series(model_run='waroona_run1',
     
     ## read all the fire data, and lats/lons
     ff,sh, = fio.read_fire(model_run=model_run, dtimes=None,
-                        extent=extent, firefront=True, sensibleheat=True)
+                           extent=extent, HSkip=HSkip,
+                           firefront=True, sensibleheat=True)
     ff=ff[-1] # just final firefront is needed
     
     
@@ -249,7 +250,8 @@ def weather_series(model_run='waroona_run1',
     #                         add_RH=True)
     
     # READ EVERYTHING, SUBSET, CALC DESIRED METRICS, PLOT METRICS
-    cubes = fio.read_model_run(model_run, extent=extent)
+    cubes = fio.read_model_run(model_run, extent=extent,
+                               HSkip=HSkip)
     ctimes = utils.dates_from_iris(cubes[0])
     
     ## get temperature, RH, cloud
@@ -279,39 +281,39 @@ def weather_series(model_run='waroona_run1',
     
     ## get wind speed/ wind dir
     u, v = cubes.extract(['x_wind','y_wind'])
-    
+    ## 10m u and v winds (already destaggered) are in fire model output
+    u10, v10 = fio.read_fire(model_run=model_run, extent=extent, 
+                             dtimes=ctimes,
+                             firefront=False, wind=True, 
+                             HSkip=HSkip)
     ## wind speed at 10m is output by the fire model
-    u0=u[:,0,:,:]
-    v0=v[:,0,:,:]
+    u10=np.swapaxes(u10.data, 1,2) # time, lon, lat -> time, lat, lon
+    v10=np.swapaxes(v10.data, 1,2) # also for v10
     u500=u[:,index_500m,:,:]
     v500=v[:,index_500m,:,:]
     
     # DESTAGGER u and v using iris interpolate
-    u0 = u0.interpolate([('longitude',v.coord('longitude').points)],
-                        iris.analysis.Linear())
-    v0 = v0.interpolate([('latitude',u.coord('latitude').points)],
-                        iris.analysis.Linear())
     u500 = u500.interpolate([('longitude',v.coord('longitude').points)],
                         iris.analysis.Linear())
     v500 = v500.interpolate([('latitude',u.coord('latitude').points)],
                         iris.analysis.Linear())
-    ws0_all = utils.wind_speed_from_uv_cubes(u0,v0).data.data
-    ws0_q1 = np.quantile(ws0_all, 0.25, axis=(1,2))
-    ws0_q3 = np.quantile(ws0_all, 0.75, axis=(1,2))
-    ws0_max = np.max(ws0_all, axis=(1,2))
-    ws0 = np.mean(ws0_all, axis=(1,2))
+    ws10_all = utils.wind_speed_from_uv(u10,v10)
+    ws10_q1 = np.quantile(ws10_all, 0.25, axis=(1,2))
+    ws10_q3 = np.quantile(ws10_all, 0.75, axis=(1,2))
+    ws10_max = np.max(ws10_all, axis=(1,2))
+    ws10 = np.mean(ws10_all, axis=(1,2))
     ws500_all = utils.wind_speed_from_uv_cubes(u500,v500).data.data
     ws500_q1 = np.quantile(ws500_all, 0.25, axis=(1,2))
     ws500_q3 = np.quantile(ws500_all, 0.75, axis=(1,2))
     #ws500_max = np.max(ws500_all, axis=(1,2))
     ws500 = np.mean(ws500_all, axis=(1,2))
-    print("DEBUG: biggest diff", np.max(ws0-ws500))
+    
     # mean wind direction based on mean u,v
-    u0_mean = np.mean(u0.data.data,axis=(1,2))
-    v0_mean = np.mean(v0.data.data,axis=(1,2))
+    u10_mean = np.mean(u10,axis=(1,2))
+    v10_mean = np.mean(v10,axis=(1,2))
     u500_mean = np.mean(u500.data.data,axis=(1,2)) 
     v500_mean = np.mean(v500.data.data,axis=(1,2))
-    #wd0 = utils.wind_dir_from_uv(u0_mean,v0_mean)
+    #wd0 = utils.wind_dir_from_uv(u10_mean,v10_mean)
     
     #######################
     #### PLOTTING PART ####
@@ -394,21 +396,21 @@ def weather_series(model_run='waroona_run1',
     
     ## Wind speed, wind speed stdev, wind dir quiver
     plt.sca(ax_ws)
-    line_ws, = plt.plot_date(ctimes, ws0, 'o',
+    line_ws, = plt.plot_date(ctimes, ws10, 'o',
                              color=color_ws, label="10m wind speed (+IQR)",)
-    line_wsmax, = plt.plot_date(ctimes, ws0_max, '^', 
+    line_wsmax, = plt.plot_date(ctimes, ws10_max, '^', 
                                 color=color_ws, label="10m max wind speed")
     
     # add quartiles
-    plt.fill_between(ctimes, ws0_q3, ws0_q1, alpha=0.6, color='grey')
+    plt.fill_between(ctimes, ws10_q3, ws10_q1, alpha=0.6, color='grey')
     
     # normalize windspeed for unit length quivers
-    wdnorm = np.sqrt(u0_mean**2 + v0_mean**2)
+    wdnorm = np.sqrt(u10_mean**2 + v10_mean**2)
     # dont show quiver at every single point
     qskip = len(wdnorm)//24 # just show 24 arrows
-    plt.quiver(ctimes[::qskip], ws0_q1[::qskip], 
-               u0_mean[::qskip]/wdnorm[::qskip], 
-               v0_mean[::qskip]/wdnorm[::qskip], 
+    plt.quiver(ctimes[::qskip], ws10_q1[::qskip], 
+               u10_mean[::qskip]/wdnorm[::qskip], 
+               v10_mean[::qskip]/wdnorm[::qskip], 
                pivot='mid', 
                alpha=.9, 
                color=color_ws,
@@ -434,7 +436,6 @@ def weather_series(model_run='waroona_run1',
                headwidth=3, headlength=2, headaxislength=2,
                width=.003)
     
-    print("DEBUG: biggest diff", np.max(ws0-ws500), index_500m)
     # top row:
     ax_fp.set_ylabel("W/m2")
     ax_fp.yaxis.label.set_color(color_fp)
@@ -475,7 +476,7 @@ if __name__=='__main__':
     #weather_summary_model(model_version='waroona_run3')
     
     ## Run timeseries
-    weather_series('waroona_run1')
+    weather_series('waroona_run3')
     
     ## run zoomed in
     #zoom_in = plotting._extents_['sirivans']

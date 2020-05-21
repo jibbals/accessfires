@@ -448,6 +448,7 @@ def read_fire(model_run='waroona_run1',
               firefront=True,
               sensibleheat=False,
               firespeed=False,
+              wind=False,
               day1=True,
               day2=False,
               HSkip=None):
@@ -473,6 +474,7 @@ def read_fire(model_run='waroona_run1',
             firefront=firefront,
             sensibleheat=sensibleheat,
             firespeed=firespeed,
+            wind=wind,
             day1=True,
             day2=False,
             HSkip=HSkip,
@@ -485,6 +487,7 @@ def read_fire(model_run='waroona_run1',
             firefront=firefront,
             sensibleheat=sensibleheat,
             firespeed=firespeed,
+            wind=wind,
             day1=False,
             day2=True,
             HSkip=HSkip,
@@ -508,17 +511,17 @@ def read_fire(model_run='waroona_run1',
     ffpath      = ddir+model_outputs[model_run]['path_firefront'+day2str]
     fluxpath    = ddir+model_outputs[model_run]['path_fireflux'+day2str]
     fspath      = ddir+model_outputs[model_run]['path_firespeed'+day2str]
+    v10path     = ddir+model_outputs[model_run]['path_v10m'+day2str]
+    u10path     = ddir+model_outputs[model_run]['path_u10m'+day2str]
     
     if extent is not None:
         constraints = _constraints_from_extent_(extent,constraints)
 
-
-
     # Build up cubelist based on which files you want to read
     cubelist = iris.cube.CubeList()
-    flags = [firefront, sensibleheat, firespeed]
-    paths = [ffpath, fluxpath, fspath]
-    units = [None, 'Watts/m2', 'm/s']
+    flags = [firefront, sensibleheat, firespeed, wind, wind]
+    paths = [ffpath, fluxpath, fspath, u10path, v10path]
+    units = [None, 'Watts/m2', 'm/s', 'm/s', 'm/s']
     for flag, path, unit in zip(flags, paths, units):
         if flag:
             cube, = read_nc_iris(path, constraints=constraints, HSkip=HSkip)
