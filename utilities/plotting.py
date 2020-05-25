@@ -629,6 +629,7 @@ def transect(data, z, lat, lon, start, end, npoints=100,
         start, end are [lat0,lon0], [lat1,lon1]
         contours will be filled colours
         lines will be where to draw black lines
+    return slicedata, slicex, slicez
     '''
     ## Default contourfargs
     if 'extend' not in contourfargs:

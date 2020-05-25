@@ -228,6 +228,7 @@ def weather_series(model_run='waroona_run1',
         ftimes = np.array([ft + offset for ft in ftimes ])
     
     # spatial sum over time of sensible heat gives firepower
+    # gives GWatts
     firepower = np.sum(utils.firepower_from_cube(sh), axis=(1,2))
     
     # remove zeros:
@@ -236,7 +237,7 @@ def weather_series(model_run='waroona_run1',
     
             
     ## Read PFT
-    # calculated using kevin's code
+    # calculated using kevin's code, stored as GWatts
     lat,lon = plotting._latlons_["fire_%s_upwind"%extentname]
     pft, ptimes, _, _ = fio.read_pft(model_run,lats=lat,lons=lon)
     #pft = np.nanmean(pft,axis=(1,2)) # average spatially
@@ -437,7 +438,7 @@ def weather_series(model_run='waroona_run1',
                width=.003)
     
     # top row:
-    ax_fp.set_ylabel("W/m2")
+    ax_fp.set_ylabel("GWatts")
     ax_fp.yaxis.label.set_color(color_fp)
     ax_T.set_ylabel("Temperature (C)")
     ax_T.yaxis.label.set_color(color_T)

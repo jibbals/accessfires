@@ -336,7 +336,70 @@ def vorticity_layers(model_run="waroona_run2", hour=16, levels=[3,5,10,20,30,40]
         # save figure
         fio.save_fig(model_run=model_run, script_name=_sn_,pname=dtime,
                      plt=plt,subdir="vorticity")
-                     
+
+def transects_hwinds(model_run, hour=18, transects=None, extent=None, ztop=4000,
+                     subdir=None, HSkip=None):
+    """
+    Arguments:
+        hour: int from 0 to 23 (or 47 if second day is available)
+        transects: [[lat,lon0,lon1], ...]
+        extent: can change mapping extent if desired
+        ztop: height of top of transect
+        subdir: subfolder for plots
+        HSkip: reduce horizontal resolution for RAM saving
+    Figure:
+        Region, with transect lines, firefront, and 10m winds
+        row for each transect showing horizontal winds 
+    """
+    extentname=model_run.split('_')[0]
+    if extent is None:
+        extent=plotting._extents_[extentname]
+    nrows=len(transects)+1
+    model_hours = fio.model_outputs[model_run]['filedates']
+    dt = model_hours[hour]
+    # First read data
+    cubes = fio.read_model_run(model_run, fdtime=dt,
+                               HSkip=HSkip, 
+                               add_winds=True, add_z=True, add_topog=True)
+    #print("DEBUG:", cubes)
+    u,v,s,z,topog = cubes.extract(['u','v','s','z_th','surface_altitude'])
+    ctimes = utils.dates_from_iris(u)
+    
+    ff,u10,v10 = fio.read_fire(model_run, dtimes=ctimes, extent=extent, HSkip=HSkip, 
+                               wind=True)
+    lats,lons = ff.coord('latitude').points, ff.coord('longitude').points
+    
+    # loop over time slices
+    for di, dtime in enumerate(ctimes):
+        # figure:
+        fig = plt.figure(figsize=[12,12])
+        _, ax1, proj,  = plotting.map_tiff_qgis(fname=extentname+'.tiff', 
+                                                extent=extent, 
+                                                fig=fig, 
+                                                subplot_row_col_n=[nrows,1,1])
+        # plot firefront
+        plotting.map_fire(ff[di].data,lats,lons)
+        # add winds streamplot
+        plt.streamplot(lons,lats,u10[di].data,v10[di].data, color='k',
+                   density=(0.8, 0.5),
+                   )#alpha=0.7)
+        # loop over transects
+        for ti, [lat,lon0,lon1] in enumerate(transects):
+            # add transect to map
+            start,end = [lat,lon0],[lat,lon1]
+            plt.plot(start,end, '--k', 
+                     linewidth=2, proj=proj) 
+            
+            # plot transect of horizontal wind speed
+            ax = plt.subplot(nrows,1,ti+2)
+            _, slicex, slicez = plotting.transect_s(s[di].data, z[di].data, lats,lons, start, end)
+            # add stream plot from u,w components
+            
+            plt.title("lat: %.3f"%lat)
+            
+        fio.save_fig(model_run, script_name=_sn_, pname=dtime, plt=plt, 
+                     subdir=subdir)
+                
 #########################################################################
 #########################################################################
 #########################################################################
@@ -345,6 +408,13 @@ def vorticity_layers(model_run="waroona_run2", hour=16, levels=[3,5,10,20,30,40]
 if __name__ == '__main__':
     
     if True:
+        #         [lat, lon0, lon1],
+        transects = [ [-32.84, 115.85, 116.05], 
+                     [-32.87, 115.85, 116.05], 
+                     [-32.9, 115.85, 116.05], ]
+        transects_hwinds(model_run='waroona_run1', transects=transects)
+    
+    if False:
         extent=None
         SI_PCB = [149.5,150.2,-32.15,-31.95] # lon0,lon1,lat0,lat1
         Waroona = plotting._extents_['waroona']
