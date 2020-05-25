@@ -18,6 +18,7 @@ import matplotlib.pyplot as plt
 #import matplotlib.ticker as tick
 #import matplotlib.patches as mpatches
 import numpy as np
+import cartopy.crs as ccrs # projection stuff
 
 import warnings
 
@@ -338,7 +339,7 @@ def vorticity_layers(model_run="waroona_run2", hour=16, levels=[3,5,10,20,30,40]
                      plt=plt,subdir="vorticity")
 
 def transects_hwinds(model_run, hour=18, transects=None, extent=None, ztop=4000,
-                     subdir=None, HSkip=None):
+                     subdir="hwinds", HSkip=None):
     """
     Arguments:
         hour: int from 0 to 23 (or 47 if second day is available)
@@ -361,42 +362,65 @@ def transects_hwinds(model_run, hour=18, transects=None, extent=None, ztop=4000,
     cubes = fio.read_model_run(model_run, fdtime=dt,
                                HSkip=HSkip, 
                                add_winds=True, add_z=True, add_topog=True)
-    #print("DEBUG:", cubes)
-    u,v,s,z,topog = cubes.extract(['u','v','s','z_th','surface_altitude'])
+    
+    u,v,s,z,topog,w = cubes.extract(['u','v','s','z_th','surface_altitude','upward_air_velocity'])
     ctimes = utils.dates_from_iris(u)
+    clats, clons = u.coord('latitude').points, u.coord('longitude').points
     
     ff,u10,v10 = fio.read_fire(model_run, dtimes=ctimes, extent=extent, HSkip=HSkip, 
                                wind=True)
-    lats,lons = ff.coord('latitude').points, ff.coord('longitude').points
+    flats,flons = ff.coord('latitude').points, ff.coord('longitude').points
     
     # loop over time slices
     for di, dtime in enumerate(ctimes):
         # figure:
         fig = plt.figure(figsize=[12,12])
-        _, ax1, proj,  = plotting.map_tiff_qgis(fname=extentname+'.tiff', 
+        _, ax1, axproj,  = plotting.map_tiff_qgis(fname=extentname+'.tiff', 
                                                 extent=extent, 
                                                 fig=fig, 
-                                                subplot_row_col_n=[nrows,1,1])
+                                                subplot_row_col_n=[nrows,1,1],)
+        llproj = ccrs.PlateCarree() # lat, lon projection
         # plot firefront
-        plotting.map_fire(ff[di].data,lats,lons)
+        plotting.map_fire(ff[di].data,flats,flons)
         # add winds streamplot
-        plt.streamplot(lons,lats,u10[di].data,v10[di].data, color='k',
+        plt.streamplot(flons,flats,u10[di].data.T,v10[di].data.T, color='k',
                    density=(0.8, 0.5),
-                   )#alpha=0.7)
+                   transform=llproj)#alpha=0.7)
         # loop over transects
         for ti, [lat,lon0,lon1] in enumerate(transects):
             # add transect to map
             start,end = [lat,lon0],[lat,lon1]
-            plt.plot(start,end, '--k', 
-                     linewidth=2, proj=proj) 
+            plt.sca(ax1)
+            plt.plot([lon0,lon1],[lat,lat], '--', color='white', 
+                     linewidth=2, 
+                     transform=llproj) 
             
             # plot transect of horizontal wind speed
             ax = plt.subplot(nrows,1,ti+2)
-            _, slicex, slicez = plotting.transect_s(s[di].data, z[di].data, lats,lons, start, end)
-            # add stream plot from u,w components
+            npoints=100
+            _, slicex, slicez = plotting.transect_s(s[di].data, z.data, 
+                                                    clats,clons, 
+                                                    start, end,
+                                                    lines=None, npoints=npoints,
+                                                    topog=topog.data)
+            # Add winds quiver
+            # add horizontal winds
+            uslice = utils.cross_section(u[di].data,clats,clons,start,end,npoints=npoints)
+            #vslice = utils.cross_section(v,lat,lon,start,end,npoints=npoints)
+            wslice = utils.cross_section(w[di].data,clats,clons,start,end,npoints=npoints)
+            
+            # lets cut away the upper levels before making our quiver
+            ztopirows, ztopicols = np.where(slicez < ztop) # index rows and columns
+            ztopi = np.max(ztopirows) # highest index with height below ztop
+            
+            # quiver east-west and vertical winds
+            plotting.map_quiver(uslice[:ztopi+4,:], wslice[:ztopi+4,:], 
+                                slicez[:ztopi+4,:], slicex[:ztopi+4,:], 
+                                nquivers=15, scale=140,
+                                alpha=0.8, pivot='middle')
             
             plt.title("lat: %.3f"%lat)
-            
+        plt.suptitle(dtime.strftime("Horizontal winds %Y%m%d %H%M (UTC)"))
         fio.save_fig(model_run, script_name=_sn_, pname=dtime, plt=plt, 
                      subdir=subdir)
                 
@@ -412,7 +436,9 @@ if __name__ == '__main__':
         transects = [ [-32.84, 115.85, 116.05], 
                      [-32.87, 115.85, 116.05], 
                      [-32.9, 115.85, 116.05], ]
-        transects_hwinds(model_run='waroona_run1', transects=transects)
+        extent=plotting._extents_['waroonaf']
+        transects_hwinds(model_run='waroona_run3', extent=extent,
+                         transects=transects)
     
     if False:
         extent=None

@@ -636,10 +636,11 @@ def transect(data, z, lat, lon, start, end, npoints=100,
         contourfargs['extend'] = 'max'
     
     ## Check that z includes topography (within margin of 40 metres)
-    if np.mean(z[0]+40)<np.mean(topog):
-        print("ERROR:",np.mean(z[0]), np.min(z[0]), "(mean,lowest z) is lower than topog", np.mean(topog), np.min(topog))
-        print("ERROR:", "Try adding topog to each level of z")
-        assert False
+    if topog is not None:
+        if np.mean(z[0]+40)<np.mean(topog):
+            print("ERROR:",np.mean(z[0]), np.min(z[0]), "(mean,lowest z) is lower than topog", np.mean(topog), np.min(topog))
+            print("ERROR:", "Try adding topog to each level of z")
+            assert False
         
     # Potential temperature
     slicedata  = utils.cross_section(data,lat,lon,start,end,npoints=npoints)
