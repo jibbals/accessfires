@@ -680,6 +680,8 @@ def read_model_run(model_version, fdtime=None, subdtimes=None, extent=None,
             # also read model height above ground level
             # This field is only in the first output file
             height_varname = 'height_above_reference_ellipsoid'
+            if constraints is not None:
+                height_varname = height_varname & constraints
             height_date = model_outputs[model_version]['filedates'][0]
             ro1_height_path = ddir+height_date.strftime('umnsaa_%Y%m%d%H_mdl_ro1.nc')
             zro, = read_nc_iris(ro1_height_path,

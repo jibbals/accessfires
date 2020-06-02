@@ -18,6 +18,9 @@ import matplotlib.ticker as tick
 from matplotlib.projections import register_projection
 from matplotlib.collections import LineCollection
 
+# interpolation
+from scipy.interpolate import interp2d
+
 # Mapping stuff
 import cartopy
 import cartopy.crs as ccrs
@@ -653,10 +656,12 @@ def transect(data, z, lat, lon, start, end, npoints=100,
     if topog is not None:
         slicetopog = utils.cross_section(topog,latt,lont,start,end,npoints=npoints)
     
+    # slicez in metres
     slicez = utils.cross_section(z,lat,lon,start,end,npoints=npoints)
     #xticks,xlabels = utils.cross_section_ticks_labels(start,end)
-    xaxis=np.linspace(0,1,npoints)
-    slicex=np.tile(xaxis,(len(z),1))
+    # slicex in metres
+    slicex=utils.transect_slicex(lat,lon,start,end,nx=npoints,nz=len(slicez[:,0]))
+    xaxis = slicex[0,:]
     
     if ax is not None:
         plt.sca(ax)
@@ -835,7 +840,38 @@ def transect_ticks_labels(start,end):
   fmt = '{:.1f}S {:.1f}E'
   xlabels = (fmt.format(-lat1,lon1),fmt.format(-0.5*(lat1+lat2),0.5*(lon1+lon2)),fmt.format(-lat2,lon2))
   return xticks,xlabels
- 
+
+
+def transect_streamplot_orig(x,y,u,v,**kwargs):
+    """
+    JeffK transect interpolation and streamplotting
+    """
+    n = 100
+    xi = np.linspace(x.min(),x.max(),n)
+    yi = np.linspace(y.min(),y.max(),n)
+    ui = interp2d(x,y,u)(xi,yi)
+    vi = interp2d(x,y,v)(xi,yi)
+    return plt.streamplot(xi,yi,ui,vi,**kwargs) 
+
+def transect_streamplot(x,y,u,v,**kwargs):
+    """
+    JeffK transect interpolation and streamplotting
+    dynamically calculates gridspacing based on smalled gridsize in u,v
+    ARGUMENTS:
+        x = 1darray (metres)
+        y = 1darray (metres)
+        u = 2darray [y,x] (m/s)
+        v = 2darray [y,x] (m/s)
+    """
+    # figure out xn,yn based on smalled grid space in that direction
+    nx = int(np.ceil((x.max()-x.min())/np.min(np.diff(x,axis=1))))
+    ny = int(np.ceil((y.max()-y.min())/np.min(np.diff(y,axis=0))))
+    xi = np.linspace(x.min(),x.max(),nx)
+    yi = np.linspace(y.min(),y.max(),ny)
+    ui = interp2d(x,y,u)(xi,yi)
+    vi = interp2d(x,y,v)(xi,yi)
+    return plt.streamplot(xi,yi,ui,vi,**kwargs) 
+
 
 def utm_from_lon(lon):
     """

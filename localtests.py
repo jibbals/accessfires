@@ -26,33 +26,29 @@ import cartopy.crs as ccrs
 
 from utilities import utils, plotting, fio, constants
 
-cubes = iris.load("/g/data/en0/jwg574/iris_convert/converted_data/RA2M_astart.nc")
+from scipy.interpolate import interp2d
 
-print(cubes)
-keys_of_interest_3d = ["x_wind", "y_wind", "air_density",
-                       "upward_air_velocity", "specific_humidity",
-                       ]
-keys_of_interest_2d = ["surface_temperature", "surface_altitude"]
+level_constraint = iris.Constraint(model_level_number = lambda cell: cell<=60)
+cubes=fio.read_model_run('waroona_run1',datetime(2016,1,6,9), add_z=True,add_winds=True,constraints=level_constraint)
 
-for key in keys_of_interest_2d:
-    keycubes = cubes.extract(key)
-    print(keycubes)
-    cube=keycubes[0]
-    qplt.pcolormesh(cube)
-    fio.save_fig("test","NYE",key,plt)
-    
-for key in keys_of_interest_3d:
-    keycubes = cubes.extract(key)
-    print(keycubes)
-    cube=keycubes[0]
-    levels=[0,5,10,25,50, 100]
-    nlevs = len(levels)
-    plt.figure(figsize=[12,12])
-    for ilev, lev in enumerate(levels):
-        plt.subplot(3, 2, ilev+1)
-        qplt.pcolormesh(cube[lev])
-        plt.title("model level %d"%lev)
-    plt.suptitle(key)
-    plt.tight_layout()
-    fio.save_fig("test","NYE",key,plt)
+#print (cubes)
+start = [-32.84, 115.85]
+end = [-32.84, 116.05]
+z,w,u, topog = cubes.extract(['z_th','upward_air_velocity','u','surface_altitude'])
+lats,lons = w.coord('latitude').points, w.coord('longitude').points
+levs = w.coord('model_level_number').points
+npoints=50
+slicew = utils.cross_section(w[0].data,lats,lons,start,end,npoints=npoints)
+slicetopog = utils.cross_section(topog.data,lats,lons,start,end,npoints=npoints)
+slicez = utils.cross_section(z.data,lats,lons,start,end,npoints=npoints)
+sliceu = utils.cross_section(u[0].data,lats,lons,start,end,npoints=npoints)
+xlen=utils.distance_between_points(start,end) # X, Y axes need to be on metres dimension!
+xaxis=np.linspace(0,xlen,npoints)
+slicex=np.tile(xaxis,(len(levs),1))
+
+
+x=slicex
+y=slicez
+
+plotting.transect_streamplot(x,y,sliceu,slicew)
     
