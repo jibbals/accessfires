@@ -69,27 +69,11 @@ def plot_weather_summary(U,V,W, height, lat, lon, extentname,
         if extentname is not None:
             plotting.map_add_locations_extent(extentname, hide_text=True)
         
-        if Streamplot:
-            # how dense is streamplot
-            density_x = 0.6
-            density_y = 0.5
-            #streamplot for horizontal winds
-            plt.streamplot(lon,lat,Ur,Vr, 
-                           color='k', 
-                           density=(density_x, density_y))
-        else:
-            # value skip so vectors aren't so dense
-            n_y, n_x = Ur.shape
-            vsv = n_y // 16; vsu = n_x // 16 # about 16x16
-            skip = (slice(None,None,vsv),slice(None,None,vsu))    
-            Uvs,Vvs = Ur[skip], Vr[skip]
-        
-            # Normalize the arrows:
-            Uvs = Uvs / np.sqrt(Uvs**2 + Vvs**2);
-            Vvs = Vvs / np.sqrt(Uvs**2 + Vvs**2);
-            
-            # quiver plot
-            plt.quiver(lon[::vsu], lat[::vsv], Uvs, Vvs, scale=30)
+        #Streamplot the horizontal winds
+        # TODO: convert lats,lons to metres?
+        plt.streamplot(lon,lat,Ur,Vr, 
+                       color='k', 
+                       density=(0.6, 0.5))
         
         # remove x and y ticks
         plt.xticks([],[])

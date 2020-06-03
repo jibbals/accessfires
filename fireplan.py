@@ -89,21 +89,29 @@ def fireplan(ff, fire_contour_map = 'autumn',
     utcstamp=[]
     for ii,dt in enumerate(ftimes[hourinds]):
 
-        utcstamp.append(dt.strftime('%b %d, %HH(UTC)'))
+        utcstamp.append(dt.strftime('%b %d, %H00(UTC)'))
 
         ffdata = ff_f[hourinds][ii].data.data
         
-        linewidth=1 + (ii == len(hourinds)-1) # make final hour thicker
-        plt.contour(lon, lat, ffdata.T, np.array([0]),
-                    colors=[rgba[ii]], linewidths=linewidth,
-                    transform=crs_data)
+        linewidth=1 + (ii == nt-1) # make final hour thicker
+        fire_line = plt.contour(lon, lat, ffdata.T, np.array([0]),
+                                colors=[rgba[ii]], linewidths=linewidth,
+                                transform=crs_data)
         
-    # final outline contour
-    final_line=plt.contour(lon,lat,ff_f[-1].data.data.T, np.array([0]), 
-                           linestyles='dotted',
-                           colors='cyan', linewidths=1, transform=crs_data)
-    clbls = plt.clabel(final_line,[0],fmt=ftimes[-1].strftime('%H:%M'), inline=True, colors='wheat')
-    plt.setp(clbls, path_effects=[patheffects.withStroke(linewidth=3, foreground="k")])
+        # label first, last, and every twelth hour line
+        if (ii%12)==0 or (dt in [ftimes[hourinds][0],ftimes[hourinds][-1]]):
+            clbls = plt.clabel(fire_line, [0], fmt=dt.strftime('%H'), 
+                               inline=True, colors='wheat')
+            # padding so label is readable
+            plt.setp(clbls, path_effects=[patheffects.withStroke(linewidth=3, foreground="k")])
+    
+    # final outline contour if last available time is not on the hour
+    if not hourinds[-1]:
+        final_line=plt.contour(lon,lat,ff_f[-1].data.data.T, np.array([0]), 
+                               linestyles='dotted',
+                               colors='cyan', linewidths=1, transform=crs_data)
+        clbls = plt.clabel(final_line,[0],fmt=dt.strftime('%H:%M'), inline=True, colors='wheat')
+        plt.setp(clbls, path_effects=[patheffects.withStroke(linewidth=3, foreground="k")])
 
     ## Add tiny colour bar showing overall time of fire
     if show_cbar:
@@ -124,19 +132,19 @@ def fireplan(ff, fire_contour_map = 'autumn',
 
     return fig, gax, gproj
 
-def fireplan_summary(model_run='waroona_run1'):
+def fireplan_summary(model_run='waroona_run1',
+                     day1=True,day2=True,
+                     just_fireplan=False):
     '''
     Show fire outline over time at waroona
     '''
     # Read fire output
     extentname1 = model_run.split('_')[0]
     extentname = extentname1+'f' # area affected by fire
-
     extent = plotting._extents_[extentname]
-    # lets do both days if we have them
-    day1,day2=True,False
-    if 'path_firefront2' in fio.model_outputs[model_run].keys():
-        day2 = True
+    
+    if 'path_firefront2' not in fio.model_outputs[model_run].keys():
+        day2 = False
     FFront, SHeat, FSpeed = fio.read_fire(model_run=model_run ,dtimes=None, extent=extent,
                                           firefront=True, sensibleheat=True, firespeed=True,
                                           day1=day1, day2=day2)
@@ -146,6 +154,9 @@ def fireplan_summary(model_run='waroona_run1'):
     fig,ax,proj = fireplan(FFront, show_cbar=True, cbar_XYWH=[0.18,0.075,.2,.02])
     fio.save_fig(model_run,_sn_,"fireplan",plt)
 
+    if just_fireplan:
+        return None
+    
     ## Bigger figure starts with plot fire front contours
     fig = plt.figure(figsize=[8,9])
     fireplan(FFront,
@@ -276,7 +287,7 @@ if __name__=='__main__':
         fio.save_fig(si_r1, _sn_, 'fireplan_hr.png', plt)
 
     if True:
-        mr = "waroona_run3"
-        fireplan_summary(model_run=mr)
+        mr = "waroona_run1"
+        fireplan_summary(model_run=mr,day2=False, just_fireplan=True)
     
     

@@ -20,6 +20,7 @@ __VERBOSE__=False
 def distance_between_points(latlon0,latlon1):
     """
     return distance between lat0,lon0 and lat1,lon1
+        IN METRES
     
     calculated using haversine formula, shortest path on a great-circle
      - see https://www.movable-type.co.uk/scripts/latlong.html
@@ -35,60 +36,161 @@ def distance_between_points(latlon0,latlon1):
     c = 2*np.arctan2(np.sqrt(a),np.sqrt(1-a))
     return R*c
 
-def cross_section(data,lats,lons,start,end,npoints=None):
-  '''
+def number_of_interp_points(lats,lons,start,end):
+    """
+    Returns how many points should be interpolated to between start and end on latlon grid
+    Based on min grid size and length of start to end line
+    """
+    lat0,lon0 = start
+    lat1,lon1 = end
+    
+    # min grid spacing
+    min_dy = np.min(np.abs(np.diff(lats)))
+    min_dx = np.min(np.abs(np.diff(lons)))
+    
+    # minimum resolvable lateral distance
+    dgrid = np.hypot(min_dx,min_dy) 
+    
+    # line length (start to end)
+    dline = np.sqrt((lon1-lon0)**2 + (lat1-lat0)**2)
+    
+    nx = int(np.ceil(dline/dgrid))
+    if nx < 2:
+        print("ERROR: start and end are too close for interpolation")
+        print("     : lats[0:3]:", lats[0:3])
+        print("     : lons[0:3]:", lons[0:3])
+        print("     : start, end:", start, end)
+        assert False, "Start and end are too close"
+    return nx
+
+def latslons_axes_along_transect(lats,lons,start,end,nx):
+    """
+    INPUTS:
+        lats, lons: 1darrays of degrees
+        start: [lat0,lon0] # start of transect
+        end: [lat1,lon1] # end of transect
+        
+    return lons,lats
+        interpolated degrees from start to end along lats,lons grid
+    """
+    x_factor = np.linspace(0,1,nx)
+    lat0,lon0 = start
+    lat1,lon1 = end
+    lons_axis = lon0 + (lon1-lon0)*x_factor
+    lats_axis = lat0 + (lat1-lat0)*x_factor
+    return lats_axis,lons_axis
+
+def transect_slicex(lats,lons,start,end,nx=None, nz=1,
+                    latlons=False):
+    """
+    Horizontal transect is based on lat,lon start and end
+    This method returns the resultant xaxis as "metres from start"
+    if latlons==True, return list of latlons between start and end point
+    """
+    if nx is None:
+        nx = number_of_interp_points(lats,lons,start,end)
+        
+    if latlons:
+        lllist = []
+        D_lat = lats[-1]-lats[0]
+        D_lon = lons[-1]-lons[0]
+        for xfactor in np.linspace(0,1,nx):
+            lllist.append([start[0]+D_lat*xfactor,start[1]+D_lon*xfactor])
+        return lllist
+        
+    xlen = distance_between_points(start,end) 
+    xaxis = np.linspace(0,xlen,nx)
+    # multiply nrows by nz, ncols by 1 so [1,nx] -> [nz, nx]
+    return np.tile(xaxis,[nz,1]) 
+
+#def cross_section(data,lats,lons,start,end,npoints=None):
+#    '''
+#    interpolate along horisontal transect (cross section)
+#    x,y axes will be in degrees
+#    inputs: data = array[[z],lats,lons]
+#            start = [lat0,lon0]
+#            end = [lat1,lon1]
+#            nx = how many points along horizontal?
+#              If this is None, use resolution of grid
+#    '''
+#  
+#    lat1,lon1=start
+#    lat2,lon2=end
+#      
+#    # add z axis if there is none
+#    if len(data.shape) < 3:
+#        data=data[np.newaxis,:,:]
+#    nz = data.shape[0]
+#    
+#    # base interp points on grid size
+#    if npoints is None:
+#        dy = lats[1] - lats[0]
+#        dx = lons[1] - lons[0]
+#        #print (dy, dx)
+#        dgrid = np.hypot(dx,dy)
+#        #print(dgrid)
+#        dline = np.sqrt((lon2-lon1)**2 + (lat2-lat1)**2) # dist from start to end
+#        npoints = int(np.ceil(dline/dgrid))
+#      
+#    # Define grid for horizontal interpolation. x increases from 0 to 1 along the
+#    # desired line segment    
+#    x_factor = np.linspace(0,1,npoints)
+#    slicelon = lon1 + (lon2-lon1)*x_factor
+#    slicelat = lat1 + (lat2-lat1)*x_factor
+#    
+#    # Interpolate data along slice (in model height coordinate). Note that the
+#    # transpose is needed because RectBivariateSpline assumes the axis order (x,y)
+#    slicedata = np.tile(np.nan, [nz, npoints])
+#    for k in range(0,nz):
+#        f = interpolate.RectBivariateSpline(lons,lats,data[k,:,:].transpose())
+#        slicedata[k,:] = f.ev(slicelon,slicelat)
+#      
+#    return np.squeeze(slicedata)
+
+def transect(data, lats, lons, start, end, nx=None, z_th=None):
+    '''
     interpolate along cross section
-    inputs: data = array[[z],lats,lons]
-            start = [lat0,lon0]
-            end = [lat1,lon1]
-            nx = how many points along horizontal?
-              If this is None, use resolution of grid
-  '''
-  
-  lat1,lon1=start
-  lat2,lon2=end
-  
-  # add z axis if there is none
-  if len(data.shape) < 3:
-    data=data[np.newaxis,:,:]
-  nz = data.shape[0]
-
-  # base interp points on grid size
-  if npoints is None:
-    dy = lats[1] - lats[0]
-    dx = lons[1] - lons[0]
-    #print (dy, dx)
-    dgrid = np.hypot(dx,dy)
-    #print(dgrid)
-    dline = np.sqrt((lon2-lon1)**2 + (lat2-lat1)**2) # dist from start to end
-    npoints = int(np.ceil(dline/dgrid))
-  
-  # Define grid for horizontal interpolation. x increases from 0 to 1 along the
-  # desired line segment
-  slicex = np.linspace(0.0,1.0,npoints)
-  slicelon = lon1 + (lon2-lon1)*slicex
-  slicelat = lat1 + (lat2-lat1)*slicex
-  
-
-  # Interpolate data along slice (in model height coordinate). Note that the
-  # transpose is needed because RectBivariateSpline assumes the axis order (x,y)
-  slicedata = np.tile(np.nan, [nz, npoints])
-  for k in range(0,nz):
-      f = interpolate.RectBivariateSpline(lons,lats,data[k,:,:].transpose())
-      slicedata[k,:] = f.ev(slicelon,slicelat)
-  
-  if __VERBOSE__:
-    # Reality check, start and end data points are close to data that is located at closest grid points to the start and end points
-    i1 = np.argmin(np.abs(lons-lon1))
-    i2 = np.argmin(np.abs(lons-lon2))        
-    j1 = np.argmin(np.abs(lats-lat1))        
-    j2 = np.argmin(np.abs(lats-lat2))
-    print('VERBOSE:utils.cross_section interpolation start and end points')
-    print('  Nearest neighbour vs interp data:')
-    print('    {:9.2f} {:9.2f}'.format(slicedata[0,0 ],data[0,j1,i1]))
-    print('    {:9.2f} {:9.2f}'.format(slicedata[0,-1],data[0,j2,i2]))
-  
-  return np.squeeze(slicedata)
+    inputs: 
+        wind: data [[z], lats, lons]
+        lats, lons: horizontal dims 1d arrays
+        start = [lat0,lon0]
+        end = [lat1,lon1]
+        nx = how many points along horizontal. defaults to grid size
+        z_th = optional altitude array [z, lats, lons]
+    RETURNS: transect, xaxis, yaxis 
+        xaxis: x points in metres
+        yaxis: y points in metres or None if no z_th provided
+    '''
+    lat1,lon1 = start
+    lat2,lon2 = end
+    
+    # add z axis if there is none
+    if len(data.shape) < 3:
+        data=data[np.newaxis,:,:]
+    nz = data.shape[0]
+    
+    # base interp points on grid size
+    if nx is None:
+        nx = number_of_interp_points(lats,lons,start,end)
+    
+    # Define grid for horizontal interpolation.
+    lataxis,lonaxis = latslons_axes_along_transect(lats,lons,start,end,nx=nx)
+    
+    # Interpolate data along slice (in model height coordinate). Note that the
+    # transpose is needed because RectBivariateSpline assumes the axis order (x,y)
+    slicedata = np.tile(np.nan, [nz, nx])
+    slicez = np.tile(np.nan, [nz, nx])
+    for k in range(0,nz):
+        f = interpolate.RectBivariateSpline(lons,lats,data[k,:,:].transpose())
+        slicedata[k,:] = f.ev(lonaxis,lataxis)
+        if z_th is not None:
+            f2 = interpolate.RectBivariateSpline(lons,lats,z_th[k,:,:].transpose())
+            slicez[k,:] = f2.ev(lonaxis, lataxis)
+    
+    # X, Y axes need to be on metres dimension!
+    slicex=transect_slicex(lats,lons,start,end,nx=nx,nz=nz)
+    
+    return np.squeeze(slicedata), slicex, slicez
 
 def cube_to_xyz(cube,
                 ztop=-1):
