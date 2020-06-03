@@ -454,7 +454,7 @@ def read_fire(model_run='waroona_run1',
               HSkip=None):
     '''
     Read fire output cubes matching dtimes time dim
-    output like [time,lon,lat]
+    output is transposed from [time,lon,lat] -> [time, lat, lon]
     '''
     ## If no fire exists for model run, return None
     if not model_outputs[model_run]['hasfire']:
@@ -547,7 +547,15 @@ def read_fire(model_run='waroona_run1',
     if dtimes is not None:
         for i in range(len(cubelist)):
             cubelist[i] = subset_time_iris(cubelist[i], dtimes)
-
+    
+    # finally put latitude before longitude
+    for cube in cubelist:
+        if len(cube.shape) == 2:
+            cube.transpose()
+        if len(cube.shape) == 3:
+            # t, lon, lat -> t, lat, lon
+            cube.transpose([0, 2, 1])
+    
     return cubelist
 
 def _set_hskip_for_hr_(model_version,HSkip):

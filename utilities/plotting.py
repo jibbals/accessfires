@@ -237,16 +237,23 @@ def map_contourf(extent, data, lat,lon, title="",
 
 def map_fire(ff,lats,lons, transform=True):
     """   
-        Plot fire outline onto either an XY grid or geoaxes (eg from map_tiff)
-        if mapping latlons onto geoaxes transform needs to be True
+    Plot fire outline onto either an XY grid or geoaxes (eg from map_tiff)
+    if mapping latlons onto geoaxes transform needs to be True
+    INPUTS:
+        ff : 2d array [lats, lons]
+        lats,lons : 1darray (degrees)
+        
     """
     # only plot if there is fire
+    fflatlon = ff
+    if (ff.shape[0] == len(lons)) and (ff.shape[0] != len(lats)):
+        fflatlon = ff.T
     if np.sum(ff<0) > 0:
         if transform:
-            plt.contour(lons,lats,np.transpose(ff),np.array([0]), colors='red',
+            plt.contour(lons,lats,fflatlon,np.array([0]), colors='red',
                         transform=ccrs.PlateCarree())
         else:
-            plt.contour(lons,lats,np.transpose(ff),np.array([0]), colors='red')
+            plt.contour(lons,lats,fflatlon,np.array([0]), colors='red')
                         
 
 
@@ -620,7 +627,7 @@ def scale_bar(ax, proj, length, location=(0.5, 0.05), linewidth=3,
     ax.plot(bar_xs, [sbcy, sbcy], transform=utm, color='k',
         linewidth=linewidth, zorder=3)
 
-def transect(data, z, lat, lon, start, end, npoints=100, 
+def transect(data, z, lat, lon, start, end, npoints=None, 
              topog=None, ff=None, latt=None, lont=None, ztop=4000,
              title="", ax=None, colorbar=True,
              cbarform=None, contours=None,lines=None,
@@ -644,9 +651,12 @@ def transect(data, z, lat, lon, start, end, npoints=100,
             print("ERROR:",np.mean(z[0]), np.min(z[0]), "(mean,lowest z) is lower than topog", np.mean(topog), np.min(topog))
             print("ERROR:", "Try adding topog to each level of z")
             assert False
+    
+    if npoints is None:
+        npoints = utils.number_of_interp_points(lat,lon,start,end)
         
-    # Potential temperature
-    slicedata  = utils.cross_section(data,lat,lon,start,end,npoints=npoints)
+    # Transect slice: data[z,x] x[z,x], z[z,x]
+    slicedata, slicex, slicez  = utils.transect(data,lat,lon,start,end,nx=npoints, z_th=z)
     
     # Pull out cross section of topography and height
     if latt is None:
@@ -654,14 +664,7 @@ def transect(data, z, lat, lon, start, end, npoints=100,
     if lont is None:
         lont=lon
     if topog is not None:
-        slicetopog = utils.cross_section(topog,latt,lont,start,end,npoints=npoints)
-    
-    # slicez in metres
-    slicez = utils.cross_section(z,lat,lon,start,end,npoints=npoints)
-    #xticks,xlabels = utils.cross_section_ticks_labels(start,end)
-    # slicex in metres
-    slicex=utils.transect_slicex(lat,lon,start,end,nx=npoints,nz=len(slicez[:,0]))
-    xaxis = slicex[0,:]
+        slicetopog,_,_ = utils.transect(topog,latt,lont,start,end,nx=npoints)
     
     if ax is not None:
         plt.sca(ax)
@@ -677,43 +680,48 @@ def transect(data, z, lat, lon, start, end, npoints=100,
     
     # Add contour lines
     if lines is not None:
-        with warnings.catch_warnings():
-            # ignore warning when there is no fire:
-            warnings.simplefilter('ignore')
-            plt.contour(slicex,slicez,slicedata,lines,colors='k')            
+        # ignore warning when there are no lines?
+        #with warnings.catch_warnings():
+            #warnings.simplefilter('ignore')
+        plt.contour(slicex,slicez,slicedata,lines,colors='k')            
     
+    zbottom = np.tile(np.min(slicez),reps=npoints) # xcoords
+    xbottom = slicex[0,:]
     # make sure land is obvious
     if topog is not None:
-        plt.fill_between(xaxis,slicetopog,interpolate=True,facecolor='darkgrey')
+        #print("DEBUG: topog fill")
+        #print("     : xbottom = ", xbottom)
+        #print("     : topog = ", slicetopog)
+        # fill_between(x, ytop[, ybottom][, **args])
+        plt.fill_between(xbottom, slicetopog, zbottom, interpolate=True, facecolor='darkgrey')
     
     # put it red where the fire is burnt
     if ff is not None:
-        ffslice = utils.cross_section(ff.T, lat, lon, start, end, 
-                                      npoints=npoints)
+        ffslice,_,_ = utils.transect(ff, lat, lon, start, end, nx=npoints)
         burnt = np.copy(slicetopog)
         interp=False
         # 0.005 is close enough?
         if not np.all(ffslice>=0.005):
             burnt[ffslice>=0.005] = np.NaN
-            plt.fill_between(xaxis, burnt, interpolate=interp, 
+            plt.fill_between(xbottom, burnt, zbottom, interpolate=interp, 
                              facecolor='yellow', zorder=1)
         # 0.003 is pretty near the fire front
         if not np.all(ffslice>=0.003):
             burnt[ffslice>=0.003] = np.NaN
-            plt.fill_between(xaxis, burnt, interpolate=interp, 
+            plt.fill_between(xbottom, burnt, zbottom, interpolate=interp, 
                              facecolor='orange', zorder=2)
         # 0 is the front
         if not np.all(ffslice>=0.001):
             burnt[ffslice>=0.001] = np.NaN
-            plt.fill_between(xaxis, burnt, interpolate=interp, 
+            plt.fill_between(xbottom, burnt, zbottom, interpolate=interp, 
                              facecolor='red', zorder=3)
         # -ve is behind the front
         if not np.all(ffslice>=0):
             burnt[ffslice>0]=np.NaN
-            plt.fill_between(xaxis, burnt, interpolate=interp, 
+            plt.fill_between(xbottom, burnt, zbottom, interpolate=interp, 
                              facecolor='saddlebrown', zorder=4)
     
-    if ztop != None:
+    if ztop is not None:
         plt.ylim(0,ztop)
     
     plt.xticks([])
@@ -853,19 +861,23 @@ def transect_streamplot_orig(x,y,u,v,**kwargs):
     vi = interp2d(x,y,v)(xi,yi)
     return plt.streamplot(xi,yi,ui,vi,**kwargs) 
 
-def transect_streamplot(x,y,u,v,**kwargs):
+def streamplot_regridded(x,y,u,v,**kwargs):
     """
     JeffK transect interpolation and streamplotting
-    dynamically calculates gridspacing based on smalled gridsize in u,v
+    dynamically calculates gridspacing based on smallest gridsize in u,v
     ARGUMENTS:
-        x = 1darray (metres)
-        y = 1darray (metres)
+        x = array [[y],x] (metres)
+        y = array [y,[x]](metres)
         u = 2darray [y,x] (m/s)
         v = 2darray [y,x] (m/s)
     """
-    # figure out xn,yn based on smalled grid space in that direction
-    nx = int(np.ceil((x.max()-x.min())/np.min(np.diff(x,axis=1))))
-    ny = int(np.ceil((y.max()-y.min())/np.min(np.diff(y,axis=0))))
+    # figure out xn,yn based on smallest grid space in that direction
+    if len(x.shape) > 1:
+        nx = int(np.ceil((x.max()-x.min())/np.min(np.diff(x,axis=1))))
+        ny = int(np.ceil((y.max()-y.min())/np.min(np.diff(y,axis=0))))
+    else:
+        nx = int(np.ceil((x.max()-x.min())/np.min(np.diff(x))))
+        ny = int(np.ceil((y.max()-y.min())/np.min(np.diff(y))))
     xi = np.linspace(x.min(),x.max(),nx)
     yi = np.linspace(y.min(),y.max(),ny)
     ui = interp2d(x,y,u)(xi,yi)

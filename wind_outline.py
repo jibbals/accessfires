@@ -376,9 +376,9 @@ def transects_hwinds(model_run, hour=18, transects=None, extent=None, ztop=4000,
         # figure:
         fig = plt.figure(figsize=[12,12])
         _, ax1, axproj,  = plotting.map_tiff_qgis(fname=extentname+'.tiff', 
-                                                extent=extent, 
-                                                fig=fig, 
-                                                subplot_row_col_n=[nrows,1,1],)
+                                                  extent=extent, 
+                                                  fig=fig, 
+                                                  subplot_row_col_n=[nrows,1,1],)
         llproj = ccrs.PlateCarree() # lat, lon projection
         # plot firefront
         plotting.map_fire(ff[di].data,flats,flons)
@@ -414,10 +414,11 @@ def transects_hwinds(model_run, hour=18, transects=None, extent=None, ztop=4000,
             ztopi = np.max(ztopirows) # highest index with height below ztop
             
             # quiver east-west and vertical winds
-            plotting.map_quiver(uslice[:ztopi+4,:], wslice[:ztopi+4,:], 
-                                slicez[:ztopi+4,:], slicex[:ztopi+4,:], 
-                                nquivers=15, scale=140,
-                                alpha=0.8, pivot='middle')
+            #plotting.map_quiver(uslice[:ztopi+4,:], wslice[:ztopi+4,:], 
+            #                    slicez[:ztopi+4,:], slicex[:ztopi+4,:], 
+            #                    nquivers=15, scale=140,
+            #                    alpha=0.8, pivot='middle')
+            plotting.streamplot_regridded(slicex,slicez,uslice,wslice, alpha=0.8)
             
             plt.title("lat: %.3f"%lat)
         plt.suptitle(dtime.strftime("Horizontal winds %Y%m%d %H%M (UTC)"))
