@@ -82,7 +82,7 @@ model_outputs = {
         'waroona_run3':{
             'path':'data/waroona_run3/',
             'topog':'umnsaa_2016010515_slv.nc',
-            'filedates':np.array([datetime(2016,1,5,15) + timedelta(hours=x) for x in range(24)]),
+            'filedates':np.array([datetime(2016,1,5,15) + timedelta(hours=x) for x in list(range(24))+list(range(36,60))]),
             'hasfire':True,
             'path_firefront':'fire/firefront.CSIRO_new_gadi.20160105T1500Z.nc',
             'path_fireflux':'fire/sensible_heat.CSIRO_new_gadi.20160105T1500Z.nc',
@@ -464,6 +464,17 @@ def read_fire(model_run='waroona_run1',
     ## Set hskip automatically for high res output
     HSkip = _set_hskip_for_hr_(model_run,HSkip)
     
+    ## if dtimes are passed, maybe we want some of day1 and day2,
+    ## set day flag automatically using dtimes if available
+    if dtimes is not None:
+        modelhours = model_outputs[model_run]['filedates']
+        if len(modelhours) < 25:
+            day2=False
+            day1=True
+        else:
+            day1 = True if dtimes[0] < modelhours[24] else False
+            day2 = True if dtimes[-1] > modelhours[23] else False
+
     ## if reading both days, read one at a time and combine
     if day1 and day2:
         cubelist1=read_fire(

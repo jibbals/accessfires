@@ -362,7 +362,8 @@ def transects_hwinds(model_run, hour=18, transects=None, extent=None, ztop=4000,
     cubes = fio.read_model_run(model_run, fdtime=dt,
                                HSkip=HSkip, 
                                add_winds=True, add_z=True, add_topog=True)
-    
+    print("DEBUG:")
+    print(cubes)
     u,v,s,z,topog,w = cubes.extract(['u','v','s','z_th','surface_altitude','upward_air_velocity'])
     ctimes = utils.dates_from_iris(u)
     clats, clons = u.coord('latitude').points, u.coord('longitude').points
@@ -383,15 +384,16 @@ def transects_hwinds(model_run, hour=18, transects=None, extent=None, ztop=4000,
         # plot firefront
         plotting.map_fire(ff[di].data,flats,flons)
         # add winds streamplot
-        plt.streamplot(flons,flats,u10[di].data.T,v10[di].data.T, color='k',
+        plt.streamplot(flons,flats,u10[di].data.T,v10[di].data.T, color='white',
                    density=(0.8, 0.5),
                    transform=llproj)#alpha=0.7)
+        plt.title('10m horizontal winds')
         # loop over transects
         for ti, [lat,lon0,lon1] in enumerate(transects):
             # add transect to map
             start,end = [lat,lon0],[lat,lon1]
             plt.sca(ax1)
-            plt.plot([lon0,lon1],[lat,lat], '--', color='white', 
+            plt.plot([lon0,lon1],[lat,lat], '--', color='k', 
                      linewidth=2, 
                      transform=llproj) 
             
@@ -436,9 +438,11 @@ if __name__ == '__main__':
         transects = [ [-32.84, 115.85, 116.05], 
                      [-32.87, 115.85, 116.05], 
                      [-32.9, 115.85, 116.05], ]
-        extent=plotting._extents_['waroonaf']
-        transects_hwinds(model_run='waroona_run3', extent=extent,
-                         transects=transects)
+        extent=[115.6,116.21, -33.05,-32.75]
+        for hour in range(24,28):
+            transects_hwinds(model_run='waroona_run3', extent=extent,
+                             hour=hour,
+                             transects=transects)
     
     if False:
         extent=None
