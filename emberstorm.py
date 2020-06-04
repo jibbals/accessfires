@@ -58,9 +58,7 @@ def emberstorm(theta, u, v, w, z, topog,
         transect: [lat0,lon0],[lat1,lon1] - for transect that will be shown
         shadows: [transects] - faint transects to add to topography (for style)
     '''
-    # TODO Replace with streamplots
-    nquivers=12
-    quiverscale=70
+    
     extent = [lon[0],lon[-1],lat[0],lat[-1]]
     
     ## figure
@@ -74,15 +72,16 @@ def emberstorm(theta, u, v, w, z, topog,
     # Add fire front contour
     ff_lead_frac=None
     if ff is not None:
-        plotting.map_fire(ff.T,lat,lon)
+        plotting.map_fire(ff,lat,lon, transform=False)
         # west most burnt bit is fire front lead
         # grab first index from left to right along burnt longitudes
         if np.sum(ff<=0) > 0:
             #print("debug:", ff.shape, len(lat), len(lon), np.sum(ff<=0,axis=0).shape)
-            ff_lead = np.where(np.sum(ff<=0, axis=0)>0)[0][0]
-            #print("debug: fire front most western point is ", lon[ff_lead])
-            #print("debug: %.2f%% of the way along the transect"%(100*(start[1]-lon[ff_lead])/(start[1] - end[1])))
+            ff_lead = np.where(np.sum(ff<=0, axis=1)>0)[0][0]
+            print("debug: fire front most western point is ", lon[ff_lead])
             ff_lead_frac=(start[1]-lon[ff_lead])/(start[1] - end[1])
+            print("debug: %.2f%% of the way along the transect"%ff_lead_frac)
+            
     
     # start to end x=[lon0,lon1], y=[lat0, lat1]
     plt.plot([start[1],end[1]],[start[0],end[0], ], '--k', 
@@ -101,15 +100,10 @@ def emberstorm(theta, u, v, w, z, topog,
                                marker='o', markersize=4)
     plotting.map_add_locations(['fire_waroona'], text=[''], 
                                marker='*', color='r')
-
-    # Quiver, reduce arrow density
-    #plotting.map_quiver(u[0],v[0],lat,lon,nquivers=nquivers, alpha=0.5,
-    #                    pivot='middle', scale=quiverscale)
-    # streamplot density of lines
-    density_x,density_y = .8,.5
+    
     # show winds
     plt.streamplot(lon,lat,u[0],v[0], color='k',
-                   density=(density_x, density_y),
+                   density=(.8,.5),
                    )#alpha=0.7)
     
     
@@ -140,7 +134,7 @@ def emberstorm(theta, u, v, w, z, topog,
     ## Subplot 2, transect of potential temp
     # only looking up to 1km
     # horizontal points
-    npoints = 100
+    npoints = utils.number_of_interp_points(lat,lon,start,end)
     plt.sca(axes[1])
     trets = plotting.transect_theta(theta, z, lat, lon, start, end, npoints=npoints,
                                     topog=topog, ff=ff, ztop=ztop,
@@ -159,56 +153,30 @@ def emberstorm(theta, u, v, w, z, topog,
     
     ## Next plot
     plt.sca(axes[2])
-    _,xslice,zslice = plotting.transect_w(w,z,lat,lon,start,end,
+    _,slicex,slicez = plotting.transect_w(w,z,lat,lon,start,end,
                                           npoints=npoints,topog=topog, ff=ff,
                                           ztop=ztop)
-    # add horizontal winds
-    uslice = utils.cross_section(u,lat,lon,start,end,npoints=npoints)
+    # add east-west-vertical winds
+    uslice,_,_ = utils.transect(u,lat,lon,start,end,nx=npoints)
     #vslice = utils.cross_section(v,lat,lon,start,end,npoints=npoints)
-    wslice = utils.cross_section(w,lat,lon,start,end,npoints=npoints)
+    wslice,_,_ = utils.transect(w,lat,lon,start,end,nx=npoints)
     
-    # lets cut away the upper levels before making our quiver
-    ztopirows, ztopicols = np.where(zslice < ztop) # index rows and columns
-    ztopi = np.max(ztopirows) # highest index with height below ztop
-    
-    # quiver east-west and vertical winds
-    plotting.map_quiver(uslice[:ztopi+4,:], wslice[:ztopi+4,:], 
-                        zslice[:ztopi+4,:], xslice[:ztopi+4,:], 
-                        nquivers=nquivers, scale=quiverscale*3,
-                        alpha=0.5, pivot='middle')
-    #density_x,density_y = .8,.5
-    ## show winds
-    #print("DEBUG:",uslice.shape, wslice.shape, zslice.shape, xslice.shape)
-    #### Interpolate uwslice from [z[2d], x[2d]] to regular grid [z,x] 
-    #xx = xslice#[:ztopi+4,:] # [z,x] dimensions
-    #zz = zslice#[:ztopi+4,:]
-    #uu = uslice#[:ztopi+4,:]
-    #ww = wslice#[:ztopi+4,:]
-    #
-    ## target grid to interpolate to
-    #meshx, meshz = np.meshgrid(xx[0,:],zz[:,0])
-    ## interpolate
-    #print("DEBUG: interpolate from", uu.shape)
-    #meshu = interpolate.griddata((xx.flatten(),zz.flatten()),uu.flatten(),(meshx,meshz),method='linear',fill_value=np.NaN)
-    #print("DEBUG: interpolated to", meshu.shape)
-    #meshw = interpolate.griddata((xx.flatten(),zz.flatten()),ww.flatten(),(meshx,meshz),method='linear')
-    ####
-    #plt.streamplot(meshx, meshz,
-    #               meshu, meshw, 
-    #               color='k', density=(density_x, density_y),
-    #               )#alpha=0.7)
+    ## Streamplot of east-west and vertical winds
+    plotting.streamplot_regridded(slicex,slicez,uslice,wslice,
+                                  density=(.8,.5))
     
     # reset plot edges?
     #plt.ylim(extent[2:]); plt.xlim(extent[0:2])
     
     if ff_lead_frac is not None:
-            if ff_lead_frac > 1: ff_lead_frac=1
-            if ff_lead_frac < 0: ff_lead_frac=0
-            for ax in [axes[1],axes[2]]:
-                ax.annotate('', xy=[ff_lead_frac,0.0],
-                    xytext=(ff_lead_frac,0.09),
-                    arrowprops=dict(facecolor='red', arrowstyle='wedge,tail_width=0.5', alpha=0.5),
-                    xycoords='axes fraction', fontsize=8, color='red')
+        if ff_lead_frac > 1: ff_lead_frac=1
+        if ff_lead_frac < 0: ff_lead_frac=0
+        for ax in [axes[1],axes[2]]:
+            ax.annotate('', xy=[ff_lead_frac,0.0],
+                        xytext=(ff_lead_frac,0.09),
+                        arrowprops=dict(facecolor='red', arrowstyle='wedge,tail_width=0.5', alpha=0.5),
+                        xycoords='axes fraction', fontsize=8, color='red',
+                        zorder=10)
     
     return fig, axes
     
@@ -253,8 +221,8 @@ def make_plots_emberstorm(model_run='waroona_run1', hours=None, wmap_height=300)
                 # fire
                 ffi=None
                 if ff is not None:
-                    ffi = ff[i].data.T # fire needs to be transposed...
-                #print("DEBUG:",[np.shape(arr) for arr in [theta, u, v, w, z, topog, ff, lat, lon]])
+                    ffi = ff[i].data 
+                
                 # extra vert map at ~ 300m altitude
                 levh  = w.coord('level_height').points
                 levhind = np.sum(levh<wmap_height)

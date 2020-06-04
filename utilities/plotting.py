@@ -693,7 +693,9 @@ def transect(data, z, lat, lon, start, end, npoints=None,
         #print("     : xbottom = ", xbottom)
         #print("     : topog = ", slicetopog)
         # fill_between(x, ytop[, ybottom][, **args])
-        plt.fill_between(xbottom, slicetopog, zbottom, interpolate=True, facecolor='darkgrey')
+        plt.fill_between(xbottom, slicetopog, zbottom, 
+                         interpolate=True, facecolor='darkgrey',
+                         zorder=2)
     
     # put it red where the fire is burnt
     if ff is not None:
@@ -704,22 +706,22 @@ def transect(data, z, lat, lon, start, end, npoints=None,
         if not np.all(ffslice>=0.005):
             burnt[ffslice>=0.005] = np.NaN
             plt.fill_between(xbottom, burnt, zbottom, interpolate=interp, 
-                             facecolor='yellow', zorder=1)
+                             facecolor='yellow', zorder=2)
         # 0.003 is pretty near the fire front
         if not np.all(ffslice>=0.003):
             burnt[ffslice>=0.003] = np.NaN
             plt.fill_between(xbottom, burnt, zbottom, interpolate=interp, 
-                             facecolor='orange', zorder=2)
+                             facecolor='orange', zorder=3)
         # 0 is the front
         if not np.all(ffslice>=0.001):
             burnt[ffslice>=0.001] = np.NaN
             plt.fill_between(xbottom, burnt, zbottom, interpolate=interp, 
-                             facecolor='red', zorder=3)
+                             facecolor='red', zorder=4)
         # -ve is behind the front
         if not np.all(ffslice>=0):
             burnt[ffslice>0]=np.NaN
             plt.fill_between(xbottom, burnt, zbottom, interpolate=interp, 
-                             facecolor='saddlebrown', zorder=4)
+                             facecolor='saddlebrown', zorder=5)
     
     if ztop is not None:
         plt.ylim(0,ztop)
@@ -837,7 +839,7 @@ def transect_qc(qc, z, lat, lon, start, end, npoints=100,
                     cbarform=cbarform, contours=contours, lines=lines,
                     **contourfargs)
 
-def transect_ticks_labels(start,end):
+def transect_ticks_labels(start,end, metres=True):
   '''
     return xticks and xlabels for a cross section
   '''
@@ -845,6 +847,9 @@ def transect_ticks_labels(start,end):
   lat2,lon2=end
   # Set up a tuple of strings for the labels. Very crude!
   xticks = (0.0,0.5,1.0)
+  if metres:
+      xlen = utils.distance_between_points(start,end)
+      xticks = (0, 0.5*xlen, xlen)
   fmt = '{:.1f}S {:.1f}E'
   xlabels = (fmt.format(-lat1,lon1),fmt.format(-0.5*(lat1+lat2),0.5*(lon1+lon2)),fmt.format(-lat2,lon2))
   return xticks,xlabels
@@ -880,8 +885,11 @@ def streamplot_regridded(x,y,u,v,**kwargs):
         ny = int(np.ceil((y.max()-y.min())/np.min(np.diff(y))))
     xi = np.linspace(x.min(),x.max(),nx)
     yi = np.linspace(y.min(),y.max(),ny)
-    ui = interp2d(x,y,u)(xi,yi)
-    vi = interp2d(x,y,v)(xi,yi)
+    #with warnings.catch_warnings():
+        #warnings.simplefilter("ignore")
+    
+    ui = interp2d(x,y,u,bounds_error=False,fill_value=np.NaN)(xi,yi)
+    vi = interp2d(x,y,v,bounds_error=False,fill_value=np.NaN)(xi,yi)
     return plt.streamplot(xi,yi,ui,vi,**kwargs) 
 
 

@@ -83,8 +83,6 @@ def wind_outline(s,u,v,w,
                  transect,
                  ff=None,
                  extentname='waroona',
-                 nquivers=18,
-                 quiverscale=60,
                  ztop = 5000,
                  cloud_threshold=constants.cloud_threshold,
                 ):
@@ -117,11 +115,7 @@ def wind_outline(s,u,v,w,
     
     # Add fire front contour
     if ff is not None:
-        with warnings.catch_warnings():
-            # ignore warning when there are no fires:
-            warnings.simplefilter('ignore')
-            plt.contour(lon,lat,np.transpose(ff),np.array([0]), 
-                        colors='red')
+        plotting.map_fire(ff,lat,lon, transform=False)
     
     # start to end x=[lon0,lon1], y=[lat0, lat1]
     plt.plot([start[1],end[1]],[start[0],end[0], ], '--k', 
@@ -132,34 +126,31 @@ def wind_outline(s,u,v,w,
     if extentname is not None:
         plotting.map_add_locations_extent(extentname)
     
-    # Quiver, reduce arrow density
-    vsu = len(lon)//nquivers
-    vsv = len(lat)//nquivers
-    skip = (slice(None,None,vsv),slice(None,None,vsu))
-    
-    ## add quiver
+    ## add streamplot
     plt.get_cmap(plotting._cmaps_['windspeed'])
-    plt.quiver(lon[skip[1]],lat[skip[0]],u[0][skip],v[0][skip], scale=quiverscale)
+    plt.streamplot(lon,lat,u[0],v[0],color='darkslategrey',)
     
     ## Second row is transect plots
     plt.subplot(3,1,2)
-    wslice, xslice, zslice  = plotting.transect_w(w,z, lat, lon,start,end,
-                                                  npoints=100,topog=topog,
+    nx=utils.number_of_interp_points(lat,lon,start,end)
+    wslice, slicex, slicez  = plotting.transect_w(w,z, lat, lon,start,end,
+                                                  topog=topog,
                                                   ff=ff,
+                                                  npoints=nx,
                                                   ztop=ztop,
                                                   lines=None)
     plt.ylabel('height (m)')
     ## Add contour where clouds occur
-    qcslice = utils.cross_section(qc,lat,lon,start,end, npoints=100)
+    qcslice, _,_ = utils.transect(qc,lat,lon,start,end,nx=nx)
     with warnings.catch_warnings():
         # ignore warning when there are no clouds:
         warnings.simplefilter('ignore')
-        plt.contour(xslice,zslice,qcslice,np.array([cloud_threshold]),colors='teal')
+        plt.contour(slicex,slicez,qcslice,np.array([cloud_threshold]),colors='teal')
     
     ax3 = plt.subplot(3,1,3)
     trs, trx, trz = plotting.transect_s(s,z,lat,lon,start,end,
                                         topog=topog, ztop=ztop,
-                                        ff=ff)
+                                        ff=ff, npoints=nx)
     xticks,xlabels = plotting.transect_ticks_labels(start,end)
     plt.xticks(xticks[0::2],xlabels[0::2]) # show transect start and end
     
@@ -362,7 +353,7 @@ def transects_hwinds(model_run, hour=18, transects=None, extent=None, ztop=4000,
     cubes = fio.read_model_run(model_run, fdtime=dt,
                                HSkip=HSkip, 
                                add_winds=True, add_z=True, add_topog=True)
-    print("DEBUG:")
+    print("DEBUG: still missing winds?")
     print(cubes)
     u,v,s,z,topog,w = cubes.extract(['u','v','s','z_th','surface_altitude','upward_air_velocity'])
     ctimes = utils.dates_from_iris(u)
@@ -384,9 +375,9 @@ def transects_hwinds(model_run, hour=18, transects=None, extent=None, ztop=4000,
         # plot firefront
         plotting.map_fire(ff[di].data,flats,flons)
         # add winds streamplot
-        plt.streamplot(flons,flats,u10[di].data.T,v10[di].data.T, color='white',
-                   density=(0.8, 0.5),
-                   transform=llproj)#alpha=0.7)
+        plt.streamplot(flons,flats,u10[di].data,v10[di].data, color='white',
+                       density=(0.8, 0.5),
+                       transform=llproj)#alpha=0.7)
         plt.title('10m horizontal winds')
         # loop over transects
         for ti, [lat,lon0,lon1] in enumerate(transects):
@@ -397,30 +388,25 @@ def transects_hwinds(model_run, hour=18, transects=None, extent=None, ztop=4000,
                      linewidth=2, 
                      transform=llproj) 
             
-            # plot transect of horizontal wind speed
-            ax = plt.subplot(nrows,1,ti+2)
-            npoints=100
+            # plot transect of horizontal wind speed on new row
+            plt.subplot(nrows,1,ti+2)
+            npoints=utils.number_of_interp_points(clats,clons,start,end)
+            # contourf of horizontal wind speeds
             _, slicex, slicez = plotting.transect_s(s[di].data, z.data, 
                                                     clats,clons, 
                                                     start, end,
                                                     lines=None, npoints=npoints,
                                                     topog=topog.data)
-            # Add winds quiver
-            # add horizontal winds
-            uslice = utils.cross_section(u[di].data,clats,clons,start,end,npoints=npoints)
-            #vslice = utils.cross_section(v,lat,lon,start,end,npoints=npoints)
-            wslice = utils.cross_section(w[di].data,clats,clons,start,end,npoints=npoints)
             
-            # lets cut away the upper levels before making our quiver
-            ztopirows, ztopicols = np.where(slicez < ztop) # index rows and columns
-            ztopi = np.max(ztopirows) # highest index with height below ztop
+            # east-west and vertical winds on transect
+            uslice,_,_ = utils.transect(u[di].data,clats,clons,start,end,nx=npoints)
+            wslice,_,_ = utils.transect(w[di].data,clats,clons,start,end,nx=npoints)
             
-            # quiver east-west and vertical winds
-            #plotting.map_quiver(uslice[:ztopi+4,:], wslice[:ztopi+4,:], 
-            #                    slicez[:ztopi+4,:], slicex[:ztopi+4,:], 
-            #                    nquivers=15, scale=140,
-            #                    alpha=0.8, pivot='middle')
-            plotting.streamplot_regridded(slicex,slicez,uslice,wslice, alpha=0.8)
+            # Streamplot
+            plotting.streamplot_regridded(slicex,slicez,uslice,wslice,
+                                          density=(1.5,1.5), 
+                                          color='darkslategrey',
+                                          zorder=1)
             
             plt.title("lat: %.3f"%lat)
         plt.suptitle(dtime.strftime("Horizontal winds %Y%m%d %H%M (UTC)"))
@@ -434,14 +420,14 @@ def transects_hwinds(model_run, hour=18, transects=None, extent=None, ztop=4000,
 
 if __name__ == '__main__':
     
-    if True:
+    if False:
         #         [lat, lon0, lon1],
-        transects = [ [-32.84, 115.85, 116.05], 
-                     [-32.87, 115.85, 116.05], 
-                     [-32.9, 115.85, 116.05], ]
+        transects = [ [-32.84, 115.82, 116.05], 
+                     [-32.9, 115.82, 116.05], 
+                     [-32.96, 115.82, 116.05], ]
         extent=[115.6,116.21, -33.05,-32.75]
-        for hour in range(24,28):
-            transects_hwinds(model_run='waroona_run3', extent=extent,
+        for hour in range(14,15):
+            transects_hwinds(model_run='waroona_run1', extent=extent,
                              hour=hour,
                              transects=transects)
     
@@ -454,11 +440,11 @@ if __name__ == '__main__':
                              hour=hour,
                              extent=Waroona)
     
-    if False:
+    if True:
         allmr = fio.model_outputs.keys()
-        allmr = ['sirivan_run2_hr']
+        allmr = ['waroona_run1']
         for mr in allmr:
-            hours = fio.model_outputs[mr]['filedates']
+            hours = fio.model_outputs[mr]['filedates'][14:16]
             for hour in hours:
                 print("info: wind_outline", mr, hour)
                 outline_model_winds(mr, hours=[hour])
