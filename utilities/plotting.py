@@ -93,6 +93,8 @@ _latlons_['pyrocb_sirivan'] = 0,0 # 0530UTC=XXXX local time
 # lat/longs get the most interesting picture.
 
 
+_extents_['NYE'] = [149.2,150.05, -36.5, -35.85]
+
 _transects_             = {} 
 __x0__,__x1__ = 115.8, 116.19
 
@@ -235,7 +237,7 @@ def map_contourf(extent, data, lat,lon, title="",
     plt.xticks([]); plt.yticks([])
     return cs, cb
 
-def map_fire(ff,lats,lons, transform=True):
+def map_fire(ff,lats,lons, transform=True, **contourargs):
     """   
     Plot fire outline onto either an XY grid or geoaxes (eg from map_tiff)
     if mapping latlons onto geoaxes transform needs to be True
@@ -244,17 +246,21 @@ def map_fire(ff,lats,lons, transform=True):
         lats,lons : 1darray (degrees)
         
     """
+    # default fire colour:
+    if 'colors' not in contourargs:
+        contourargs['colors']='red'
     # only plot if there is fire
     fflatlon = ff
+    fireline = None
     if (ff.shape[0] == len(lons)) and (ff.shape[0] != len(lats)):
         fflatlon = ff.T
     if np.sum(ff<0) > 0:
         if transform:
-            plt.contour(lons,lats,fflatlon,np.array([0]), colors='red',
-                        transform=ccrs.PlateCarree())
+            fireline = plt.contour(lons,lats,fflatlon,np.array([0]),
+                                   transform=ccrs.PlateCarree(), **contourargs)
         else:
-            plt.contour(lons,lats,fflatlon,np.array([0]), colors='red')
-                        
+            fireline = plt.contour(lons,lats,fflatlon,np.array([0]),**contourargs)
+    return fireline 
 
 
 def map_tiff_qgis(fname='sirivan.tiff', extent=None, show_grid=False,
@@ -777,7 +783,7 @@ def transect_theta(theta, z, lat, lon, start, end, npoints=100,
     if 'cmap' not in contourfargs:
         contourfargs['cmap'] = _cmaps_['th']
     if 'norm' not in contourfargs:
-        contourfargs['norm'] = col.SymLogNorm(300)
+        contourfargs['norm'] = col.SymLogNorm(300,np.e)
         
     # call transect using some defaults for potential temperature
     return transect(theta,z,lat,lon,start,end,npoints=npoints,
@@ -804,7 +810,7 @@ def transect_w(w, z, lat, lon, start, end, npoints=100,
     if 'cmap' not in contourfargs:
         contourfargs['cmap'] = _cmaps_['verticalvelocity']
     if 'norm' not in contourfargs:
-        contourfargs['norm'] = col.SymLogNorm(0.25)
+        contourfargs['norm'] = col.SymLogNorm(0.25,base=np.e)
     
     # call transect using some defaults for vertical velocity w
     return transect(w, z,lat,lon,start,end,npoints=npoints,
@@ -831,7 +837,7 @@ def transect_qc(qc, z, lat, lon, start, end, npoints=100,
     if 'cmap' not in contourfargs:
         contourfargs['cmap'] = _cmaps_['qc']
     if 'norm' not in contourfargs:
-        contourfargs['norm'] = col.SymLogNorm(0.02)
+        contourfargs['norm'] = col.SymLogNorm(0.02,base=np.e)
     # call transect using some defaults for vertical velocity w
     return transect(qc, z,lat,lon,start,end,npoints=npoints,
                     topog=topog, ff=ff, latt=latt, lont=lont, ztop=ztop,

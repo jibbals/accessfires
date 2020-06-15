@@ -184,6 +184,16 @@ model_outputs = {
             'run':'Run in october 2016',
             'origdir':'/g/data1/en0/rjf548/fires/waroona.2016010615.vanj'
             },
+        ## Nested run for NYE atmosphere around fire in SE NSW
+        ## Uses newer model version: 11.6
+        'NYE_run1':{
+            'path':'data/NYE_run1/',
+            'topog':'umnsaa_2019123009_slv.nc',
+            'filedates':np.array([datetime(2019,12,30,9) + timedelta(hours=x) for x in range(24)]),
+            'hasfire':False,
+            'run':'Run in June 2020',
+            'origdir':'/home/574/jwg574/cylc-run/u-bq575/share/cycle/20191230T0900Z/SEForest/0p3/'
+                }
         }
 
 
@@ -473,7 +483,12 @@ def read_fire(model_run='waroona_run1',
             day1=True
         else:
             day1 = True if dtimes[0] < modelhours[24] else False
-            day2 = True if dtimes[-1] > modelhours[23] else False
+            day2 = True if dtimes[-1] >= modelhours[24] else False
+            #print("DEBUG: fire_read recursion")
+            #print("     : model hours 0, -1: ",modelhours[0], modelhours[-1])
+            #print("     : model hours 25, 24: ",modelhours[25], modelhours[24])
+            #print("     : dtimes 0, -1: ",dtimes[0],dtimes[-1])
+            #print("     : day1, day2:", day1, day2)
 
     ## if reading both days, read one at a time and combine
     if day1 and day2:
@@ -1052,19 +1067,40 @@ def read_waroona_old(dtime, constraints=None, extent=None):
                 ]
     cubes = read_nc_iris(path,constraints=constraints,keepvars=varnames)
 
-    # specific_humidity is the name of two variables, we just want the good one
-    sh0,sh = cubes.extract('specific_humidity')
-    if len(sh.shape)==2:
-        cubes.remove(sh)
-    else:
-        cubes.remove(sh0)
+    # specific_humidity is sometimes read into multiple cubes!? occasionally is surface only
+    sh_cubes = cubes.extract('specific_humidity')
+    sh_flag = False
+    if len(sh_cubes) > 1:
+        print("DEBUG:", sh_cubes )
+        for sh_cube in sh_cubes:
+            if sh_flag or (len(sh_cube.shape) == 2):
+                cubes.remove(sh_cube)
+            else:
+                # keep first 3d instance of sh
+                sh_flag = True
+    
+    ta_cubes = cubes.extract('air_temperature')
+    ta_flag = False
+    if len(ta_cubes) > 1:
+        print("DEBUG:", ta_cubes )
+        for ta_cube in ta_cubes:
+            if ta_flag or (len(ta_cube.shape) == 2):
+                cubes.remove(ta_cube)
+            else:
+                # keep first 3d instance of ta
+                ta_flag = True
+    #sh0,sh = cubes.extract('specific_humidity')
+    #if len(sh.shape)==2:
+    #    cubes.remove(sh)
+    #else:
+    #    cubes.remove(sh0)
 
     # air_temperature is the name of two variables, we just want the good one
-    Ta0,Ta = cubes.extract('air_temperature')
-    if len(Ta.shape)==2:
-        cubes.remove(Ta)
-    else:
-        cubes.remove(Ta0)
+    #Ta0,Ta = cubes.extract('air_temperature')
+    #if len(Ta.shape)==2:
+    #    cubes.remove(Ta)
+    #else:
+    #    cubes.remove(Ta0)
     
     return cubes
 

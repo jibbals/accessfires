@@ -6,9 +6,10 @@ Created on Mon Sep 16 08:45:14 2019
 @author: jesse
 """
 import matplotlib
-matplotlib.use("Agg",warn=False)
+matplotlib.use(backend="Agg",warn=False)
 
 from matplotlib import colors, ticker, patches
+from matplotlib import patheffects
 import matplotlib.dates as mdates
 
 import numpy as np
@@ -26,7 +27,8 @@ _sn_ = 'weather_summary'
 __cloud_thresh__ = constants.cloud_threshold
 
 def plot_weather_summary(U,V,W, height, lat, lon, extentname, 
-                         Q=None, FF=None, Streamplot=True):
+                         Q=None, FF=None, Streamplot=True,
+                         hwind_limits=None):
     '''
     Show horizontal slices of horizontal and vertical winds averaged between 
     several vertical levels. Also shows clouds (Q) and fires (FF) with contour outline.
@@ -35,6 +37,8 @@ def plot_weather_summary(U,V,W, height, lat, lon, extentname,
         U,V,W: wind speed in lon, lat, vert dimension m/s [z,lat,lon]
         height: altitude ASL or AGL m [z,lat,lon] or [z]
         height: level heights for titles (array [ levs ])
+        hwind_limits: None, or [vmin, vmax]
+            horizontal wind map contourf colorbar limits
     '''
     
     row1 = (100<=height) * (height<500)
@@ -46,9 +50,15 @@ def plot_weather_summary(U,V,W, height, lat, lon, extentname,
     
     # vertical wind colourbar is constant
     wcmap=plotting._cmaps_['verticalvelocity']
-    wnorm=colors.SymLogNorm(0.25) # linear to +- 0.25, then log scale
+    wnorm=colors.SymLogNorm(0.25, base=np.e) # linear to +- 0.25, then log scale
     wcontours=np.union1d(np.union1d(2.0**np.arange(-2,6),-1*(2.0**np.arange(-2,6))),np.array([0]))
-    
+    hcontours=16
+    hcmap=plotting._cmaps_['windspeed']
+    if hwind_limits is not None:
+        hvmin,hvmax = hwind_limits
+        hcontours=np.linspace(hvmin,hvmax,15)
+        hnorm=colors.Normalize(vmin=hwind_limits[0],vmax=hwind_limits[1], clip=True)
+
     fig = plt.figure(figsize=[10,10])
     for ii,row in enumerate([row1, row2, row3, row4, row5]):
         plt.subplot(5,2,ii*2+1)
@@ -61,16 +71,21 @@ def plot_weather_summary(U,V,W, height, lat, lon, extentname,
         Ur = np.mean(Ui, axis=0)
         Vr = np.mean(Vi, axis=0)
         Sr = np.mean(Si, axis=0)
+        #print("DEBUG: windspeed mean: ",Sr.shape)
+        #print("     : ", np.sum(np.isnan(Sr)), np.sum(np.isnan(Sr[1:-2,1:-2])))
+        ## No nans, not sure why white space appears!?
         
         # wind speed contourf
-        plt.contourf(lon, lat, Sr, 10)
-        plt.colorbar(ticklocation=ticker.MaxNLocator(5),pad=0)
+        if hwind_limits is None:
+            csh = plt.contourf(lon, lat, Sr, hcontours)
+            plt.colorbar(ticklocation=ticker.MaxNLocator(5),pad=0)
+        else:
+            csh = plt.contourf(lon, lat, Sr, hcontours, cmap=hcmap, norm=hnorm)
         
         if extentname is not None:
             plotting.map_add_locations_extent(extentname, hide_text=True)
         
         #Streamplot the horizontal winds
-        # TODO: convert lats,lons to metres?
         plt.streamplot(lon,lat,Ur,Vr, 
                        color='k', 
                        density=(0.6, 0.5))
@@ -101,7 +116,7 @@ def plot_weather_summary(U,V,W, height, lat, lon, extentname,
                          extend='both',)
         
         if FF is not None:
-            plotting.map_fire(FF, lat, lon)
+            plotting.map_fire(FF, lat, lon, transform=False)
         
         plt.xticks([],[])
         plt.yticks([],[])
@@ -111,14 +126,20 @@ def plot_weather_summary(U,V,W, height, lat, lon, extentname,
     # reduce vert gap between subplots
     fig.subplots_adjust(hspace=0.1)
     # add vert wind colourbar
-    cbar_ax = fig.add_axes([0.905, 0.4, 0.01, 0.2])# X Y Width Height
+    cbar_ax = fig.add_axes([0.905, 0.4, 0.01, 0.2]) # X Y Width Height
     fig.colorbar(cs, cax=cbar_ax, format=ticker.ScalarFormatter(), pad=0)
+    # Add horizontal wind colourbar (if uniform)
+    if hwind_limits is not None:
+        cbar_ax2 = fig.add_axes([0.48, 0.4, 0.01, 0.2]) #XYWH
+        fig.colorbar(csh, cax=cbar_ax2, format=ticker.ScalarFormatter(7), pad=0)
         
 
 def weather_summary_model(model_version='waroona_run1',
                           fdtimes=None,
                           zoom_in=None,
-                          HSkip=None):
+                          subdir=None,
+                          HSkip=None,
+                          hwind_limits=None):
     '''
     Read model run output hour by hour, running plot_weather_summary on each
     time slice. Can subset to just show fdtimes, and can also zoom to specific 
@@ -169,17 +190,20 @@ def weather_summary_model(model_version='waroona_run1',
             
             plot_weather_summary(ui, vi, wi, height, lat, lon, 
                                  extentname=extentname,
-                                 Q = qci, FF=FF)
+                                 Q = qci, FF=FF,
+                                 hwind_limits=hwind_limits,)
             
             plt.suptitle("%s weather "%model_version + dtime.strftime("%Y %b %d %H:%M (UTC)"))
-            subdir=None
-            if zoom_in is not None: 
+            
+            if (zoom_in is not None) and (subdir is None): 
                 subdir = 'zoomed'
             fio.save_fig(model_version,_sn_, dtime, plt, subdir=subdir)
 
 def weather_series(model_run='waroona_run1', 
                    extent=None,
-                   HSkip=None,):
+                   HSkip=None,
+                   day2=False,
+                   showPFT=True):
     """
         time series of surface weather
     """
@@ -194,12 +218,20 @@ def weather_series(model_run='waroona_run1',
     proj_latlon = ccrs.PlateCarree() # lat,lon projection
     qc_thresh = constants.cloud_threshold
     
+    # READ EVERYTHING, SUBSET, CALC DESIRED METRICS, PLOT METRICS
+    modeltimes = fio.model_outputs[model_run]['filedates']
+    fdtimes = modeltimes[-24:] if day2 else modeltimes[:24]
+    cubes = fio.read_model_run(model_run, extent=extent,
+                               HSkip=HSkip,
+                               fdtime=fdtimes)
+    ctimes = utils.dates_from_iris(cubes[0])
     ## read all the fire data, and lats/lons
-    ff,sh, = fio.read_fire(model_run=model_run, dtimes=None,
+    ## 10m u and v winds (already destaggered) are in fire model output
+    ff,sh,u10, v10 = fio.read_fire(model_run=model_run, dtimes=ctimes,
                            extent=extent, HSkip=HSkip,
-                           firefront=True, sensibleheat=True)
-    ff=ff[-1] # just final firefront is needed
-    
+                           firefront=True, sensibleheat=True,
+                           day2=day2, day1=(not day2),
+                           wind=True)
     
     lons,lats = sh.coord('longitude').points, sh.coord('latitude').points
     assert sh is not None, "Missing sensible heat file"
@@ -223,10 +255,11 @@ def weather_series(model_run='waroona_run1',
     ## Read PFT
     # calculated using kevin's code, stored as GWatts
     lat,lon = plotting._latlons_["fire_%s_upwind"%extentname]
-    pft, ptimes, _, _ = fio.read_pft(model_run,lats=lat,lons=lon)
-    #pft = np.nanmean(pft,axis=(1,2)) # average spatially
-    if localtime:
-        ptimes = np.array([pt + offset for pt in ptimes ])
+    if showPFT:
+        pft, ptimes, _, _ = fio.read_pft(model_run,lats=lat,lons=lon)
+        #pft = np.nanmean(pft,axis=(1,2)) # average spatially
+        if localtime:
+            ptimes = np.array([pt + offset for pt in ptimes ])
     
     ## Read Temperature:
     # just want surface for most of these, lets just take bottom two rows:
@@ -234,12 +267,11 @@ def weather_series(model_run='waroona_run1',
     #cubes=fio.read_model_run(model_run, extent=extent, constraints=surf_constraint, 
     #                         add_RH=True)
     
-    # READ EVERYTHING, SUBSET, CALC DESIRED METRICS, PLOT METRICS
-    cubes = fio.read_model_run(model_run, extent=extent,
-                               HSkip=HSkip)
-    ctimes = utils.dates_from_iris(cubes[0])
     
     ## get temperature, RH, cloud
+    #print("DEBUG: cubes")
+    #print()
+    #print(cubes)
     q,T,qc = cubes.extract(['specific_humidity','air_temperature','qc'])
     
     index_500m = np.argmin(np.abs(q.coord('level_height').points - 500))
@@ -266,11 +298,6 @@ def weather_series(model_run='waroona_run1',
     
     ## get wind speed/ wind dir
     u, v = cubes.extract(['x_wind','y_wind'])
-    ## 10m u and v winds (already destaggered) are in fire model output
-    u10, v10 = fio.read_fire(model_run=model_run, extent=extent, 
-                             dtimes=ctimes,
-                             firefront=False, wind=True, 
-                             HSkip=HSkip)
     ## wind speed at 10m is output by the fire model
     u10=np.swapaxes(u10.data, 1,2) # time, lon, lat -> time, lat, lon
     v10=np.swapaxes(v10.data, 1,2) # also for v10
@@ -331,7 +358,23 @@ def weather_series(model_run='waroona_run1',
     
     # add fire outline
     plt.sca(ax_map)
-    plotting.map_fire(ff.data, lats, lons)
+    # Firefront shown at each 6 hour increment:
+    ffhours = fdtimes[::6]
+    for ffhour in ffhours:
+        ffhind = utils.date_index(ffhour, ctimes) 
+        if ffhind is None:
+            ffhind = 0
+            ffhour = ctimes[0]
+        else:
+            ffhind = ffhind[0]
+        print("DEBUG:", type(ffhind), ffhind)
+        ffline = plotting.map_fire(ff[ffhind].data, lats, lons)
+        print("DEBUG: ffline: ", ffline)
+        if ffline is not None:
+            clbls = plt.clabel(ffline, [0], fmt=ffhour.strftime('%H'), 
+                               inline=True, colors='wheat')
+            # padding so label is readable
+            plt.setp(clbls, path_effects=[patheffects.withStroke(linewidth=3, foreground="k")])
     
     
     ax_fp = plt.subplot(3,1,2) # firepower axis
@@ -354,8 +397,9 @@ def weather_series(model_run='waroona_run1',
     
     ## Plot firepower, and PFT on one axis
     plt.sca(ax_fp)
-    line_pft, = plt.plot_date(ptimes, pft, '--', 
-                             color=color_fp, label='PFT', alpha=0.6)
+    if showPFT:
+        line_pft, = plt.plot_date(ptimes, pft, '--', 
+                                 color=color_fp, label='PFT', alpha=0.6)
     line_fp, = plt.plot_date(ftimes, firepower, '-',
                             color=color_fp, label='firepower')
     ## plot temperature on right axis
@@ -437,7 +481,9 @@ def weather_series(model_run='waroona_run1',
     ax_ws500.yaxis.label.set_color(color_ws500)
     
     ## Plot periphery
-    lines = [line_pft, line_fp, line_T, line_RH, line_qc]
+    lines = [line_fp, line_T, line_RH, line_qc]
+    if showPFT:
+        lines = [line_pft, line_fp, line_T, line_RH, line_qc]
     labels = [l.get_label() for l in lines]
     ax_fp.legend(lines, labels, loc='upper left')
     #plt.suptitle(model_run,y=0.9)
@@ -453,21 +499,34 @@ def weather_series(model_run='waroona_run1',
     
     ax_map.set_title("Surface area-average over time")
     fig.tight_layout(rect=[0,0,.99,1]) # left, bottom, right, top
-    fio.save_fig(model_run, _sn_, 'timeseries.png', plt=plt)
+    pname = 'timeseries_day2.png' if day2 else 'timeseries.png'
+    fio.save_fig(model_run, _sn_, pname, plt=plt)
 
 if __name__=='__main__':
     
+    waroona_run3times = fio.model_outputs['waroona_run3']['filedates']
+    waroona_day2zoom = [115.7,116.0, -33.18,-32.9]
     ## run for all of waroona_run2 datetimes
     #weather_summary_model(model_version='waroona_run3')
     
     ## Run timeseries
-    weather_series('waroona_run3')
+    # day2 waroona:
+    #weather_series('waroona_run3',day2=True, showPFT=False, extent=waroona_day2zoom)
+    # day1 waroona:
+    #weather_series('waroona_run3')
     
     ## run zoomed in
     #zoom_in = plotting._extents_['sirivans']
-    #zoom_in = None # or not
-    #weather_summary_model('waroona_run3',zoom_in=zoom_in,HSkip=None, 
-    #                      fdtimes=[datetime(2016,1,6,13)])
+    # waroona day2
+    zoom_in = plotting._extents_['waroonaf'] # full outline for now 
+    weather_summary_model(
+        'waroona_run3',
+        zoom_in=zoom_in,
+        subdir="day2",
+        HSkip=None, 
+        fdtimes=waroona_run3times[24:],
+        hwind_limits=[0,30],
+        )
 
     print("INFO: weather_summary.py done")
 
