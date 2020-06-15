@@ -53,7 +53,7 @@ def plot_weather_summary(U,V,W, height, lat, lon, extentname,
     wnorm=colors.SymLogNorm(0.25, base=np.e) # linear to +- 0.25, then log scale
     wcontours=np.union1d(np.union1d(2.0**np.arange(-2,6),-1*(2.0**np.arange(-2,6))),np.array([0]))
     hcontours=16
-    hcmap=plotting._cmaps_['windspeed']
+    hcmap="plasma" #plotting._cmaps_['windspeed']
     if hwind_limits is not None:
         hvmin,hvmax = hwind_limits
         hcontours=np.linspace(hvmin,hvmax,15)
@@ -131,7 +131,7 @@ def plot_weather_summary(U,V,W, height, lat, lon, extentname,
     # Add horizontal wind colourbar (if uniform)
     if hwind_limits is not None:
         cbar_ax2 = fig.add_axes([0.48, 0.4, 0.01, 0.2]) #XYWH
-        fig.colorbar(csh, cax=cbar_ax2, format=ticker.ScalarFormatter(7), pad=0)
+        fig.colorbar(csh, cax=cbar_ax2, format=ticker.ScalarFormatter(), pad=0)
         
 
 def weather_summary_model(model_version='waroona_run1',

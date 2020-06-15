@@ -29,7 +29,9 @@ __cloud_thresh__ = constants.cloud_threshold
 def weather_summary_model(model_version='NYE_run1',
                           fdtimes=None,
                           zoom_in=None,
-                          HSkip=None):
+                          subdir=None,
+                          HSkip=None,
+                          hwind_limits=None):
     '''
     Read model run output hour by hour, running plot_weather_summary on each
     time slice. Can subset to just show fdtimes, and can also zoom to specific 
@@ -89,22 +91,26 @@ def weather_summary_model(model_version='NYE_run1',
             
             plot_weather_summary(ui, vi, wi, height, lat2, lon, 
                                  extentname=extentname,
-                                 Q = qci, FF=None)
+                                 Q = qci, FF=None, 
+                                 hwind_limits=hwind_limits)
             
             plt.suptitle("%s weather "%model_version + dtime.strftime("%Y %b %d %H:%M (UTC)"))
-            subdir=None
-            if zoom_in is not None: 
+            if zoom_in is not None and subdir is None: 
                 subdir = 'zoomed'
-            fio.save_fig(model_version,_sn_, dtime, plt, subdir=subdir)
+            fio.save_fig(model_version, _sn_, dtime, plt, subdir=subdir)
 
 
 if __name__=='__main__':
     mr = 'NYE_run1'
     NYE_hours = fio.model_outputs[mr]['filedates']
-    NYE_zoom = [149.2,150.05, -36.5, -35.85]
-
+    NYE_zoom = [149.2,150.05, -37.5, -36.85]
+    
+    ## NYE Weather summary figures:
     weather_summary_model('NYE_run1',zoom_in=NYE_zoom,HSkip=None, 
-            fdtimes=NYE_hours[5:])
+            fdtimes=NYE_hours, hwind_limits=[0,30],)
+    # Make a helper figure to show where the summary is located
+    
+
 
     print("INFO: weather_summary.py done")
 
