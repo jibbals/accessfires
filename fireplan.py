@@ -14,7 +14,7 @@ from matplotlib import patheffects, colors
 import numpy as np
 # for legend creation:
 from matplotlib.lines import Line2D
-
+from datetime import datetime,timedelta
 
 import iris
 
@@ -45,7 +45,7 @@ def fireplan(ff, fire_contour_map = 'autumn',
         fig,... arguments to plotting.map_tiff_qgis()
     '''
     lon,lat = ff.coord('longitude').points, ff.coord('latitude').points
-    _,nx,ny = ff.shape
+    _,ny,nx = ff.shape
     extent = [np.min(lon),np.max(lon), np.min(lat),np.max(lat)]
     crs_data = ccrs.PlateCarree()
 
@@ -86,31 +86,45 @@ def fireplan(ff, fire_contour_map = 'autumn',
                                    texts=['Uarbry'], fontsizes=14)
     
     # plot contours at each hour
-    utcstamp=[]
+    tstamp=[]
     for ii,dt in enumerate(ftimes[hourinds]):
-
-        utcstamp.append(dt.strftime('%b %d, %H00(UTC)'))
+        #TODO  Make local time based on extentname not just assume waroona
+        offset = 8 if "waroona" in extentname else 10
+        
+        LT = dt + timedelta(hours=offset)
+        color=[rgba[ii]]
+        if "waroona" in extentname:
+            dnum = int(LT.strftime("%d"))
+            if dnum == 6:
+                color = 'red'
+            elif dnum==7:
+                color="orange"
+            else:
+                color = "grey"
+                
+        tstamp.append(LT.strftime('%b %d, %H00(local)'))
 
         ffdata = ff_f[hourinds][ii].data.data
         
         linewidth=1 + (ii == nt-1) # make final hour thicker
-        fire_line = plt.contour(lon, lat, ffdata.T, np.array([0]),
-                                colors=[rgba[ii]], linewidths=linewidth,
+        fire_line = plt.contour(lon, lat, ffdata, np.array([0]),
+                                colors=color, linewidths=linewidth,
                                 transform=crs_data)
         
-        # label first, last, and every twelth hour line
-        if (ii%12)==0 or (dt in [ftimes[hourinds][0],ftimes[hourinds][-1]]):
-            clbls = plt.clabel(fire_line, [0], fmt=dt.strftime('%H'), 
+        # label first, last, and every Nth hour
+        if (ii%4)==0 or (dt in [ftimes[hourinds][0],ftimes[hourinds][-1]]):
+            clbls = plt.clabel(fire_line, [0], fmt=LT.strftime('%d-%H'), 
                                inline=True, colors='wheat')
             # padding so label is readable
             plt.setp(clbls, path_effects=[patheffects.withStroke(linewidth=3, foreground="k")])
     
     # final outline contour if last available time is not on the hour
     if not hourinds[-1]:
-        final_line=plt.contour(lon,lat,ff_f[-1].data.data.T, np.array([0]), 
+        final_line=plt.contour(lon,lat,ff_f[-1].data.data, np.array([0]), 
                                linestyles='dotted',
                                colors='cyan', linewidths=1, transform=crs_data)
-        clbls = plt.clabel(final_line,[0],fmt=dt.strftime('%H:%M'), inline=True, colors='wheat')
+        clbls = plt.clabel(final_line,[0],fmt=LT.strftime('%H:%M'), 
+                           inline=True, colors='wheat')
         plt.setp(clbls, path_effects=[patheffects.withStroke(linewidth=3, foreground="k")])
 
     ## Add tiny colour bar showing overall time of fire
@@ -121,7 +135,7 @@ def fireplan(ff, fire_contour_map = 'autumn',
         cax.axes.get_yaxis().set_visible(False) # horizontal alignment, no yax
         cbar = matplotlib.colorbar.ColorbarBase(cax,cmap=plt.get_cmap(fire_contour_map), orientation='horizontal')
         cbar.set_ticks([0,1])
-        cbar.set_ticklabels([utcstamp[0],utcstamp[-1]])
+        cbar.set_ticklabels([tstamp[0],tstamp[-1]])
         # make xtick labels have black outline on wheat text color
         cbxtick_obj = plt.getp(cax, 'xticklabels') # get xtick labels
         plt.setp(cbxtick_obj, color='wheat',
@@ -145,8 +159,9 @@ def fireplan_summary(model_run='waroona_run1',
     
     if 'path_firefront2' not in fio.model_outputs[model_run].keys():
         day2 = False
-    FFront, SHeat, FSpeed = fio.read_fire(model_run=model_run ,dtimes=None, extent=extent,
-                                          firefront=True, sensibleheat=True, firespeed=True,
+    FFront, SHeat, FSpeed = fio.read_fire(model_run=model_run ,dtimes=None, 
+                                          extent=extent, firefront=True, 
+                                          sensibleheat=True, firespeed=True,
                                           day1=day1, day2=day2)
     lon,lat = FFront.coord('longitude').points, FFront.coord('latitude').points
 
@@ -287,7 +302,7 @@ if __name__=='__main__':
         fio.save_fig(si_r1, _sn_, 'fireplan_hr.png', plt)
 
     if True:
-        mr = "waroona_run1"
-        fireplan_summary(model_run=mr,day2=False, just_fireplan=True)
+        mr = "waroona_run3"
+        fireplan_summary(model_run=mr, day2=True, just_fireplan=True)
     
     
