@@ -6,7 +6,7 @@ Created on Mon Sep 16 08:45:14 2019
 @author: jesse
 """
 import matplotlib
-matplotlib.use(backend="Agg",warn=False)
+matplotlib.use("Agg",warn=False)
 
 from matplotlib import colors, ticker, patches
 from matplotlib import patheffects
@@ -504,29 +504,55 @@ def weather_series(model_run='waroona_run1',
 
 if __name__=='__main__':
     
+    CanPlotTiff=True
+    
     waroona_run3times = fio.model_outputs['waroona_run3']['filedates']
     waroona_day2zoom = [115.7,116.0, -33.18,-32.9]
     ## run for all of waroona_run2 datetimes
     #weather_summary_model(model_version='waroona_run3')
     
     ## Run timeseries
-    # day2 waroona:
-    #weather_series('waroona_run3',day2=True, showPFT=False, extent=waroona_day2zoom)
-    # day1 waroona:
-    #weather_series('waroona_run3')
+    if False:
+        # day2 waroona:
+        weather_series('waroona_run3',day2=True, showPFT=False, extent=waroona_day2zoom)
+        # day1 waroona:
+        weather_series('waroona_run3')
     
-    ## run zoomed in
-    #zoom_in = plotting._extents_['sirivans']
+    ## Run weather summary
     # waroona day2
-    zoom_in = plotting._extents_['waroonaf'] # full outline for now 
-    weather_summary_model(
-        'waroona_run3',
-        zoom_in=zoom_in,
-        subdir="day2",
-        HSkip=None, 
-        fdtimes=waroona_run3times[24:],
-        hwind_limits=[0,30],
-        )
-
+    if False:
+        zoom_in = plotting._extents_['waroonaf'] # full outline for now 
+        weather_summary_model(
+            'waroona_run3',
+            zoom_in=zoom_in,
+            subdir="day2",
+            HSkip=None, 
+            fdtimes=waroona_run3times[24:],
+            hwind_limits=[0,30],
+            )
+    
+    if CanPlotTiff:
+        # Make a helper figure to show where the summary is located
+        for name,zoom in zip(["day1_extent.png","day2_extent.png"],
+                             [plotting._extents_['waroona'],plotting._extents_['waroonaf']]):
+            
+            f,ax,proj = plotting.map_tiff_qgis("waroonas.tiff",)
+            latlon_proj = ccrs.PlateCarree()
+            ## Add box around zoomed in area
+            xy = [zoom[0], zoom[2]]
+            width = zoom[1]-zoom[0]
+            height = zoom[3]-zoom[2]
+            ax.add_patch(patches.Rectangle(xy=xy,
+                                           width=width,
+                                           height=height,
+                                           #facecolor=None,
+                                           fill=False,
+                                           edgecolor='blue',
+                                           linewidth=2,
+                                           #linestyle='-',
+                                           alpha=.7, 
+                                           transform=latlon_proj))
+            fio.save_fig("waroona_run3",_sn_,name,plt=plt)
+    
     print("INFO: weather_summary.py done")
 

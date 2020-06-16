@@ -105,12 +105,33 @@ if __name__=='__main__':
     NYE_hours = fio.model_outputs[mr]['filedates']
     NYE_zoom = [149.2,150.05, -37.5, -36.85]
     
-    ## NYE Weather summary figures:
-    weather_summary_model('NYE_run1',zoom_in=NYE_zoom,HSkip=None, 
-            fdtimes=NYE_hours, hwind_limits=[0,30],)
-    # Make a helper figure to show where the summary is located
+    CanPlotTiff = True # set to True if not on NCI
     
-
-
-    print("INFO: weather_summary.py done")
+    if False:
+        ## NYE Weather summary figures:
+        _sn_ = "weather_summary"
+        weather_summary_model('NYE_run1',zoom_in=NYE_zoom,HSkip=None, 
+                fdtimes=NYE_hours, hwind_limits=[0,30],)
+    
+    if CanPlotTiff:
+        # Make a helper figure to show where the summary is located
+        f,ax,proj = plotting.map_tiff_qgis("SEForests.tiff",)
+        latlon_proj = ccrs.PlateCarree()
+        ## Add box around zoomed in area
+        xy = [NYE_zoom[0], NYE_zoom[2]]
+        width = NYE_zoom[1]-NYE_zoom[0]
+        height = NYE_zoom[3]-NYE_zoom[2]
+        ax.add_patch(patches.Rectangle(xy=xy,
+                                       width=width,
+                                       height=height,
+                                       #facecolor=None,
+                                       fill=False,
+                                       edgecolor='blue',
+                                       linewidth=2,
+                                       #linestyle='-',
+                                       alpha=.7, 
+                                       transform=latlon_proj))
+        fio.save_fig("NYE_run1","weather_summary","weather_summary_extent.png",plt=plt)
+    
+    ## Now lets look at another thing!?
 
