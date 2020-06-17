@@ -332,10 +332,13 @@ def map_tiff_qgis(fname='sirivan.tiff', extent=None, show_grid=False,
                     locnames.remove(locstr)
         
     if show_grid:
-        gl = ax.gridlines(crs=ccrs.PlateCarree(), draw_labels=True,
-                          linewidth=2, color='gray', alpha=0.35, linestyle='--')
-        gl.xlabels_top = False
-        gl.ylabels_left = False
+        transform = ccrs.PlateCarree()._as_mpl_transform(ax)
+        ## plot some gridlines using transform I guess...
+        # TODO
+        #gl = ax.gridlines(crs=transform, draw_labels=True,
+        #                  linewidth=2, color='gray', alpha=0.35, linestyle='--')
+        #gl.xlabels_top = False
+        #gl.ylabels_left = False
         #gl.xlines = False
     if locnames is not None:
         # split out fire into it's own thing
@@ -896,7 +899,11 @@ def streamplot_regridded(x,y,u,v,**kwargs):
     
     ui = interp2d(x,y,u,bounds_error=False,fill_value=np.NaN)(xi,yi)
     vi = interp2d(x,y,v,bounds_error=False,fill_value=np.NaN)(xi,yi)
-    return plt.streamplot(xi,yi,ui,vi,**kwargs) 
+    splot = plt.streamplot(xi,yi,ui,vi,**kwargs) 
+    # set limits back to latlon limits
+    #plt.gca().set_ylim(yi[0],yi[-1])
+    #plt.gca().set_xlim(xi[0],xi[-1])
+    return splot
 
 
 def utm_from_lon(lon):

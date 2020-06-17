@@ -21,6 +21,7 @@ import cartopy.crs
 import cartopy.io.img_tiles as cimgt
 from cartopy.mpl.gridliner import LONGITUDE_FORMATTER, LATITUDE_FORMATTER
 from matplotlib.transforms import offset_copy
+from matplotlib import patheffects
 
 # LOCAL IMPORTS
 from utilities import utils, fio, constants, plotting
@@ -36,6 +37,8 @@ __NESTS__ = {'waroona_run1':{'centre':[-32.9, 116.1],
                              'nlats':[384,576,576],
                              'nlons':[384,576,576],
                              'wider_view':[107,140,-40,-10],
+                             'tiffname':'WesternAus.tiff',
+                             'pointnames':['perth',]
                              },
             'sirivan_run1':{'centre':[-32.001400, 149.798600],
                             'resolution':[.036,.01,.0028],
@@ -46,6 +49,7 @@ __NESTS__ = {'waroona_run1':{'centre':[-32.9, 116.1],
             }
 # old and run2 are the same as run1
 __NESTS__['waroona_run2'] = __NESTS__['waroona_run1']
+__NESTS__['waroona_run3'] = __NESTS__['waroona_run1']
 __NESTS__['waroona_old'] = __NESTS__['waroona_run1']
 
 ##############################################
@@ -122,19 +126,20 @@ def show_nests(model_run='waroona_run1', annotate_res=True, title=''):
     #f, ax, gproj = plotting.map_google(plotting._extents_['waroona'], zoom=11)
     locname=model_run.split('_')[0]
     nest=__NESTS__[model_run]
-    
+    tiffname = __NESTS__[model_run]['tiffname']
+    locnames = __NESTS__[model_run]['pointnames']
     # look at nests within wider view:
     aust = nest['wider_view']
     
     # create figure and projection
-    fig, ax, proj = plotting.map_tiff(locname=locname,
-                                      extent=aust,
-                                      show_grid=True, 
-                                      locnames=[locname,])
+    fig, ax, proj = plotting.map_tiff_qgis(tiffname,
+                                           extent=aust,
+                                           show_grid=True, 
+                                           locnames=locnames)
     
     # add coastline, stock img (tiff is currently just for zoomed in stuff)
-    ax.coastlines()
-    ax.stock_img()
+    #ax.coastlines()
+    #ax.stock_img()
     
     ## Show grid resolution maybe with annotations
     ## Add box around zoomed in area
@@ -156,18 +161,30 @@ def show_nests(model_run='waroona_run1', annotate_res=True, title=''):
                                        alpha=0.9,
                                        transform=cartopy.crs.PlateCarree()
                                        ))
+        # transform for our epsg
+        maptransform=cartopy.crs.PlateCarree()._as_mpl_transform(ax)
         
-        ## add text?
-        ax.annotate(['Nest 1','Nest 2','N3'][i], xy=botleft, 
-                    xycoords=cartopy.crs.PlateCarree()._as_mpl_transform(ax), color='k',
-                    ha='left', va='top')
+        # outline for text/markers
+        outlinecolor='k'
+        #marker_effects=[patheffects.Stroke(linewidth=5, foreground=outlinecolor), patheffects.Normal()]
+        text_effects = [patheffects.withStroke(linewidth=3, foreground=outlinecolor)]
+        text_color="wheat"
+        ## add text
+        txt = ax.annotate(['Nest 1','Nest 2','N3'][i], xy=botleft, 
+                          xycoords=maptransform, 
+                          color=text_color,
+                          ha='left', va='bottom')
+        txt.set_path_effects(text_effects)
         
         if annotate_res:
-            ax.annotate('Nest %d: %dx%d %0.1f km squares'%(i+1, nres, nres, [3.5, 1.0, 0.3][i]),
-                        xy=[.055, .95 - .05*i],
-                        xycoords='axes fraction',
-                        color='k', fontsize=13,
-                        ha='left', va='top')
+            nestres = [3.5, 1.0, 0.3][i]
+            txt = ax.annotate('Nest %d: %0.1fx%0.1f km squares'%(i+1, nestres,nestres),
+                              xy=[.055, .95 - .05*i],
+                              xycoords='axes fraction',
+                              color=text_color, fontsize=13,
+                              ha='left', va='top')
+            txt.set_path_effects(text_effects)
+            
     if title=='':
         locname = str.capitalize(model_run.split('_')[0])
         if locname == 'Sirivan':
@@ -179,7 +196,7 @@ def show_nests(model_run='waroona_run1', annotate_res=True, title=''):
     
 if __name__=='__main__':
     
-    outline_waroona()
+    #outline_waroona()
     
-    for mr in ['sirivan_run1','waroona_run1']:
+    for mr in ['waroona_run3']:
         show_nests(mr)

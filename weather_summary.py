@@ -9,7 +9,7 @@ import matplotlib
 matplotlib.use("Agg",warn=False)
 
 from matplotlib import colors, ticker, patches
-from matplotlib import patheffects
+from matplotlib import patheffects, gridspec
 import matplotlib.dates as mdates
 
 import numpy as np
@@ -27,7 +27,8 @@ _sn_ = 'weather_summary'
 __cloud_thresh__ = constants.cloud_threshold
 
 def plot_weather_summary(U,V,W, height, lat, lon, extentname, 
-                         Q=None, FF=None, Streamplot=True,
+                         Q=None, FF=None, 
+                         topog=None, topog_contours=[50],
                          hwind_limits=None):
     '''
     Show horizontal slices of horizontal and vertical winds averaged between 
@@ -37,6 +38,8 @@ def plot_weather_summary(U,V,W, height, lat, lon, extentname,
         U,V,W: wind speed in lon, lat, vert dimension m/s [z,lat,lon]
         height: altitude ASL or AGL m [z,lat,lon] or [z]
         height: level heights for titles (array [ levs ])
+        topog: surface altitudes [lat,lon] in metres
+        topog_contours: add a contour along these surface altitudes
         hwind_limits: None, or [vmin, vmax]
             horizontal wind map contourf colorbar limits
     '''
@@ -50,18 +53,19 @@ def plot_weather_summary(U,V,W, height, lat, lon, extentname,
     
     # vertical wind colourbar is constant
     wcmap=plotting._cmaps_['verticalvelocity']
-    wnorm=colors.SymLogNorm(0.25, base=np.e) # linear to +- 0.25, then log scale
+    wnorm=colors.SymLogNorm(0.25) # linear to +- 0.25, then log scale
     wcontours=np.union1d(np.union1d(2.0**np.arange(-2,6),-1*(2.0**np.arange(-2,6))),np.array([0]))
-    hcontours=16
-    hcmap="plasma" #plotting._cmaps_['windspeed']
+    nhcontours=16
+    hcontours=nhcontours
+    hcmap='plasma' #plotting._cmaps_['windspeed']
     if hwind_limits is not None:
         hvmin,hvmax = hwind_limits
-        hcontours=np.linspace(hvmin,hvmax,15)
+        hcontours=np.linspace(hvmin,hvmax,nhcontours)
         hnorm=colors.Normalize(vmin=hwind_limits[0],vmax=hwind_limits[1], clip=True)
 
     fig = plt.figure(figsize=[10,10])
     for ii,row in enumerate([row1, row2, row3, row4, row5]):
-        plt.subplot(5,2,ii*2+1)
+        lax = plt.subplot(5,2,ii*2+1, )#projection=ccrs.PlateCarree())
         
         Ui = U[row]
         Vi = V[row]
@@ -71,35 +75,48 @@ def plot_weather_summary(U,V,W, height, lat, lon, extentname,
         Ur = np.mean(Ui, axis=0)
         Vr = np.mean(Vi, axis=0)
         Sr = np.mean(Si, axis=0)
-        #print("DEBUG: windspeed mean: ",Sr.shape)
-        #print("     : ", np.sum(np.isnan(Sr)), np.sum(np.isnan(Sr[1:-2,1:-2])))
-        ## No nans, not sure why white space appears!?
         
         # wind speed contourf
         if hwind_limits is None:
             csh = plt.contourf(lon, lat, Sr, hcontours)
-            plt.colorbar(ticklocation=ticker.MaxNLocator(5),pad=0)
+            lax.colorbar(ticklocation=ticker.MaxNLocator(5),pad=0)
         else:
-            csh = plt.contourf(lon, lat, Sr, hcontours, cmap=hcmap, norm=hnorm)
+            csh = lax.contourf(lon, lat, Sr, 
+                               levels=hcontours,
+                               cmap=hcmap, norm=hnorm)
+        
+        if FF is not None:
+            plotting.map_fire(FF, lat, lon, transform=False)
+        if topog is not None:
+            lax.contour(lon,lat,topog,topog_contours,
+                        colors='k', alpha=0.7, linewidths=1)
         
         if extentname is not None:
             plotting.map_add_locations_extent(extentname, hide_text=True)
         
-        #Streamplot the horizontal winds
-        plt.streamplot(lon,lat,Ur,Vr, 
-                       color='k', 
-                       density=(0.6, 0.5))
+        ##Streamplot the horizontal winds
+        ## This shifts the subplot grid axes slightly!! 
+        # this is seemingly to show the arrows in full where they extend outside the boundary
+        lax.streamplot(lon,lat,Ur,Vr, 
+                       color='k', #transform=ccrs.PlateCarree(),
+                       density=(0.5, 0.4))
+        # set limits back to latlon limits
+        lax.set_ylim(lat[0],lat[-1])  # outliers only
+        lax.set_xlim(lon[0],lon[-1])
         
         # remove x and y ticks
         plt.xticks([],[])
         plt.yticks([],[])
+        
+        if ii==0:
+            lax.set_title('horizontal winds (m/s)')
+        
         # add ylabel
         plt.ylabel("%.0f - %.0f m"%(height[row][0], height[row][-1]),fontsize=13)
-        if ii==0:
-            plt.title('horizontal winds (m/s)')
+        #lax.yaxis.set_label_position("right")
         
         # Now plot vertical motion
-        plt.subplot(5,2,ii*2+2)
+        plt.subplot(5,2,ii*2+2,)#projection=ccrs.PlateCarree())
         Wi = W[row]
         Wr = np.mean(Wi,axis=0)
         
@@ -118,10 +135,17 @@ def plot_weather_summary(U,V,W, height, lat, lon, extentname,
         if FF is not None:
             plotting.map_fire(FF, lat, lon, transform=False)
         
+        if topog is not None:
+            plt.contour(lon,lat,topog,topog_contours,
+                        colors='k', alpha=0.7, linewidths=1)
+            
         plt.xticks([],[])
         plt.yticks([],[])
         if ii==0:
             plt.title('vertical motion (m/s)')
+        
+        # auto fit to avail area
+        #rax.set_aspect('auto')
         
     # reduce vert gap between subplots
     fig.subplots_adjust(hspace=0.1)
@@ -164,7 +188,7 @@ def weather_summary_model(model_version='waroona_run1',
         cubes = fio.read_model_run(model_version, fdtime=[fdtime], extent=extent, 
                                    add_winds=True,
                                    HSkip=HSkip)
-        u,v = cubes.extract(['u','v'])
+        u,v,topog = cubes.extract(['u','v','surface_altitude'])
         w, = cubes.extract('upward_air_velocity')
         clouds = cubes.extract('qc')
         qc = None
@@ -191,7 +215,8 @@ def weather_summary_model(model_version='waroona_run1',
             plot_weather_summary(ui, vi, wi, height, lat, lon, 
                                  extentname=extentname,
                                  Q = qci, FF=FF,
-                                 hwind_limits=hwind_limits,)
+                                 hwind_limits=hwind_limits,
+                                 topog=topog.data)
             
             plt.suptitle("%s weather "%model_version + dtime.strftime("%Y %b %d %H:%M (UTC)"))
             
@@ -504,7 +529,7 @@ def weather_series(model_run='waroona_run1',
 
 if __name__=='__main__':
     
-    CanPlotTiff=True
+    CanPlotTiff=False
     
     waroona_run3times = fio.model_outputs['waroona_run3']['filedates']
     waroona_day2zoom = [115.7,116.0, -33.18,-32.9]
@@ -520,14 +545,16 @@ if __name__=='__main__':
     
     ## Run weather summary
     # waroona day2
-    if False:
+    if True:
+        fdt = waroona_run3times[:2] 
         zoom_in = plotting._extents_['waroonaf'] # full outline for now 
+        
         weather_summary_model(
-            'waroona_run3',
+            'waroona_run1',
             zoom_in=zoom_in,
-            subdir="day2",
+            subdir='waroonaf',
             HSkip=None, 
-            fdtimes=waroona_run3times[24:],
+            fdtimes=fdt,
             hwind_limits=[0,30],
             )
     
