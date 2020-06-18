@@ -10,11 +10,13 @@ Created on Thu Sep 19 16:28:18 2019
 import matplotlib
 matplotlib.use('Agg',warn=False)
 import matplotlib.pyplot as plt
-from matplotlib import patheffects, colors
+from matplotlib import patheffects, colors, image
 import numpy as np
 # for legend creation:
 from matplotlib.lines import Line2D
 from datetime import datetime,timedelta
+
+
 
 import iris
 
@@ -30,6 +32,7 @@ _sn_ = 'fireplan'
 
 def fireplan(ff, fire_contour_map = 'autumn',
              show_cbar=True, cbar_XYWH= [0.65, 0.63, .2, .02],
+             
              **kwtiffargs):
 #             fig=None,subplot_row_col_n=None,
 #             draw_grid=False,gridlines=None):
@@ -112,7 +115,7 @@ def fireplan(ff, fire_contour_map = 'autumn',
                                 transform=crs_data)
         
         # label first, last, and every Nth hour
-        if (ii%4)==0 or (dt in [ftimes[hourinds][0],ftimes[hourinds][-1]]):
+        if (dt in [ftimes[hourinds][0],ftimes[hourinds][-1]]): # or (ii%4)==0
             clbls = plt.clabel(fire_line, [0], fmt=LT.strftime('%d-%H'), 
                                inline=True, colors='wheat')
             # padding so label is readable
@@ -263,7 +266,40 @@ def fireplan_comparison(model_runs=['waroona_old','waroona_run1','waroona_run2',
     ax.legend(legend, model_runs)
     plt.tight_layout()
     fio.save_fig('project', _sn_, figname, plt)
+
+def fireplan_vs_isochrones():
+    """
+    Show isochrones over waroona, look at flux over yarloop and compare to iso
+    4 panels: 
+        A: isochrones, 
+        B: FF contours (hourly coloured by localtime day)
+        C: flux at 3pm on day2? zoomed into yarloop a bit
+        D: flux at 8pm on day2? zoomed a bit
+    """
+    mr='waroona_run3'
+    plt.figure(figsize=[12,12])
+    ax1 = plt.subplot(2,2,1)
+    ## Top left is the isochrones picture
+    iso = image.imread('data/Waroona_Fire_Isochrones.png')
+    ax1.imshow(iso)
+    # Read fire output
+    # area affected by fire
+    extentnameA = 'waroonaf' 
+    extentA = plotting._extents_[extentnameA]
+    # area to zoom in on for yarloop
+    extentB = [115.7,155.95, -33.15,-32.95]
     
+    FFront, SHeat, = fio.read_fire(model_run=mr, dtimes=None, 
+                                   extent=extentA, 
+                                   firefront=True, 
+                                   sensibleheat=True,
+                                   day1=True, day2=True
+                                   )
+    lon, lat = FFront.coord('longitude').points, FFront.coord('latitude').points
+    
+    ## PLOTTING: first just show firefronts hourly contour
+    fig,ax,proj = fireplan(FFront, fig=fig, subplot_row_col_n=[2,2,2])
+    fio.save_fig(mr,_sn_,"fireplan_vs_isochrones.png",plt)
 
 if __name__=='__main__':
     ### Run the stuff
@@ -272,6 +308,8 @@ if __name__=='__main__':
     if False:
         fireplan_comparison()
     
+    if True:
+        fireplan_vs_isochrones()
     
     ## Just create a fireplan figure:
     if False:
@@ -301,7 +339,7 @@ if __name__=='__main__':
         fig,ax,proj = fireplan(ff, show_cbar=True, cbar_XYWH=[.18,.3,.2,.02])
         fio.save_fig(si_r1, _sn_, 'fireplan_hr.png', plt)
 
-    if True:
+    if False:
         mr = "waroona_run3"
         fireplan_summary(model_run=mr, day2=True, just_fireplan=True)
     
