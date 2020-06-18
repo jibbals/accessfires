@@ -319,7 +319,6 @@ def fireplan_vs_isochrones():
             )
     
         flux = SHeat[dti].data.data + 0.01 # get rid of zeros
-        print("DEBUG:", flux.shape, np.max(flux), dti)
         levels = np.sort(np.union1d(np.power(10,np.arange(2,5)),5*np.power(10,np.arange(2,5))))
         levels = np.logspace(2,5,30)
         cs = plt.contourf(lon, lat, flux,
@@ -330,21 +329,22 @@ def fireplan_vs_isochrones():
                       transform=ccrs.PlateCarree(),
                       #locator=ticker.LogLocator(),
                       )
-        plt.colorbar(
+        cbar=plt.colorbar(
             cs, 
             orientation='horizontal', 
             pad=0, 
             ticks=[1e2,1e3,1e4,1e5],
+            label='$10^x$ [W/$m^2$]',
             )
-        #cbar.ax.set_yticklabels(['1e2','1e3','1e4','1e5'])
+        cbar.ax.set_xticklabels(['2','3','4','5'])
         plt.title(
-            lt.strftime('Sensible heat flux(W/m2) on the %dth at %H%M (LT)'),
+            lt.strftime('Sensible heat flux on the %dth at %H%M (LT)'),
             fontsize=14,
             #,y=.74)
             )
         plt.xticks([],[])
         plt.yticks([],[])
-    plt.subplots_adjust(left=.01, right=.99, top=.96, bottom=.04,
+    plt.subplots_adjust(left=.03, right=.97, top=.96, bottom=.04,
             wspace=.03, hspace=.01)
 
     
