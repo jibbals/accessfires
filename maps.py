@@ -149,7 +149,8 @@ def show_nests(model_run='waroona_run1', annotate_res=True, title=''):
         res,nres = nest['resolution'][i], nest['nlats'][i]
         width=res*nres
         botleft = xy[0]-width/2.0, xy[1]-width/2.0
-        
+        print("NEST ",i)
+        print(botleft, xy[0]+width/2.0, xy[1]+width/2.0)
         ax.add_patch(patches.Rectangle(xy=botleft,
                                        width=width, 
                                        height=width,
