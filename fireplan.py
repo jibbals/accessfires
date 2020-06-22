@@ -10,7 +10,7 @@ Created on Thu Sep 19 16:28:18 2019
 import matplotlib
 matplotlib.use('Agg',warn=False)
 import matplotlib.pyplot as plt
-from matplotlib import patheffects, colors, image
+from matplotlib import patheffects, colors, image, ticker
 import numpy as np
 # for legend creation:
 from matplotlib.lines import Line2D
@@ -277,17 +277,19 @@ def fireplan_vs_isochrones():
         D: flux at 8pm on day2? zoomed a bit
     """
     mr='waroona_run3'
-    plt.figure(figsize=[12,12])
+    fig = plt.figure(figsize=[14,12])
     ax1 = plt.subplot(2,2,1)
     ## Top left is the isochrones picture
     iso = image.imread('data/Waroona_Fire_Isochrones.png')
     ax1.imshow(iso)
+    plt.xticks([],[])
+    plt.yticks([],[])
+
     # Read fire output
     # area affected by fire
-    extentnameA = 'waroonaf' 
-    extentA = plotting._extents_[extentnameA]
+    extentA = [115.6,116.21, -33.05,-32.75]
     # area to zoom in on for yarloop
-    extentB = [115.7,155.95, -33.15,-32.95]
+    extentB = [115.7,116.05, -33,-32.82]
     
     FFront, SHeat, = fio.read_fire(model_run=mr, dtimes=None, 
                                    extent=extentA, 
@@ -296,10 +298,59 @@ def fireplan_vs_isochrones():
                                    day1=True, day2=True
                                    )
     lon, lat = FFront.coord('longitude').points, FFront.coord('latitude').points
+    fdates=utils.dates_from_iris(FFront)
+
+    ## PANEL B: firefronts hourly contours
+    _,ax2,proj = fireplan(FFront, show_cbar=False, fig=fig, subplot_row_col_n=[2,2,2])
     
-    ## PLOTTING: first just show firefronts hourly contour
-    fig,ax,proj = fireplan(FFront, fig=fig, subplot_row_col_n=[2,2,2])
+    ## PANEL C: flux at 3PM local time over yarloop (day 2?)
+    dt1 = datetime(2016,1,7,7,30)
+    dt2 = datetime(2016,1,7,12,30)
+    for i,dt in enumerate([dt1,dt2]):
+        dti = utils.nearest_date_index(dt,fdates)
+        lt = dt + timedelta(hours=8)
+
+        _,ax3,_ = plotting.map_tiff_qgis(
+            "waroonaf.tiff", 
+            extent=extentB, 
+            fig=fig, 
+            subplot_row_col_n=[2,2,3+i],
+            locnames=['yarloop','waroona'],
+            )
+    
+        flux = SHeat[dti].data.data + 0.01 # get rid of zeros
+        levels = np.sort(np.union1d(np.power(10,np.arange(2,5)),5*np.power(10,np.arange(2,5))))
+        levels = np.logspace(2,5,30)
+        cs = plt.contourf(lon, lat, flux,
+                      levels, # color levels I think...
+                      norm=colors.LogNorm(),
+                      vmin=100,
+                      cmap='gnuplot2',
+                      transform=ccrs.PlateCarree(),
+                      #locator=ticker.LogLocator(),
+                      )
+        cbar=plt.colorbar(
+            cs, 
+            orientation='horizontal', 
+            pad=0, 
+            ticks=[1e2,1e3,1e4,1e5],
+            label='$10^x$ [W/$m^2$]',
+            )
+        cbar.ax.set_xticklabels(['2','3','4','5'])
+        plt.title(
+            lt.strftime('Sensible heat flux on the %dth at %H%M (LT)'),
+            fontsize=14,
+            #,y=.74)
+            )
+        plt.xticks([],[])
+        plt.yticks([],[])
+    plt.subplots_adjust(left=.03, right=.97, top=.96, bottom=.04,
+            wspace=.03, hspace=.01)
+
+    
+    
     fio.save_fig(mr,_sn_,"fireplan_vs_isochrones.png",plt)
+
 
 if __name__=='__main__':
     ### Run the stuff
