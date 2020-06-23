@@ -138,10 +138,12 @@ def f160(press,Temp,Tempd, latlon,
 def f160_hour(dtime=datetime(2016,1,6,7), 
               latlon=plotting._latlons_['pyrocb_waroona1'],
               latlon_stamp='pyrocb1',
-              model_version='waroona_run1'):
+              model_version='waroona_run1',
+              nearby=2):
     '''
     Look at F160 plots over time for a particular location
     INPUTS: hour of interest, latlon, and label to describe latlon (for plotting folder)
+        nearby: how many gridpoints around the desired latlon to plot (can be 0)
     '''
 
     # Use datetime and latlon to determine what data to read
@@ -177,26 +179,38 @@ def f160_hour(dtime=datetime(2016,1,6,7),
 
 if __name__ == '__main__':
     
+    waroona_upwind = []
+    waroona_0630_pcb = [-32.9,116.05] # latlon
+    waroona_0630_pcb_stamp = "32.90S, 116.05E"
+    if True:
+        # show waroona f160 at PCB
+        f160_hour(dtime=datetime(2016,1,6,6),
+                  latlon=waroona_0630_pcb,
+                  latlon_stamp=waroona_0630_pcb_stamp,
+                  model_version='waroona_run3', 
+                  nearby=1)
     
-    topleft = [-32.75, 115.8] # random point away from the fire influence
-    pyrocb1 = plotting._latlons_['pyrocb_waroona1']
-    upwind  = plotting._latlons_['fire_waroona_upwind'] # ~1 km upwind of fire
-    loc_and_stamp = ([pyrocb1,topleft,upwind],['pyrocb1','topleft','upwind'])
-    #loc_and_stamp = ([upwind],['upwind'])
-    #checktimes = [ datetime(2016,1,6,5) + timedelta(hours=x) for x in range(2) ]
-    #checktimes = [ datetime(2016,1,5,15) ]
-    old_times = fio.model_outputs['waroona_old']['filedates']
-    run_times = fio.model_outputs['waroona_run1']['filedates']
     
-    # 'waroona_run1','waroona_old'],[run_times,run_times,run_times,old_times]):
-    for mv, dtimes in zip(['waroona_run2','waroona_run2uc'],[run_times,run_times]):
-        for dtime in dtimes:
-            for latlon,latlon_stamp in zip(loc_and_stamp[0],loc_and_stamp[1]):
-                try:
-                    f160_hour(dtime, latlon=latlon,
-                              latlon_stamp=latlon_stamp,
-                              model_version=mv)
-                except OSError as ose:
-                    print("WARNING: probably no file for ",mv,dtime)
-                    print("       :", ose)
+    if False: # old stuff
+        topleft = [-32.75, 115.8] # random point away from the fire influence
+        pyrocb1 = plotting._latlons_['pyrocb_waroona1']
+        upwind  = plotting._latlons_['fire_waroona_upwind'] # ~1 km upwind of fire
+        loc_and_stamp = ([pyrocb1,topleft,upwind],['pyrocb1','topleft','upwind'])
+        #loc_and_stamp = ([upwind],['upwind'])
+        #checktimes = [ datetime(2016,1,6,5) + timedelta(hours=x) for x in range(2) ]
+        #checktimes = [ datetime(2016,1,5,15) ]
+        old_times = fio.model_outputs['waroona_old']['filedates']
+        run_times = fio.model_outputs['waroona_run1']['filedates']
+        
+        # 'waroona_run1','waroona_old'],[run_times,run_times,run_times,old_times]):
+        for mv, dtimes in zip(['waroona_run2','waroona_run2uc'],[run_times,run_times]):
+            for dtime in dtimes:
+                for latlon,latlon_stamp in zip(loc_and_stamp[0],loc_and_stamp[1]):
+                    try:
+                        f160_hour(dtime, latlon=latlon,
+                                  latlon_stamp=latlon_stamp,
+                                  model_version=mv)
+                    except OSError as ose:
+                        print("WARNING: probably no file for ",mv,dtime)
+                        print("       :", ose)
 

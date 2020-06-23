@@ -20,7 +20,7 @@ import matplotlib.ticker as tick
 import cartopy.crs as ccrs
 
 import numpy as np
-import pandas as pd
+#import pandas as pd
 from datetime import datetime,timedelta
 import iris # file reading and constraints etc
 import warnings
@@ -589,7 +589,8 @@ def moving_pyrocb(model_run='waroona_run3', dtimes = None,
             fio.save_fig(model_run,_sn_,ffdtimes[i],plt,subdir='moving')
         
     
-def pyrocb_model_run(model_run='waroona_run1', dtime=datetime(2016,1,5,15)):
+def pyrocb_model_run(model_run='waroona_run1', dtime=datetime(2016,1,5,15),
+                     localtime=True, ):
     """
     Try to show pyrocb using two figures:
         1: left to right transect showing winds and potential temp
@@ -654,7 +655,13 @@ def pyrocb_model_run(model_run='waroona_run1', dtime=datetime(2016,1,5,15)):
         ## second make the full pyrocb plot:
         
         # datetime timestamp for file,title
-        stitle = ffdtimes[i].strftime("Vertical motion %Y %b %d %H:%M (UTC)")
+        labeltime=ffdtimes[i]
+        labeltimezone = 'LT' if localtime else 'UTC'
+        if localtime:
+            offset=8 if 'waroona' in model_run else 10
+            labeltime = labeltime+timedelta(hours=offset)
+            
+        stitle = labeltime.strftime("Vertical motion %%Y %%b %%d %%H:%%M (%s)"%labeltimezone)
         wmeantitle='Mean(%3.0fm - %4.0fm)'%(h0,h1)
         
         pyrocb(w=wi, u=ui, qc=qci, z=zi, wmean=wmeani, topog=topogi,
@@ -664,6 +671,7 @@ def pyrocb_model_run(model_run='waroona_run1', dtime=datetime(2016,1,5,15)):
                extentname=extentname)
         # Save figure into animation folder with numeric identifier
         plt.suptitle(stitle)
+        plt.subplots_adjust(hspace=0.08)
         fio.save_fig(model_run, _sn_, ffdtimes[i], plt, dpi=200)
 
 if __name__ == '__main__':
@@ -676,10 +684,10 @@ if __name__ == '__main__':
         sample_showing_grid(model_run="sirivan_run2_hr", extentname='sirivans', HSkip=8)
 
     ## New zoomed, moving pyrocb plotting
-    if True:
+    if False:
         #mr = 'sirivan_run2_hr'
         #xlen=.4 # degrees of longitude for transect length
-        mr='waroona_run1'
+        mr='waroona_run3'
         xlen=0.1
         hours=[waroona_second_half[0]] # run half the hours
         moving_pyrocb(model_run=mr, 
@@ -692,11 +700,11 @@ if __name__ == '__main__':
             pyrocb_model_run('sirivan_run1', dtime=hour)
     
     ### These are the first pyrocb plots I made (3 transects, not moving)
-    if False:
-        model_runs = ['waroona_run3','waroona_run2','sirivan_run1']
+    if True:
+        model_runs = ['waroona_run3',]# 'waroona_run2','sirivan_run1']
         for mr in model_runs :
             dtimes = fio.model_outputs[mr]['filedates']
-            if False: # Maybe just do a few hours for testing
-                dtimes = dtimes[0:2]
+            if True: # Maybe just do a few hours for testing
+                dtimes = dtimes[14:18]
             for dtime in dtimes:
                 pyrocb_model_run(model_run=mr, dtime=dtime)
