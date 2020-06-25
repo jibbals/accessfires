@@ -262,19 +262,62 @@ def map_fire(ff,lats,lons, transform=True, **contourargs):
             fireline = plt.contour(lons,lats,fflatlon,np.array([0]),**contourargs)
     return fireline 
 
+def map_sensibleheat(sh, lat, lon,
+                     levels = np.logspace(2,5,30),
+                     colorbar=True,
+                     **contourfargs):
+    """
+    ARGUMENTS:
+        sh [lat,lon] : sensible heat flux
+        levels : color levels to be contourfed (optional)
+        other args for contourf can be added
+    RETURNS:
+        cs, cbar: contour return value, colorbar handle
+    """
+    flux = sh + 0.01 # get rid of zeros
+    # set defaults
+    if 'norm' not in contourfargs:
+        contourfargs['norm']=col.LogNorm()
+    if 'vmin' not in contourfargs:
+        contourfargs['vmin']=100
+    if 'cmap' not in contourfargs:
+        contourfargs['cmap']='gnuplot2'
+    if 'transform' not in contourfargs:
+        contourfargs['transform']=ccrs.PlateCarree()
+    
+    cs = plt.contourf(lon, lat, flux,
+                      levels, # color levels
+                      **contourfargs,
+                      )
+    cbar=None
+    if colorbar:
+        cbar=plt.colorbar(
+            cs, 
+            orientation='horizontal', 
+            pad=0, 
+            ticks=[1e2,1e3,1e4,1e5],
+            label='log$_10$ Heat Flux [W/$m^2$]',
+            )
+        cbar.ax.set_xticklabels(['2','3','4','5'])
+        
+    plt.xticks([],[])
+    plt.yticks([],[])
+    return cs, cbar
 
 def map_tiff_qgis(fname='sirivan.tiff', extent=None, show_grid=False,
                   locnames=None,
-                  fig=None, subplot_row_col_n=[1,1,1], subplot_axes=None):
+                  fig=None, subplot_row_col_n=[1,1,1], subplot_axes=None,
+                  EPSG=3857):
     """
     satellite image from ESRI, roads added from OSM using QGIS, saved as .tiff
     
     ARGUMENTS:
-        locname: "sirivan_map_linescan.tiff" or whatever in qgis folder
-        extent: [lon0, lon1, lat0, lat1]
+        fname: "sirivan_map_linescan.tiff" (Searches in data/QGIS/)
+        extent: [left,right,bot,top] (lats and lons)
             where is projection zoomed in to
         show_grid: {True|False}
             show lats and lons around map
+        locnames: named points to add to map (from utilities/plotting.py)
         fig: matplotlib pyplot figure (default=[1,1,1])
             can add map to an already created figure object
         subplot_row_col_n: [row,col,n] (optional)
@@ -297,7 +340,7 @@ def map_tiff_qgis(fname='sirivan.tiff', extent=None, show_grid=False,
     img = plt.imread(path_to_tiff)
     
     # projection defined in QGIS
-    projection = ccrs.epsg("3857")
+    projection = ccrs.epsg(str(EPSG))
     
     # geotransform for tiff coords
     # tells us the image bounding coordinates

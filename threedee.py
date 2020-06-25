@@ -17,7 +17,7 @@ import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
 import warnings
-from datetime import datetime
+from datetime import datetime, timedelta
 
 # 3d plotting
 # isosurface plotting available in plotly
@@ -93,21 +93,15 @@ def create_figure(gofigures,
     # place camera
     cx,cy,cz=camera_eye
     ax,ay,az=aspectratio
-    fig.update_layout(scene=dict(aspectratio=dict(x=ax,y=ay,z=az),
-                                 camera_eye=dict(x=cx,y=cy,z=cz),
-                                 xaxis = dict(title='lon'),
-                                 yaxis = dict(title='lat'),
-                                 zaxis = dict(title='alt'),
-                                 ),
-                      #margin=dict(#l=0,
-                      #            #r=0,
-                      #            t=0.5,
-                      #            b=0.2,
-                      #            ),
-                      )
-    
-    if len(layoutargs) > 0:
-        fig.update_layout(**layoutargs)
+    # default minimal axis labelling
+    if 'scene' not in layoutargs:
+        layoutargs['scene'] = dict(aspectratio=dict(x=ax,y=ay,z=az),
+                                   camera_eye=dict(x=cx,y=cy,z=cz),
+                                   xaxis = dict(nticks=2, title='',),
+                                   yaxis = dict(nticks=2, title='',),
+                                   zaxis = dict(nticks=3, title='',)
+                                   ,)
+    fig.update_layout(**layoutargs)
     
     if filename is None:
         pio.show(fig)
@@ -122,7 +116,8 @@ def cloud_system(model_run='waroona_run2', hour=20,
                 vert_motion_height = 2500,
                 top_height=8000, send_to_browser=False,
                 extent=None,
-                HSkip=5):
+                HSkip=5,
+                ltoffset=8):
     """
     Read an hour of model output, plot it in 3d using plotly
     saves output as .png
@@ -161,6 +156,8 @@ def cloud_system(model_run='waroona_run2', hour=20,
     # Get the rest of the desired data
     topog, = cubes.extract(['surface_altitude'])
     d_topog = topog.data.data.T # convert to lon,lat
+    # set one pixel to -150 to fix color scale
+    d_topog[1,1] = -150
     
     u,v,w = cubes.extract(['u','v','upward_air_velocity'])
     levh  = qc.coord('level_height').points
@@ -183,6 +180,7 @@ def cloud_system(model_run='waroona_run2', hour=20,
         x=X[:,:,0],
         y=Y[:,:,0],
         colorscale='earth', # was not reversed on local laptop
+        #cmin=-150, # make water blue, near zero green, hills brown
         reversescale=True,
         surfacecolor=d_topog,
         showscale=False, # remove colour bar,
@@ -226,7 +224,7 @@ def cloud_system(model_run='waroona_run2', hour=20,
             z=[0]*len(namedlocs),
             mode='markers',
             marker=dict(
-                size=6,
+                size=4,
                 color='black',           # array/list of desired values
                 #colorscale='Viridis',   # choose a colorscale
                 opacity=0.8
@@ -235,7 +233,6 @@ def cloud_system(model_run='waroona_run2', hour=20,
         surface_list.append(locations_scatter)
         
         ## atmospheric heat (theta)
-        # TODO: smaller markers, labelled by location name
         if np.sum(d_th > theta_min) > 0:
             verbose("adding heat surface")
             theta_surf = go.Isosurface(
@@ -308,14 +305,16 @@ def cloud_system(model_run='waroona_run2', hour=20,
         #
         
         ## title, lables
+        lt = cubetime + timedelta(hours=ltoffset)
         layoutargs = dict(
-            #title=cubetime.strftime('Clouds %Y%m%d%H%M(UTC)'),
-            title={"text":cubetime.strftime(model_run+' %Y%m%d%H%M(UTC)'),
+            title={"text":lt.strftime(model_run+' %d %H:%M (lt)'),
                    "yref": "paper",
                    "y" : 0.775,
                    "x" : 0.3,
                    "yanchor" : "bottom",
                    "xanchor" : "left",},
+            xaxis_title="",
+            yaxis_title="",
             font=dict(
                     family="Courier New, monospace",
                     size=18,
@@ -340,6 +339,8 @@ if __name__=='__main__':
     wider_waroona[0] -= .4 # move west edge west
     wider_waroona[1] += .2 # move east edge east
     wider_waroona[2] -= .1 # move south edge south
+    waroona_theta_min = 311
+    waroona_theta_max = 320
     # lon0,lon1,lat0,lat1
     sirivan_run1_PCB = [149.5,150.2,-32.15,-31.75] 
     # sirivan gets hot near the surface
@@ -353,21 +354,22 @@ if __name__=='__main__':
                       HSkip=None)
     
     
-    if False:
+    if True:
+        # Images for waroona
         for hour in [14]:
-            cloud_system(model_run='waroona_run3',
+            cloud_system(model_run='waroona_run1',
                          hour = hour,
                          extent = wider_waroona,
-                         HSkip = 4,
+                         HSkip = 5,
                          top_height = 13500,
                          #theta_height=1250,
                          #theta_min=sirivan_theta_min,
                          #theta_max=sirivan_theta_max,
                          send_to_browser=True,)
     
-    if True:
-        # Save a bunch of images
-        for hour in [10]:#range(15,24):
+    if False:
+        # Images for sirivan
+        for hour in [16]:#range(15,24):
             
             #theta_min=311
             #theta_max=320
@@ -381,3 +383,4 @@ if __name__=='__main__':
                         theta_min=sirivan_theta_min,
                         theta_max=sirivan_theta_max,
                         send_to_browser=True,)
+            

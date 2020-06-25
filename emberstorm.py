@@ -179,7 +179,40 @@ def emberstorm(theta, u, v, w, z, topog,
                         zorder=10)
     
     return fig, axes
+
+def topdown_emberstorm(fig=None, subplot_row_col_n=None, 
+                       extent=[115.71, 116.1, -33.05,-32.78],
+                       lats=None,lons=None, ff=None, sh=None, u10=None, v10=None):
+    """
+    Top down view of Waroona/Yarloop, adding fire front and heat flux and 10m winds
+    ARGUMENTS:
+        lats/lons are 1D arrays, required if adding other stuff
+        ff [lats,lons] : firefront array
+        sh [lats,lons] : sensible heat flux
+        u10 [lats,lons] : 10m altitude longitudinal winds
+        v10 [lats,lons] : 10m altitude latitudinal winds
+    RETURNS:
+        fig, ax, proj : proj is map projection used by tiff
+    """
+    # first create map from tiff file
     
+    fig, ax, proj = plotting.map_tiff_qgis(
+        fname="waroonaz_osm.tiff", 
+        extent=extent,
+        fig=fig,
+        subplot_row_col_n=subplot_row_col_n,
+        #EPSG=4326,
+        )
+    
+    if ff is not None:
+        # add firefront
+        cs_ff = plotting.map_fire(ff,lats,lons,transform=True)
+    if sh is not None:
+        # add hot spots for heat flux
+        cs_sh, cb_sh = plotting.map_sensibleheat(sh,lats,lons)
+    
+    return fig, ax, proj
+
 def make_plots_emberstorm(model_run='waroona_run1', hours=None, wmap_height=300):
     """
     run emberstorm plotting method on model output read by my iris fio scripts
@@ -242,11 +275,32 @@ def make_plots_emberstorm(model_run='waroona_run1', hours=None, wmap_height=300)
 
 if __name__ == '__main__':
     plotting.init_plots()
-    mr = 'waroona_run3'
+    mr = 'waroona_run1'
+    
     
     hours=fio.model_outputs[mr]['filedates']
     testhours = [datetime(2016,1,6,13)]
     interesting_hours=[datetime(2016,1,6,x) for x in range(8,15)]
 
-
-    make_plots_emberstorm(mr, hours=testhours)
+    if False:
+        # This makes the combined 3 row plot with top down winds and 
+        # transects of theta and wind
+        make_plots_emberstorm(mr, hours=testhours)
+    
+    if True:
+        # newer plots showing 1: fire + town + winds (based on top panel in make_plots_emberstorm)
+        extent=[115.71, 116.1, -33.05,-32.78]
+        # read fire
+        ff,sh = fio.read_fire(model_run=mr,
+                              dtimes=testhours, 
+                              extent=extent,
+                              sensibleheat=True)
+        FF = ff[0].data.data
+        SH = sh[0].data.data
+        lats = ff.coord('latitude').points
+        lons = ff.coord('longitude').points
+        
+        fig,ax,proj = topdown_emberstorm(extent=extent,
+                                         lats=lats,lons=lons,
+                                         ff=FF, sh=SH)
+        fio.save_fig('test',_sn_,'emberstorm_topdown.png',plt)

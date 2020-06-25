@@ -318,25 +318,9 @@ def fireplan_vs_isochrones():
             locnames=['yarloop','waroona'],
             )
     
-        flux = SHeat[dti].data.data + 0.01 # get rid of zeros
-        levels = np.sort(np.union1d(np.power(10,np.arange(2,5)),5*np.power(10,np.arange(2,5))))
-        levels = np.logspace(2,5,30)
-        cs = plt.contourf(lon, lat, flux,
-                      levels, # color levels I think...
-                      norm=colors.LogNorm(),
-                      vmin=100,
-                      cmap='gnuplot2',
-                      transform=ccrs.PlateCarree(),
-                      #locator=ticker.LogLocator(),
-                      )
-        cbar=plt.colorbar(
-            cs, 
-            orientation='horizontal', 
-            pad=0, 
-            ticks=[1e2,1e3,1e4,1e5],
-            label='$10^x$ [W/$m^2$]',
-            )
-        cbar.ax.set_xticklabels(['2','3','4','5'])
+        cs,cbar = plotting.map_sensibleheat(SHeat[dti].data.data,
+                                            lat,lon,
+                                            colorbar=True)
         plt.title(
             lt.strftime('Sensible heat flux on the %dth at %H%M (LT)'),
             fontsize=14,
