@@ -97,8 +97,8 @@ def create_figure(gofigures,
     if 'scene' not in layoutargs:
         layoutargs['scene'] = dict(aspectratio=dict(x=ax,y=ay,z=az),
                                    camera_eye=dict(x=cx,y=cy,z=cz),
-                                   xaxis = dict(nticks=2, title='',),
-                                   yaxis = dict(nticks=2, title='',),
+                                   xaxis = dict(nticks=3, title='',),
+                                   yaxis = dict(nticks=3, title='',),
                                    zaxis = dict(nticks=3, title='',)
                                    ,)
     fig.update_layout(**layoutargs)
@@ -251,8 +251,8 @@ def cloud_system(model_run='waroona_run2', hour=20,
             
         
         ## volume plot showing vertical motion 
-        wmax = 6
-        wmin = 2.5
+        wmax = 7
+        wmin = 3
         vm_ind = np.sum(levh<vert_motion_height)
         up_volume = go.Volume(
             x=X[:,:,:vm_ind].flatten(), 
@@ -356,11 +356,11 @@ if __name__=='__main__':
     
     if True:
         # Images for waroona
-        for hour in [14]:
-            cloud_system(model_run='waroona_run1',
+        for hour in [15]:
+            cloud_system(model_run='waroona_run3',
                          hour = hour,
                          extent = wider_waroona,
-                         HSkip = 5,
+                         HSkip = 2,
                          top_height = 13500,
                          #theta_height=1250,
                          #theta_min=sirivan_theta_min,

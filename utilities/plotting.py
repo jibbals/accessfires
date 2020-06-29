@@ -297,6 +297,7 @@ def map_sensibleheat(sh, lat, lon,
             pad=0, 
             ticks=[1e2,1e3,1e4,1e5],
             label='log$_{10}$ Heat Flux [Wm$^{-2}$]',
+            aspect=40,
             )
         cbar.ax.set_xticklabels(['2','3','4','5'])
         

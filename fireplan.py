@@ -115,11 +115,11 @@ def fireplan(ff, fire_contour_map = 'autumn',
                                 transform=crs_data)
         
         # label first, last, and every Nth hour
-        if (dt in [ftimes[hourinds][0],ftimes[hourinds][-1]]): # or (ii%4)==0
-            clbls = plt.clabel(fire_line, [0], fmt=LT.strftime('%d-%H'), 
-                               inline=True, colors='wheat')
-            # padding so label is readable
-            plt.setp(clbls, path_effects=[patheffects.withStroke(linewidth=3, foreground="k")])
+        #if (dt in [ftimes[hourinds][0],ftimes[hourinds][-1]]): # or (ii%4)==0
+        #    clbls = plt.clabel(fire_line, [0], fmt=LT.strftime('%d-%H'), 
+        #                       inline=True, colors='wheat')
+        #    # padding so label is readable
+        #    plt.setp(clbls, path_effects=[patheffects.withStroke(linewidth=3, foreground="k")])
     
     # final outline contour if last available time is not on the hour
     if not hourinds[-1]:
@@ -287,7 +287,7 @@ def fireplan_vs_isochrones():
 
     # Read fire output
     # area affected by fire
-    extentA = [115.6,116.21, -33.05,-32.75]
+    extentA = [115.6,116.21, -33.05,-32.8]
     # area to zoom in on for yarloop
     extentB = [115.7,116.05, -33,-32.82]
     
@@ -320,9 +320,10 @@ def fireplan_vs_isochrones():
     
         cs,cbar = plotting.map_sensibleheat(SHeat[dti].data.data,
                                             lat,lon,
-                                            colorbar=True)
+                                            colorbar=True,
+                                            alpha=0.8)
         plt.title(
-            lt.strftime('Sensible heat flux on the %dth at %H%M (LT)'),
+            lt.strftime('Sensible heat flux, %d %H:%M (LT)'),
             fontsize=14,
             #,y=.74)
             )
@@ -330,8 +331,6 @@ def fireplan_vs_isochrones():
         plt.yticks([],[])
     plt.subplots_adjust(left=.03, right=.97, top=.96, bottom=.04,
             wspace=.03, hspace=.01)
-
-    
     
     fio.save_fig(mr,_sn_,"fireplan_vs_isochrones.png",plt)
 
