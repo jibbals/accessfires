@@ -7,7 +7,7 @@ Created on Thu Oct  3 10:09:53 2019
 """
 
 import matplotlib
-matplotlib.use('Agg',warn=False)
+#matplotlib.use('Agg',warn=False)
 
 # plotting stuff
 import matplotlib.pyplot as plt
@@ -210,7 +210,6 @@ def topdown_emberstorm(fig=None, subplot_row_col_n=None,
         )
     xlims = ax.get_xlim()
     ylims = ax.get_ylim()
-    print(xlims)
     
     if ff is not None:
         # add firefront
@@ -220,7 +219,7 @@ def topdown_emberstorm(fig=None, subplot_row_col_n=None,
         cs_sh, cb_sh = plotting.map_sensibleheat(sh,lats,lons, alpha=0.6)
     if u10 is not None:
         # winds, assume v10 is also not None        
-        ax.streamplot(lons,lats,u10,u10, 
+        ax.streamplot(lons,lats,u10,v10, 
                        color='k', transform=ccrs.PlateCarree(),
                        density=(0.5, 0.4))
         # set limits back to latlon limits
@@ -298,7 +297,7 @@ def make_plots_emberstorm(model_run='waroona_run1', hours=None, wmap_height=300)
 
 if __name__ == '__main__':
     plotting.init_plots()
-    mr = 'waroona_run1'
+    mr = 'waroona_run3'
     
     
     hours=fio.model_outputs[mr]['filedates']
@@ -313,18 +312,26 @@ if __name__ == '__main__':
     if True:
         # newer plots showing 1: fire + town + winds (based on top panel in make_plots_emberstorm)
         extent=[115.71, 116.1, -33.05,-32.78]
+        
         # read fire
         ff,sh,u10,v10 = fio.read_fire(model_run=mr,
                                       dtimes=testhours, 
                                       extent=extent,
                                       sensibleheat=True,
                                       wind=True)
+        lats = ff.coord('latitude').points
+        lons = ff.coord('longitude').points
         FF = ff[0].data.data
         SH = sh[0].data.data
         u10d = u10[0].data.data
         v10d = v10[0].data.data
-        lats = ff.coord('latitude').points
-        lons = ff.coord('longitude').points
+        print(u10.shape,u10d.shape)
+        print(np.min(u10d), np.max(u10d))
+        print(np.min(v10d), np.max(v10d))
+        #plt.streamplot(lons,lats,u10d,v10d)
+        
+        
+        
         
         fig,ax,proj = topdown_emberstorm(extent=extent,
                                          lats=lats,lons=lons,
