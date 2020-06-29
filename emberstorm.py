@@ -15,6 +15,7 @@ import numpy as np
 import warnings
 from datetime import datetime
 from scipy import interpolate
+import cartopy.crs as ccrs
 
 # local modules
 from utilities import plotting, utils, fio
@@ -182,7 +183,9 @@ def emberstorm(theta, u, v, w, z, topog,
 
 def topdown_emberstorm(fig=None, subplot_row_col_n=None, 
                        extent=[115.71, 116.1, -33.05,-32.78],
-                       lats=None,lons=None, ff=None, sh=None, u10=None, v10=None):
+                       lats=None,lons=None, ff=None, sh=None, 
+                       u10=None, v10=None,
+                       topog=None, topog_contours=[50]):
     """
     Top down view of Waroona/Yarloop, adding fire front and heat flux and 10m winds
     ARGUMENTS:
@@ -191,6 +194,8 @@ def topdown_emberstorm(fig=None, subplot_row_col_n=None,
         sh [lats,lons] : sensible heat flux
         u10 [lats,lons] : 10m altitude longitudinal winds
         v10 [lats,lons] : 10m altitude latitudinal winds
+        topog [lats,lons] : surface altitude
+        topog_contours : list of values to contour topography at
     RETURNS:
         fig, ax, proj : proj is map projection used by tiff
     """
@@ -203,13 +208,31 @@ def topdown_emberstorm(fig=None, subplot_row_col_n=None,
         subplot_row_col_n=subplot_row_col_n,
         #EPSG=4326,
         )
+    xlims = ax.get_xlim()
+    ylims = ax.get_ylim()
+    print(xlims)
     
     if ff is not None:
         # add firefront
         cs_ff = plotting.map_fire(ff,lats,lons,transform=True)
     if sh is not None:
         # add hot spots for heat flux
-        cs_sh, cb_sh = plotting.map_sensibleheat(sh,lats,lons)
+        cs_sh, cb_sh = plotting.map_sensibleheat(sh,lats,lons, alpha=0.6)
+    if u10 is not None:
+        # winds, assume v10 is also not None        
+        ax.streamplot(lons,lats,u10,u10, 
+                       color='k', transform=ccrs.PlateCarree(),
+                       density=(0.5, 0.4))
+        # set limits back to latlon limits
+        
+        ax.set_ylim(ylims[0],ylims[1])#, transform=ccrs.PlateCarree())  # outliers only
+        ax.set_xlim(xlims[0],xlims[1])#, transform=ccrs.PlateCarree())
+    
+    if topog is not None:
+        ax.contour(lons,lats,topog,topog_contours,
+                    colors='k', alpha=0.8, linewidths=1,
+                    transform=ccrs.PlateCarree(),
+                    )
     
     return fig, ax, proj
 
@@ -291,16 +314,20 @@ if __name__ == '__main__':
         # newer plots showing 1: fire + town + winds (based on top panel in make_plots_emberstorm)
         extent=[115.71, 116.1, -33.05,-32.78]
         # read fire
-        ff,sh = fio.read_fire(model_run=mr,
-                              dtimes=testhours, 
-                              extent=extent,
-                              sensibleheat=True)
+        ff,sh,u10,v10 = fio.read_fire(model_run=mr,
+                                      dtimes=testhours, 
+                                      extent=extent,
+                                      sensibleheat=True,
+                                      wind=True)
         FF = ff[0].data.data
         SH = sh[0].data.data
+        u10d = u10[0].data.data
+        v10d = v10[0].data.data
         lats = ff.coord('latitude').points
         lons = ff.coord('longitude').points
         
         fig,ax,proj = topdown_emberstorm(extent=extent,
                                          lats=lats,lons=lons,
-                                         ff=FF, sh=SH)
+                                         ff=FF, sh=SH, 
+                                         u10=u10d, v10=v10d)
         fio.save_fig('test',_sn_,'emberstorm_topdown.png',plt)

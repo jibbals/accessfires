@@ -218,7 +218,9 @@ def weather_summary_model(model_version='waroona_run1',
                                  hwind_limits=hwind_limits,
                                  topog=topog.data)
             
-            plt.suptitle("%s weather "%model_version + dtime.strftime("%Y %b %d %H:%M (UTC)"))
+            offsethours=8 if np.min(lon)<120 else 10
+            ltime=dtime+timedelta(hours=offsethours)
+            plt.suptitle("%s weather "%model_version + ltime.strftime("%Y %b %d %H:%M (LT)"))
             
             if (zoom_in is not None) and (subdir is None): 
                 subdir = 'zoomed'
