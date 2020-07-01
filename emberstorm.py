@@ -13,7 +13,7 @@ import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
 import warnings
-from datetime import datetime
+from datetime import datetime,timedelta
 from scipy import interpolate
 import cartopy.crs as ccrs
 
@@ -35,6 +35,42 @@ _transects_ = [ [[y,x0],[y,x1]] for y in y0+yspread ]
 ## METHODS
 ###
 
+def add_vertical_contours(w,lat,lon,
+                          wmap_height=300, wmap_levels=[1,3],
+                          annotate=True, xy0=[.01,-.05]):
+    '''
+    ARGS:
+        w [lat,lon] : map of vertical motion
+        lat,lon : degrees
+        wmap_height : w map altitude
+        annotate {True | False} : add annotation?
+        xy0: annotate text added at xy0 and xy0 + [0,-.06]
+    '''
+    
+    with warnings.catch_warnings():
+        # ignore warning when there are no contours to plot:
+        warnings.simplefilter('ignore')
+        # downward motion in blueish
+        plt.contour(lon, lat, -1*w, levels=wmap_levels, 
+                    linestyles=['dashed','solid'],
+                    colors=('aquamarine',))
+        # upward motion in pink
+        plt.contour(lon, lat, w, levels=wmap_levels, 
+                    linestyles=['dashed','solid'],
+                    colors=('pink',))
+        
+    plt.annotate(
+        'vertical motion at %dm altitude'%wmap_height, 
+        xy=xy0, 
+        xycoords='axes fraction', 
+        fontsize=8
+        )
+    plt.annotate(
+        'dashed is %.1fm/s, solid is %.1fm/s'%(wmap_levels[0],wmap_levels[1]), 
+        xy=[xy0[0],xy0[1]-.06], 
+        xycoords='axes fraction', 
+        fontsize=8
+        )
 
 def emberstorm(theta, u, v, w, z, topog,
                lat, lon,
@@ -73,15 +109,15 @@ def emberstorm(theta, u, v, w, z, topog,
     # Add fire front contour
     ff_lead_frac=None
     if ff is not None:
+        
         plotting.map_fire(ff,lat,lon, transform=False)
         # west most burnt bit is fire front lead
         # grab first index from left to right along burnt longitudes
         if np.sum(ff<=0) > 0:
             #print("debug:", ff.shape, len(lat), len(lon), np.sum(ff<=0,axis=0).shape)
-            ff_lead = np.where(np.sum(ff<=0, axis=1)>0)[0][0]
-            print("debug: fire front most western point is ", lon[ff_lead])
-            ff_lead_frac=(start[1]-lon[ff_lead])/(start[1] - end[1])
-            print("debug: %.2f%% of the way along the transect"%ff_lead_frac)
+            ff_lead = np.where(np.sum(ff<=0, axis=0)>0)[0][0]
+            print("debug: fire front most western point is %.2f (=lon[%d])"%(lon[ff_lead],ff_lead))
+            print("debug: transect goes from %.2f to %.2f"%(start[1],end[1]))
             
     
     # start to end x=[lon0,lon1], y=[lat0, lat1]
@@ -107,25 +143,11 @@ def emberstorm(theta, u, v, w, z, topog,
                    density=(.8,.5),
                    )#alpha=0.7)
     
-    
     # Finally add some faint pink or green hatching based on vertical wind motion
     if wmap is not None:
-        with warnings.catch_warnings():
-            # ignore warning when there are no contours to plot:
-            warnings.simplefilter('ignore')
-            plt.contour(lon, lat, -1*wmap, levels=[1,3], 
-                        linestyles=['dashed','solid'],
-                        colors=('aquamarine',))
-            plt.contour(lon, lat, wmap, levels=[1,3], 
-                        linestyles=['dashed','solid'],
-                        colors=('pink',))
-            #plt.contour(lon,lat,wmap, levels=[-2.1,2.1],
-            #            alpha=0.5,
-            #            colors=['aquamarine','pink'])
-            axes[0].annotate('vertical motion at %dm altitude'%wmap_height, 
-                xy=[0.01,-.05], xycoords='axes fraction', fontsize=8)
-            axes[0].annotate('dashed is 1m/s, solid is 3m/s', 
-                xy=[0.01,-.11], xycoords='axes fraction', fontsize=8)
+        add_vertical_contours(wmap,lat,lon,
+                              wmap_height=wmap_height,
+                              wmap_levels=[1,3],)
     
     # cut down to desired extent
     plt.ylim(extent[2:]); plt.xlim(extent[0:2])
@@ -163,6 +185,8 @@ def emberstorm(theta, u, v, w, z, topog,
     wslice,_,_ = utils.transect(w,lat,lon,start,end,nx=npoints)
     
     ## Streamplot of east-west and vertical winds
+    print("DEBUG: slicex and slicez",slicex[0,:5],slicez[:15,0])
+    
     plotting.streamplot_regridded(slicex,slicez,uslice,wslice,
                                   density=(.8,.5))
     
@@ -182,9 +206,10 @@ def emberstorm(theta, u, v, w, z, topog,
     return fig, axes
 
 def topdown_emberstorm(fig=None, subplot_row_col_n=None, 
-                       extent=[115.71, 116.1, -33.05,-32.78],
+                       extent=[115.68, 116.15, -33.025,-32.79],
                        lats=None,lons=None, ff=None, sh=None, 
-                       u10=None, v10=None,
+                       u10=None, v10=None, 
+                       wmap=None, wmap_height=None,
                        topog=None, topog_contours=[50]):
     """
     Top down view of Waroona/Yarloop, adding fire front and heat flux and 10m winds
@@ -206,7 +231,7 @@ def topdown_emberstorm(fig=None, subplot_row_col_n=None,
         extent=extent,
         fig=fig,
         subplot_row_col_n=subplot_row_col_n,
-        #EPSG=4326,
+        EPSG=4326, # SHOULD MATCH PLATECARREE
         )
     xlims = ax.get_xlim()
     ylims = ax.get_ylim()
@@ -219,13 +244,20 @@ def topdown_emberstorm(fig=None, subplot_row_col_n=None,
         cs_sh, cb_sh = plotting.map_sensibleheat(sh,lats,lons, alpha=0.6)
     if u10 is not None:
         # winds, assume v10 is also not None        
-        ax.streamplot(lons,lats,u10,v10, 
-                       color='k', transform=ccrs.PlateCarree(),
-                       density=(0.5, 0.4))
-        # set limits back to latlon limits
+        plt.streamplot(lons,lats,u10,v10, 
+                       color='k', #transform=ccrs.PlateCarree(),
+                       density=(0.6, 0.5))
         
-        ax.set_ylim(ylims[0],ylims[1])#, transform=ccrs.PlateCarree())  # outliers only
-        ax.set_xlim(xlims[0],xlims[1])#, transform=ccrs.PlateCarree())
+        s10 = np.hypot(u10,v10)
+        
+        plotting.annotate_max_winds(s10, xytext=(0,1.02), s="10m wind max = %5.1f m/s")
+    
+    if wmap is not None:
+        add_vertical_contours(wmap,lats,lons,
+                              wmap_height=wmap_height,
+                              wmap_levels=[1,3],
+                              annotate=True,
+                              xy0=[0.8,1.1])
     
     if topog is not None:
         ax.contour(lons,lats,topog,topog_contours,
@@ -233,13 +265,21 @@ def topdown_emberstorm(fig=None, subplot_row_col_n=None,
                     transform=ccrs.PlateCarree(),
                     )
     
+    # set limits back to latlon limits
+    ax.set_ylim(ylims[0],ylims[1])#, transform=ccrs.PlateCarree())  # outliers only
+    ax.set_xlim(xlims[0],xlims[1])#, transform=ccrs.PlateCarree())
+    
     return fig, ax, proj
 
-def make_plots_emberstorm(model_run='waroona_run1', hours=None, wmap_height=300):
+def make_plots_emberstorm(model_run='waroona_run3', 
+                          hours=None, 
+                          extent=None,
+                          wmap_height=300):
     """
     run emberstorm plotting method on model output read by my iris fio scripts
     """
-    extent = plotting._extents_['waroona']
+    if extent is None:
+        extent = plotting._extents_['waroona']
     # read topog
     topog=fio.read_topog(model_run,extent=extent)
     lat = topog.coord('latitude').points
@@ -263,10 +303,11 @@ def make_plots_emberstorm(model_run='waroona_run1', hours=None, wmap_height=300)
         
         # pull out bits we want
         uvw = cubelist.extract(['u','v','upward_air_velocity'])
+        
         z, = cubelist.extract(['z_th']) # z has no time dim
         # for each time slice pull out potential temp, winds
         for i,dtime in enumerate(dtimes):
-            for transecti, transect in enumerate(_transects_):
+            for transecti, transect in enumerate(_transects_[:5]):
                 # other transects that will be plotted
                 shadows = [tran for trani, tran in enumerate(_transects_) if trani!=transecti]
                 # current time
@@ -281,6 +322,7 @@ def make_plots_emberstorm(model_run='waroona_run1', hours=None, wmap_height=300)
                 # extra vert map at ~ 300m altitude
                 levh  = w.coord('level_height').points
                 levhind = np.sum(levh<wmap_height)
+                
                 emberstorm(theta[i].data, u.data, v.data, w.data, z.data,
                            topog.data, lat, lon, ff=ffi, 
                            wmap=w[levhind].data, wmap_height=wmap_height,
@@ -298,43 +340,67 @@ def make_plots_emberstorm(model_run='waroona_run1', hours=None, wmap_height=300)
 if __name__ == '__main__':
     plotting.init_plots()
     mr = 'waroona_run3'
-    
+    extent1 = [115.8, 116.1, -32.92,-32.82]
+    transect1 = _transects_[0]
     
     hours=fio.model_outputs[mr]['filedates']
     testhours = [datetime(2016,1,6,13)]
-    interesting_hours=[datetime(2016,1,6,x) for x in range(8,15)]
+    interesting_hours=[datetime(2016,1,6,x) for x in range(7,15)]
 
     if False:
         # This makes the combined 3 row plot with top down winds and 
         # transects of theta and wind
-        make_plots_emberstorm(mr, hours=testhours)
+        make_plots_emberstorm(mr, hours=interesting_hours,
+                              extent=extent1)
     
     if True:
         # newer plots showing 1: fire + town + winds (based on top panel in make_plots_emberstorm)
-        extent=[115.71, 116.1, -33.05,-32.78]
+        # First of two emberstorms
         
-        # read fire
-        ff,sh,u10,v10 = fio.read_fire(model_run=mr,
-                                      dtimes=testhours, 
-                                      extent=extent,
-                                      sensibleheat=True,
-                                      wind=True)
-        lats = ff.coord('latitude').points
-        lons = ff.coord('longitude').points
-        FF = ff[0].data.data
-        SH = sh[0].data.data
-        u10d = u10[0].data.data
-        v10d = v10[0].data.data
-        print(u10.shape,u10d.shape)
-        print(np.min(u10d), np.max(u10d))
-        print(np.min(v10d), np.max(v10d))
-        #plt.streamplot(lons,lats,u10d,v10d)
+        wmap_height = 300
         
-        
-        
-        
-        fig,ax,proj = topdown_emberstorm(extent=extent,
-                                         lats=lats,lons=lons,
-                                         ff=FF, sh=SH, 
-                                         u10=u10d, v10=v10d)
-        fio.save_fig('test',_sn_,'emberstorm_topdown.png',plt)
+        for extent,transect in zip([extent1,],[transect1,]):
+                           
+            dtimes=interesting_hours
+            
+            cubes = fio.read_model_run(mr, fdtime=dtimes, extent=extent, 
+                                       add_topog=False, add_winds=True)
+            w,=cubes.extract("upward_air_velocity")
+            ctimes = utils.dates_from_iris(w)
+            
+            # extra vert map at ~ 300m altitude
+            levh  = w.coord('level_height').points
+            levhind = np.sum(levh<wmap_height)
+            wmap = w[:,levhind]
+            # read fire
+            ff,sh,u10,v10 = fio.read_fire(model_run=mr,
+                                          dtimes=ctimes, 
+                                          extent=extent,
+                                          sensibleheat=True,
+                                          wind=True)
+            
+            lats = ff.coord('latitude').points
+            lons = ff.coord('longitude').points
+            for dti, dt in enumerate(ctimes):
+                ffd = ff[dti].data.data
+                shd = sh[dti].data.data
+                u10d = u10[dti].data.data
+                v10d = v10[dti].data.data
+                wmapd = wmap[dti].data.data
+                
+                fig,ax,proj = topdown_emberstorm(extent=extent,
+                                                 lats=lats,lons=lons,
+                                                 ff=ffd, sh=shd, 
+                                                 u10=u10d, v10=v10d,
+                                                 wmap=wmapd,
+                                                 wmap_height=wmap_height)
+                
+                ## Add dashed line to show where transect will be
+                start,end =transect
+                plt.plot([start[1],end[1]],[start[0],end[0], ], '--k', 
+                         linewidth=2, transform=ccrs.PlateCarree())
+                
+                ## Plot title
+                LT = dt + timedelta(hours=8)
+                plt.title(LT.strftime('%b %d, %H00(local)'))
+                fio.save_fig(mr,_sn_,dt,subdir='topdown',plt=plt)

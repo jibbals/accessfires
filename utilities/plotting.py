@@ -17,6 +17,7 @@ import matplotlib.pyplot as plt
 import matplotlib.ticker as tick
 from matplotlib.projections import register_projection
 from matplotlib.collections import LineCollection
+from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 # interpolation
 from scipy.interpolate import interp2d
@@ -129,9 +130,57 @@ def init_plots():
     matplotlib.rcParams['image.cmap'] = 'plasma'        # Colormap default
     matplotlib.rcParams['axes.formatter.useoffset'] = False # another one I've forgotten the purpose of
     # rcParams["figure.dpi"] 
-    #matplotlib.rcParams["figure.dpi"] = 400           # DEFAULT DPI for plot output
-    # THIS MESSES UP THE PLOTTING
+    #matplotlib.rcParams["figure.dpi"] = 200           # DEFAULT DPI for plot output
 
+def annotate_max_winds(winds, upto=None, **annotateargs):
+    """
+    annotate max wind speed within 2d winds field
+    ARGUMENTS:
+        winds [y, x] = wind speed in m/s
+        y, x = data axes,
+        upto: if set, only look at y<=upto
+        extra arguments for plt.annotate
+            defaults: textcoords='axes fraction',
+                      xytext=(0,-0.2), # note xy will be pointing at max windspeed location
+                      fontsize=15,
+                      s="windspeed max = %5.1f m/s", # Can change text, but needs a %f somewhere
+                      arrowprops=dict(...) # set this to None for no arrow
+                      
+    """
+    # Annotate max wind speed
+    # only care about lower troposphere
+    # 60 levels is about 2800m, 80 levels is about 4700m, 70 levels : 3700m
+    if upto is None:
+        upto=np.shape(winds)[0]
+    # find max windspeed, put into same shape as winds [y,x]
+    mloc = np.unravel_index(np.argmax(winds[:upto,:],axis=None),winds[:upto,:].shape)
+    
+    # Set default annotate args
+    if 'textcoords' not in annotateargs:
+        annotateargs['textcoords']='axes fraction'
+    if 'fontsize' not in annotateargs:
+        annotateargs['fontsize']=12
+    if 'xytext' not in annotateargs:
+        annotateargs['xytext']=(0, -0.2)
+    if 'arrowprops' not in annotateargs:
+        annotateargs['arrowprops'] = dict(
+            arrowstyle='-|>',
+            alpha=0.8,
+            linestyle=(0,(1,5)),
+            color='red',)
+    
+    # use indices to get how far the point is from top-right
+    # 1-topright gives fractional distance from botleft (for xy)
+    annotateargs['xycoords'] = 'axes fraction'
+    ymax,xmax = np.shape(winds)
+    annotateargs['xy'] = [1-(ymax - mloc[0])/ymax, 1-(xmax - mloc[1])/xmax]
+    
+    if 's' not in annotateargs:
+        annotateargs['s'] = "wind max = %5.1f m/s"%(winds[:upto,:][mloc])
+    else:
+        annotateargs['s'] = annotateargs['s']%(winds[:upto,:][mloc])
+    
+    plt.annotate(**annotateargs)
 
 def map_add_locations_extent(extentname, hide_text=False):
     '''
@@ -291,8 +340,12 @@ def map_sensibleheat(sh, lat, lon,
                       )
     cbar=None
     if colorbar:
+        #from mpl_toolkits.axes_grid1 import make_axes_locatable
+        #divider = make_axes_locatable(plt.gca())
+        #cax = divider.append_axes("bottom", size="4%", pad=0.01)
         cbar=plt.colorbar(
-            cs, 
+            cs,
+            #cax=cax,
             orientation='horizontal', 
             pad=0, 
             ticks=[1e2,1e3,1e4,1e5],
@@ -341,7 +394,8 @@ def map_tiff_qgis(fname='sirivan.tiff', extent=None, show_grid=False,
     img = plt.imread(path_to_tiff)
     
     # projection defined in QGIS
-    projection = ccrs.epsg(str(EPSG))
+    # 4326 is not actually 'projected' - except it is PlateCarree!
+    projection=ccrs.PlateCarree() if EPSG == 4326 else ccrs.epsg(str(EPSG))
     
     # geotransform for tiff coords
     # tells us the image bounding coordinates
@@ -379,11 +433,11 @@ def map_tiff_qgis(fname='sirivan.tiff', extent=None, show_grid=False,
         transform = ccrs.PlateCarree()._as_mpl_transform(ax)
         ## plot some gridlines using transform I guess...
         # TODO
-        #gl = ax.gridlines(crs=transform, draw_labels=True,
-        #                  linewidth=2, color='gray', alpha=0.35, linestyle='--')
-        #gl.xlabels_top = False
-        #gl.ylabels_left = False
-        #gl.xlines = False
+        gl = ax.gridlines(crs=transform, draw_labels=True,
+                          linewidth=2, color='gray', alpha=0.35, linestyle='--')
+        gl.xlabels_top = False
+        gl.ylabels_left = False
+        gl.xlines = False
     if locnames is not None:
         # split out fire into it's own thing
         fires = ['fire' in element for element in locnames]
@@ -857,7 +911,7 @@ def transect_w(w, z, lat, lon, start, end, npoints=100,
     if 'cmap' not in contourfargs:
         contourfargs['cmap'] = _cmaps_['verticalvelocity']
     if 'norm' not in contourfargs:
-        contourfargs['norm'] = col.SymLogNorm(0.25,base=np.e)
+        contourfargs['norm'] = col.SymLogNorm(0.25)
     
     # call transect using some defaults for vertical velocity w
     return transect(w, z,lat,lon,start,end,npoints=npoints,

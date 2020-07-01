@@ -928,7 +928,7 @@ def read_model_run(model_version, fdtime=None, subdtimes=None, extent=None,
     if add_theta:
         # Estimate potential temp
         test_theta = allcubes.extract(['air_pressure','air_temperature'])
-        print("DEBUG:",test_theta)
+        
         p, Ta = allcubes.extract(['air_pressure','air_temperature'])
         theta = utils.potential_temperature(p.data,Ta.data)
         # create cube
@@ -1071,7 +1071,7 @@ def read_waroona_old(dtime, constraints=None, extent=None):
     sh_cubes = cubes.extract('specific_humidity')
     sh_flag = False
     if len(sh_cubes) > 1:
-        print("DEBUG:", sh_cubes )
+        #print("DEBUG:", sh_cubes )
         for sh_cube in sh_cubes:
             if sh_flag or (len(sh_cube.shape) == 2):
                 cubes.remove(sh_cube)
@@ -1082,7 +1082,7 @@ def read_waroona_old(dtime, constraints=None, extent=None):
     ta_cubes = cubes.extract('air_temperature')
     ta_flag = False
     if len(ta_cubes) > 1:
-        print("DEBUG:", ta_cubes )
+        #print("DEBUG:", ta_cubes )
         for ta_cube in ta_cubes:
             if ta_flag or (len(ta_cube.shape) == 2):
                 cubes.remove(ta_cube)
