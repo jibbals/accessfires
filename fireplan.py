@@ -32,7 +32,6 @@ _sn_ = 'fireplan'
 
 def fireplan(ff, fire_contour_map = 'autumn',
              show_cbar=True, cbar_XYWH= [0.65, 0.63, .2, .02],
-             
              **kwtiffargs):
 #             fig=None,subplot_row_col_n=None,
 #             draw_grid=False,gridlines=None):
@@ -50,7 +49,6 @@ def fireplan(ff, fire_contour_map = 'autumn',
     lon,lat = ff.coord('longitude').points, ff.coord('latitude').points
     _,ny,nx = ff.shape
     extent = [np.min(lon),np.max(lon), np.min(lat),np.max(lat)]
-    crs_data = ccrs.PlateCarree()
 
     # Get datetimes from firefront cube
     ftimes = utils.dates_from_iris(ff)
@@ -73,29 +71,25 @@ def fireplan(ff, fire_contour_map = 'autumn',
 
     # First show satellite image and locations
     extentname='sirivan' if extent[0]>130 else 'waroonaf'
-    fig, gax, gproj = plotting.map_tiff_qgis(
+    fig, ax = plotting.map_tiff_qgis(
         fname=extentname+'.tiff',
         extent=extent, 
         **kwtiffargs,
-    #    fig=fig,
-    #    subplot_row_col_n=subplot_row_col_n,
-    #    show_grid=False
-    )
+        )
     if 'waroona' in extentname:
-        plotting.map_add_nice_text(gax,[plotting._latlons_['waroona'],plotting._latlons_['yarloop']],
+        plotting.map_add_nice_text(ax,[plotting._latlons_['waroona'],plotting._latlons_['yarloop']],
                                    texts=['Waroona','Yarloop'], fontsizes=14)
     else:
-        plotting.map_add_nice_text(gax,[plotting._latlons_['uarbry']],
+        plotting.map_add_nice_text(ax,[plotting._latlons_['uarbry']],
                                    texts=['Uarbry'], fontsizes=14)
     
     # plot contours at each hour
     tstamp=[]
     for ii,dt in enumerate(ftimes[hourinds]):
-        #TODO  Make local time based on extentname not just assume waroona
         offset = 8 if "waroona" in extentname else 10
-        
         LT = dt + timedelta(hours=offset)
         color=[rgba[ii]]
+        # Colour waroona by day of firefront
         if "waroona" in extentname:
             dnum = int(LT.strftime("%d"))
             if dnum == 6:
@@ -105,30 +99,22 @@ def fireplan(ff, fire_contour_map = 'autumn',
             else:
                 color = "grey"
                 
-        tstamp.append(LT.strftime('%b %d, %H00(local)'))
+        tstamp.append(LT.strftime('%b %d, %H%m(local)'))
 
         ffdata = ff_f[hourinds][ii].data.data
         
         linewidth=1 + (ii == nt-1) # make final hour thicker
         fire_line = plt.contour(lon, lat, ffdata, np.array([0]),
                                 colors=color, linewidths=linewidth,
-                                transform=crs_data)
-        
-        # label first, last, and every Nth hour
-        #if (dt in [ftimes[hourinds][0],ftimes[hourinds][-1]]): # or (ii%4)==0
-        #    clbls = plt.clabel(fire_line, [0], fmt=LT.strftime('%d-%H'), 
-        #                       inline=True, colors='wheat')
-        #    # padding so label is readable
-        #    plt.setp(clbls, path_effects=[patheffects.withStroke(linewidth=3, foreground="k")])
+                                )
     
-    # final outline contour if last available time is not on the hour
-    if not hourinds[-1]:
-        final_line=plt.contour(lon,lat,ff_f[-1].data.data, np.array([0]), 
-                               linestyles='dotted',
-                               colors='cyan', linewidths=1, transform=crs_data)
-        clbls = plt.clabel(final_line,[0],fmt=LT.strftime('%H:%M'), 
-                           inline=True, colors='wheat')
-        plt.setp(clbls, path_effects=[patheffects.withStroke(linewidth=3, foreground="k")])
+    # final contour gets bonus blue line
+    final_line=plt.contour(lon,lat,ff_f[-1].data.data, np.array([0]), 
+                           linestyles='dotted',
+                           colors='cyan', linewidths=1)
+    clbls = plt.clabel(final_line,[0],fmt=LT.strftime('%H:%M'), 
+                       inline=True, colors='wheat')
+    plt.setp(clbls, path_effects=[patheffects.withStroke(linewidth=3, foreground="k")])
 
     ## Add tiny colour bar showing overall time of fire
     if show_cbar:
@@ -144,10 +130,10 @@ def fireplan(ff, fire_contour_map = 'autumn',
         plt.setp(cbxtick_obj, color='wheat',
                  path_effects=[patheffects.withStroke(linewidth=3, foreground="k")])
         # return focus to newly created plot
-        plt.sca(gax)
-    plotting.scale_bar(gax, gproj, 10)
+        plt.sca(ax)
+    plotting.scale_bar(ax, ccrs.PlateCarree(), 10)
 
-    return fig, gax, gproj
+    return fig, ax
 
 def fireplan_summary(model_run='waroona_run1',
                      day1=True,day2=True,
@@ -169,7 +155,7 @@ def fireplan_summary(model_run='waroona_run1',
     lon,lat = FFront.coord('longitude').points, FFront.coord('latitude').points
 
     ## PLOTTING: first just show firefronts hourly contour
-    fig,ax,proj = fireplan(FFront, show_cbar=True, cbar_XYWH=[0.18,0.075,.2,.02])
+    fig,ax = fireplan(FFront, show_cbar=True, cbar_XYWH=[0.18,0.075,.2,.02])
     fio.save_fig(model_run,_sn_,"fireplan",plt)
 
     if just_fireplan:
@@ -225,13 +211,12 @@ def fireplan_comparison(model_runs=['waroona_old','waroona_run1','waroona_run2',
     
     # first pull tiff image into memory
     fig = plt.figure(figsize=[14,10])
-    fig,ax,proj = plotting.map_tiff_qgis(fname=mapname,extent=extent,fig=fig)
+    fig,ax = plotting.map_tiff_qgis(fname=mapname,extent=extent,fig=fig)
     # firefront coord system is lats and lons
-    crs_data = ccrs.PlateCarree()
     legend = []
     
     # for each model run, extract last fire front
-    for mr, color in zip(model_runs,colors):
+    for mr, color in zip(model_runs, colors):
         FF, = fio.read_fire(model_run=mr,
                             dtimes=None,
                             extent=extent,
@@ -244,17 +229,17 @@ def fireplan_comparison(model_runs=['waroona_old','waroona_run1','waroona_run2',
         firstind = np.where(np.min(FF.data,axis=(1,2))<0)[0][0]
         FFfirst = FF[firstind].data
         # contour the firefronts
-        plt.contour(lon, lat, FFfirst.T, np.array([0]),
+        plt.contour(lon, lat, FFfirst, np.array([0]),
                     colors=color, 
                     linewidths=2,
-                    transform=crs_data, 
-                    alpha=0.5)
+                    alpha=0.5,
+                    )
         
-        plt.contour(lon, lat, FFlast.T, np.array([0]),
+        plt.contour(lon, lat, FFlast, np.array([0]),
                     colors=color, 
                     linewidths=2,
                     alpha=0.75,
-                    transform=crs_data)
+                    )
         legend.append(Line2D([0],[0],color=color,lw=2))
     
     if 'waroona' in model_runs[0]:
@@ -301,7 +286,7 @@ def fireplan_vs_isochrones():
     fdates=utils.dates_from_iris(FFront)
 
     ## PANEL B: firefronts hourly contours
-    _,ax2,proj = fireplan(FFront, show_cbar=False, fig=fig, subplot_row_col_n=[2,2,2])
+    _,ax2 = fireplan(FFront, show_cbar=False, fig=fig, subplot_row_col_n=[2,2,2])
     
     ## PANEL C: flux at 3PM local time over yarloop (day 2?)
     dt1 = datetime(2016,1,7,7,30)
@@ -360,7 +345,7 @@ if __name__=='__main__':
                             extent=extent, firefront=True,
                             HSkip=5)
         
-        fig,ax,proj = fireplan(ff, show_cbar=True, cbar_XYWH=[.18,.3,.2,.02])
+        fig,ax = fireplan(ff, show_cbar=True, cbar_XYWH=[.18,.3,.2,.02])
         fio.save_fig(si_r2_hr, _sn_, 'fireplan_hr.png', plt)
         
         ## Plot fireplan for sirivan original run
@@ -370,7 +355,7 @@ if __name__=='__main__':
                             HSkip=5)
         
         # first plot just the fireplan on it's own
-        fig,ax,proj = fireplan(ff, show_cbar=True, cbar_XYWH=[.18,.3,.2,.02])
+        fig,ax = fireplan(ff, show_cbar=True, cbar_XYWH=[.18,.3,.2,.02])
         fio.save_fig(si_r1, _sn_, 'fireplan_hr.png', plt)
 
     if False:

@@ -1321,7 +1321,7 @@ def make_folder(pname):
         print("INFO: Creating folder:",folder)
         os.makedirs(folder)
 
-def save_fig_to_path(pname,plt, dpi=150):
+def save_fig_to_path(pname,plt, **savefigargs):
     '''
     Create dir if necessary
     Save figure
@@ -1331,9 +1331,15 @@ def save_fig_to_path(pname,plt, dpi=150):
         plt = matplotlib.pyplot instance
 
     '''
+    # Defaults:
+    if 'dpi' not in savefigargs:
+        savefigargs['dpi']=150
+    if 'transparent' not in savefigargs:
+        savefigargs['transparent']=False
+        
     make_folder(pname)
     print ("INFO: Saving figure:",pname)
-    plt.savefig(pname, dpi=dpi)
+    plt.savefig(pname, **savefigargs)
     plt.close()
 
 def standard_fig_name(model_run, script_name, pname, 
@@ -1352,7 +1358,7 @@ def standard_fig_name(model_run, script_name, pname,
     return path
 
 def save_fig(model_run, script_name, pname, plt, subdir=None,
-             ext='.png', dpi=150):
+             ext='.png', **savefigargs):
     """
     create figurename as figures/model_run/script_name/[subdir/]fig_YYYYMMDDhhmm.png
 
@@ -1366,4 +1372,4 @@ def save_fig(model_run, script_name, pname, plt, subdir=None,
     """
     path = standard_fig_name(model_run, script_name, pname, subdir, ext)
 
-    save_fig_to_path(path,plt, dpi=dpi)
+    save_fig_to_path(path,plt, **savefigargs)

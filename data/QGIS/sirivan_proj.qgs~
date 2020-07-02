@@ -29,30 +29,30 @@
   </layer-tree-group>
   <relations/>
   <mapcanvas>
-    <units>meters</units>
+    <units>degrees</units>
     <extent>
-      <xmin>12869761.96817602403461933</xmin>
-      <ymin>-4001477.82554484624415636</ymin>
-      <xmax>13100626.12180973775684834</xmax>
-      <ymax>-3844390.60055091697722673</ymax>
+      <xmin>115.68272971384965331</xmin>
+      <ymin>-33.01686901972750121</ymin>
+      <xmax>116.1666158376573037</xmax>
+      <ymax>-32.78482950266450047</ymax>
     </extent>
     <rotation>0</rotation>
     <projections>1</projections>
     <destinationsrs>
       <spatialrefsys>
-        <proj4>+proj=merc +a=6378137 +b=6378137 +lat_ts=0.0 +lon_0=0.0 +x_0=0.0 +y_0=0 +k=1.0 +units=m +nadgrids=@null +wktext  +no_defs</proj4>
-        <srsid>3857</srsid>
-        <srid>3857</srid>
-        <authid>EPSG:3857</authid>
-        <description>WGS 84 / Pseudo Mercator</description>
-        <projectionacronym>merc</projectionacronym>
+        <proj4>+proj=longlat +datum=WGS84 +no_defs</proj4>
+        <srsid>3452</srsid>
+        <srid>4326</srid>
+        <authid>EPSG:4326</authid>
+        <description>WGS 84</description>
+        <projectionacronym>longlat</projectionacronym>
         <ellipsoidacronym>WGS84</ellipsoidacronym>
-        <geographicflag>false</geographicflag>
+        <geographicflag>true</geographicflag>
       </spatialrefsys>
     </destinationsrs>
     <rendermaptile>0</rendermaptile>
     <layer_coordinate_transform_info>
-      <layer_coordinate_transform destAuthId="EPSG:3857" srcAuthId="EPSG:3857" srcDatumTransform="-1" destDatumTransform="-1" layerid="OpenStreetMap20200521172908425"/>
+      <layer_coordinate_transform destAuthId="EPSG:4326" srcAuthId="EPSG:3857" srcDatumTransform="-1" destDatumTransform="-1" layerid="OpenStreetMap20200521172908425"/>
     </layer_coordinate_transform_info>
   </mapcanvas>
   <layer-tree-canvas>
@@ -1688,9 +1688,9 @@ def my_form_open(dialog, layer, feature):
       <filterByMap type="bool">false</filterByMap>
     </Legend>
     <SpatialRefSys>
-      <ProjectCRSProj4String type="QString">+proj=merc +a=6378137 +b=6378137 +lat_ts=0.0 +lon_0=0.0 +x_0=0.0 +y_0=0 +k=1.0 +units=m +nadgrids=@null +wktext  +no_defs</ProjectCRSProj4String>
-      <ProjectCrs type="QString">EPSG:3857</ProjectCrs>
-      <ProjectCRSID type="int">3857</ProjectCRSID>
+      <ProjectCRSProj4String type="QString">+proj=longlat +datum=WGS84 +no_defs</ProjectCRSProj4String>
+      <ProjectCrs type="QString">EPSG:4326</ProjectCrs>
+      <ProjectCRSID type="int">3452</ProjectCRSID>
       <ProjectionsEnabled type="int">1</ProjectionsEnabled>
     </SpatialRefSys>
     <DefaultStyles>

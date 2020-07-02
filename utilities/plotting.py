@@ -61,6 +61,7 @@ _extents_['waroonaz']    = [115.88, 116.19, -32.92,-32.83] # zoom in on fire
 
 
 _latlons_['waroona']    = -32.84, 115.93  # suburb centre: -32.8430, 115.8526
+_latlons_['hamel']      = -32.8725, 115.92 # just south of waroona
 _latlons_['yarloop']    = -32.96, 115.90  # suburb centre: -32.9534, 115.9124
 _latlons_['wagerup']    = -32.92, 115.91  # wagerup
 _latlons_['AWS_wagerup']    = -32.92, 115.91  # AWS at wagerup, 40 m asl
@@ -161,7 +162,7 @@ def annotate_max_winds(winds, upto=None, **annotateargs):
     if 'fontsize' not in annotateargs:
         annotateargs['fontsize']=12
     if 'xytext' not in annotateargs:
-        annotateargs['xytext']=(0, -0.2)
+        annotateargs['xytext']=(0, -0.025)
     if 'arrowprops' not in annotateargs:
         annotateargs['arrowprops'] = dict(
             arrowstyle='-|>',
@@ -286,7 +287,7 @@ def map_contourf(extent, data, lat,lon, title="",
     plt.xticks([]); plt.yticks([])
     return cs, cb
 
-def map_fire(ff,lats,lons, transform=True, **contourargs):
+def map_fire(ff,lats,lons, **contourargs):
     """   
     Plot fire outline onto either an XY grid or geoaxes (eg from map_tiff)
     if mapping latlons onto geoaxes transform needs to be True
@@ -298,28 +299,31 @@ def map_fire(ff,lats,lons, transform=True, **contourargs):
     # default fire colour:
     if 'colors' not in contourargs:
         contourargs['colors']='red'
-    # only plot if there is fire
     fflatlon = ff
     fireline = None
+    # May need to transpose the fire
     if (ff.shape[0] == len(lons)) and (ff.shape[0] != len(lats)):
         fflatlon = ff.T
+        print("WARNING: fire is in [lon,lat]")
+    # only plot if there is fire
     if np.sum(ff<0) > 0:
-        if transform:
-            fireline = plt.contour(lons,lats,fflatlon,np.array([0]),
-                                   transform=ccrs.PlateCarree(), **contourargs)
-        else:
-            fireline = plt.contour(lons,lats,fflatlon,np.array([0]),**contourargs)
+        fireline = plt.contour(lons,lats,fflatlon,np.array([0]),**contourargs)
+    
     return fireline 
 
 def map_sensibleheat(sh, lat, lon,
                      levels = np.logspace(2,5,30),
                      colorbar=True,
+                     cbar_kwargs={},
                      **contourfargs):
     """
     ARGUMENTS:
         sh [lat,lon] : sensible heat flux
         levels : color levels to be contourfed (optional)
-        other args for contourf can be added
+        colorbar : {True | False} add colourbar?
+        cbar_kwargs: dict()
+            arguments for plt.colorbar(cs, **cbar_kwargs)
+        additional contourf arguments are sent through to contourf
     RETURNS:
         cs, cbar: contour return value, colorbar handle
     """
@@ -331,39 +335,49 @@ def map_sensibleheat(sh, lat, lon,
         contourfargs['vmin']=100
     if 'cmap' not in contourfargs:
         contourfargs['cmap']='gnuplot2'
-    if 'transform' not in contourfargs:
-        contourfargs['transform']=ccrs.PlateCarree()
-    
+        
+        
     cs = plt.contourf(lon, lat, flux,
                       levels, # color levels
                       **contourfargs,
                       )
     cbar=None
     if colorbar:
-        #from mpl_toolkits.axes_grid1 import make_axes_locatable
-        #divider = make_axes_locatable(plt.gca())
-        #cax = divider.append_axes("bottom", size="4%", pad=0.01)
-        cbar=plt.colorbar(
-            cs,
-            #cax=cax,
-            orientation='horizontal', 
-            pad=0, 
-            ticks=[1e2,1e3,1e4,1e5],
-            label='log$_{10}$ Heat Flux [Wm$^{-2}$]',
-            aspect=40,
-            )
-        cbar.ax.set_xticklabels(['2','3','4','5'])
+        # colorbar default arguments
+        if 'orientation' not in cbar_kwargs:
+            cbar_kwargs['orientation'] = 'vertical'
+        if 'shrink' not in cbar_kwargs:
+            #fraction by which to multiply the size of the colorbar
+            cbar_kwargs['shrink'] = 0.6
+        if 'aspect' not in cbar_kwargs:
+            # ratio of long to short dimensions
+            cbar_kwargs['aspect'] = 30 
+        if 'pad' not in cbar_kwargs:
+            # space between cbar and fig axis
+            cbar_kwargs['pad'] = 0.01
+        if 'ticks' not in cbar_kwargs:
+            cbar_kwargs['ticks'] = [1e2,1e3,1e4,1e5],
+            xtick_labels=['2','3','4','5']
+        else:
+            xtick_labels=cbar_kwargs['ticks']
+        if 'label' not in cbar_kwargs:
+            cbar_kwargs['label'] ='log$_{10}$ Heat Flux [Wm$^{-2}$]',
+        
+        cbar=plt.colorbar(cs, **cbar_kwargs)
+        cbar.ax.set_xticklabels(xtick_labels)
         
     plt.xticks([],[])
     plt.yticks([],[])
     return cs, cbar
 
+
+
 def map_tiff_qgis(fname='sirivan.tiff', extent=None, show_grid=False,
                   locnames=None,
                   fig=None, subplot_row_col_n=[1,1,1], subplot_axes=None,
-                  EPSG=3857):
+                  aspect='auto'):
     """
-    satellite image from ESRI, roads added from OSM using QGIS, saved as .tiff
+    satellite image from ESRI, some just OSM .tiff files on epsg 4326 (platecarree)
     
     ARGUMENTS:
         fname: "sirivan_map_linescan.tiff" (Searches in data/QGIS/)
@@ -378,6 +392,7 @@ def map_tiff_qgis(fname='sirivan.tiff', extent=None, show_grid=False,
             subplot axes to create and add map to
         subplot_extent: [x0,y0,width,height]
             where to put axes inside figure (can use instead of subplot_row_col_n)
+        aspect: {'equal' | 'auto'} # default is 'auto', equal prevents pixel stretch
     """
     gdal.UseExceptions()
     
@@ -395,7 +410,7 @@ def map_tiff_qgis(fname='sirivan.tiff', extent=None, show_grid=False,
     
     # projection defined in QGIS
     # 4326 is not actually 'projected' - except it is PlateCarree!
-    projection=ccrs.PlateCarree() if EPSG == 4326 else ccrs.epsg(str(EPSG))
+    # projection=ccrs.PlateCarree() if EPSG == 4326 else ccrs.epsg(str(EPSG))
     
     # geotransform for tiff coords
     # tells us the image bounding coordinates
@@ -403,24 +418,24 @@ def map_tiff_qgis(fname='sirivan.tiff', extent=None, show_grid=False,
     imgextent = (gt[0], gt[0] + ds.RasterXSize * gt[1],
                  gt[3] + ds.RasterYSize * gt[5], gt[3])
     
+    ## set up figure and axes if needed
     if fig is None:
         fig = plt.figure(figsize=(13, 9))
-    
-    # if the subplotaxes are defined, use them, otherwise use subplot_row_col
-    
     if subplot_axes is not None:
-        ax = fig.add_axes(subplot_axes, frameon=False, projection=projection)
+        ax = fig.add_axes(subplot_axes, frameon=False)
     else:
         nrows,ncols,n = subplot_row_col_n
-        ax = fig.add_subplot(nrows,ncols,n,projection=projection)
+        ax = fig.add_subplot(nrows,ncols,n)
     
+    # Display tiff and cut to extent
     ax.imshow(img,
               extent=imgextent, 
-              origin='upper')
-    
+              origin='upper',
+              aspect=aspect)
     if extent is not None:
-        ax.set_extent(extent)
-        #crop to desired extent
+        #ax.set_extent(extent)
+        ax.set_xlim([extent[0],extent[1]]) # E-W
+        ax.set_ylim([extent[2],extent[3]]) # S-N
         
         # if we have locations and defined extent, put them in 
         if locnames is not None:
@@ -430,10 +445,7 @@ def map_tiff_qgis(fname='sirivan.tiff', extent=None, show_grid=False,
                     locnames.remove(locstr)
         
     if show_grid:
-        transform = ccrs.PlateCarree()._as_mpl_transform(ax)
-        ## plot some gridlines using transform I guess...
-        # TODO
-        gl = ax.gridlines(crs=transform, draw_labels=True,
+        gl = ax.gridlines(draw_labels=True,
                           linewidth=2, color='gray', alpha=0.35, linestyle='--')
         gl.xlabels_top = False
         gl.ylabels_left = False
@@ -458,7 +470,7 @@ def map_tiff_qgis(fname='sirivan.tiff', extent=None, show_grid=False,
                           markercolors=markercolors,
                           fontsizes=14)        
         
-    return fig, ax, projection
+    return fig, ax
 
 def map_tiff_gsky(locname='waroona', fig=None, subplot_row_col_n=None,
              extent=None, show_grid=False, locnames=None):
@@ -623,16 +635,22 @@ def map_satellite(extent = _extents_['waroona'],
 def map_add_nice_text(ax, latlons, texts=None, markers=None, 
                       fontsizes=12, fontcolors='wheat', 
                       markercolors='grey', markersizes=None,
-                      outlinecolors='k'):
+                      outlinecolors='k', transform=None):
     '''
     ARGUMENTS:
         ax: plot axis
         latlons: iterable of (lat, lon) pairs
         texts: iterable of strings, optional
         markers: iterable of characters, optional
+        transform: if using geoaxes instance (non platecarree map) then set this to ccrs.Geodetic() or PlateCarree()?
     '''
     ## Adding to a map using latlons can use the geodetic transform
-    geodetic_CRS = ccrs.Geodetic()
+    #geodetic_CRS = ccrs.Geodetic()
+    transformargs = {}
+    if transform is not None:
+        if transform == True:
+            transform=ccrs.Geodetic()
+        transformargs['transform']=transform
     
     # Make everything iterable
     if texts is None:
@@ -660,14 +678,15 @@ def map_add_nice_text(ax, latlons, texts=None, markers=None,
         text_effects = [patheffects.withStroke(linewidth=3, foreground=outlinecolor)]
         
         # Add the point to the map with patheffect
-        ax.plot(lon, lat, color=mcolor, linewidth=0, marker=marker, markersize=msize,
-                transform=geodetic_CRS,
-                path_effects=marker_effects)
+        ax.plot(lon, lat, color=mcolor, linewidth=0, 
+                marker=marker, markersize=msize,
+                path_effects=marker_effects,
+                **transformargs)
         
         if len(text)>0:
             # Add text to map
             txt = ax.text(lon, lat, text, fontsize=fsize, color=fcolor,
-                          transform=geodetic_CRS)
+                          **transformargs)
             # Add background (outline)
             txt.set_path_effects(text_effects)
     

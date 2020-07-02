@@ -11,6 +11,7 @@ import matplotlib
 
 # plotting stuff
 import matplotlib.pyplot as plt
+import matplotlib.patheffects as PathEffects
 import numpy as np
 import warnings
 from datetime import datetime,timedelta
@@ -37,7 +38,7 @@ _transects_ = [ [[y,x0],[y,x1]] for y in y0+yspread ]
 
 def add_vertical_contours(w,lat,lon,
                           wmap_height=300, wmap_levels=[1,3],
-                          annotate=True, xy0=[.01,-.05]):
+                          annotate=True, xy0=[.7,-.02], xy1=None):
     '''
     ARGS:
         w [lat,lon] : map of vertical motion
@@ -58,7 +59,8 @@ def add_vertical_contours(w,lat,lon,
         plt.contour(lon, lat, w, levels=wmap_levels, 
                     linestyles=['dashed','solid'],
                     colors=('pink',))
-        
+    if xy1 is None:
+        xy1=[xy0[0], xy0[1]-.03]
     plt.annotate(
         'vertical motion at %dm altitude'%wmap_height, 
         xy=xy0, 
@@ -67,7 +69,7 @@ def add_vertical_contours(w,lat,lon,
         )
     plt.annotate(
         'dashed is %.1fm/s, solid is %.1fm/s'%(wmap_levels[0],wmap_levels[1]), 
-        xy=[xy0[0],xy0[1]-.06], 
+        xy=xy1, 
         xycoords='axes fraction', 
         fontsize=8
         )
@@ -210,7 +212,7 @@ def topdown_emberstorm(fig=None, subplot_row_col_n=None,
                        lats=None,lons=None, ff=None, sh=None, 
                        u10=None, v10=None, 
                        wmap=None, wmap_height=None,
-                       topog=None, topog_contours=[50]):
+                       topog=None):
     """
     Top down view of Waroona/Yarloop, adding fire front and heat flux and 10m winds
     ARGUMENTS:
@@ -219,57 +221,82 @@ def topdown_emberstorm(fig=None, subplot_row_col_n=None,
         sh [lats,lons] : sensible heat flux
         u10 [lats,lons] : 10m altitude longitudinal winds
         v10 [lats,lons] : 10m altitude latitudinal winds
-        topog [lats,lons] : surface altitude
-        topog_contours : list of values to contour topography at
+        topog [lats,lons] : surface altitude - can use this instead of tiff
+        topog_contours : list of values to contour topography at - default 50m
     RETURNS:
-        fig, ax, proj : proj is map projection used by tiff
+        fig, ax
     """
-    # first create map from tiff file
-    
-    fig, ax, proj = plotting.map_tiff_qgis(
-        fname="waroonaz_osm.tiff", 
-        extent=extent,
-        fig=fig,
-        subplot_row_col_n=subplot_row_col_n,
-        EPSG=4326, # SHOULD MATCH PLATECARREE
-        )
+    if fig is None:
+        xsize = 12
+        ysize = 12
+        if extent is not None:
+            # try to guess a good size for aspect ratio
+            width = extent[1]-extent[0]
+            height = extent[3]-extent[2]
+            if width > (1.5*height):
+                xsize=16
+            if width > (2*height):
+                xsize=20
+                ysize=10
+            if width < (0.75 * height):
+                ysize=16
+        fig=plt.figure(figsize=(xsize,ysize))
+    # first create map from tiff file unless topography passed in
+    if topog is None:
+        fig, ax = plotting.map_tiff_qgis(
+            fname="waroonaz_osm.tiff", 
+            extent=extent,
+            fig=fig,
+            subplot_row_col_n=subplot_row_col_n,
+            aspect='equal',
+            )
+    else:
+        plotting.map_topography(extent,topog,lats,lons,
+                                cbar=False,title="")
+        ax=plt.gca()
+        ## Add waroona, hamel, yarloop if possible
+        for txt in ['Waroona','Hamel','Yarloop']:
+            ax.annotate(txt, xy=np.array(plotting._latlons_[str.lower(txt)])[::-1],
+                        xycoords="data", # lat lon xy as coords are platecarree
+                        fontsize=12, ha="center",
+                        color='k',
+                        path_effects=[PathEffects.withStroke(linewidth=2,
+                                                             foreground="w")])
+            
     xlims = ax.get_xlim()
     ylims = ax.get_ylim()
     
     if ff is not None:
         # add firefront
-        cs_ff = plotting.map_fire(ff,lats,lons,transform=True)
+        cs_ff = plotting.map_fire(ff,lats,lons)
     if sh is not None:
         # add hot spots for heat flux
-        cs_sh, cb_sh = plotting.map_sensibleheat(sh,lats,lons, alpha=0.6)
+        cs_sh, cb_sh = plotting.map_sensibleheat(sh,lats,lons,alpha=0.6)
     if u10 is not None:
         # winds, assume v10 is also not None        
         plt.streamplot(lons,lats,u10,v10, 
-                       color='k', #transform=ccrs.PlateCarree(),
+                       color='k',
                        density=(0.6, 0.5))
         
         s10 = np.hypot(u10,v10)
         
-        plotting.annotate_max_winds(s10, xytext=(0,1.02), s="10m wind max = %5.1f m/s")
+        plotting.annotate_max_winds(s10, s="10m wind max = %5.1f m/s")
     
     if wmap is not None:
         add_vertical_contours(wmap,lats,lons,
                               wmap_height=wmap_height,
                               wmap_levels=[1,3],
                               annotate=True,
-                              xy0=[0.8,1.1])
-    
-    if topog is not None:
-        ax.contour(lons,lats,topog,topog_contours,
-                    colors='k', alpha=0.8, linewidths=1,
-                    transform=ccrs.PlateCarree(),
-                    )
+                              xy0=[0.6,-0.02])
     
     # set limits back to latlon limits
-    ax.set_ylim(ylims[0],ylims[1])#, transform=ccrs.PlateCarree())  # outliers only
-    ax.set_xlim(xlims[0],xlims[1])#, transform=ccrs.PlateCarree())
+    print("DEBUG: xlims, lon lims:",xlims,lons[0],lons[-1])
+    print("DEBUG: ylims, lat lims:",ylims,lats[0],lats[-1])
     
-    return fig, ax, proj
+    ax.set_ylim(ylims[0],ylims[1])
+    ax.set_xlim(xlims[0],xlims[1])
+    
+    return fig, ax
 
 def make_plots_emberstorm(model_run='waroona_run3', 
                           hours=None, 
@@ -344,7 +371,7 @@ if __name__ == '__main__':
     transect1 = _transects_[0]
     
     hours=fio.model_outputs[mr]['filedates']
-    testhours = [datetime(2016,1,6,13)]
+    testhours = [datetime(2016,1,6,7)]
     interesting_hours=[datetime(2016,1,6,x) for x in range(7,15)]
 
     if False:
@@ -361,11 +388,13 @@ if __name__ == '__main__':
         
         for extent,transect in zip([extent1,],[transect1,]):
                            
-            dtimes=interesting_hours
+            dtimes=interesting_hours[-5:]
             
             cubes = fio.read_model_run(mr, fdtime=dtimes, extent=extent, 
-                                       add_topog=False, add_winds=True)
+                                       add_topog=True, add_winds=True)
             w,=cubes.extract("upward_air_velocity")
+            topog=cubes.extract("surface_altitude")[0].data
+            
             ctimes = utils.dates_from_iris(w)
             
             # extra vert map at ~ 300m altitude
@@ -388,19 +417,20 @@ if __name__ == '__main__':
                 v10d = v10[dti].data.data
                 wmapd = wmap[dti].data.data
                 
-                fig,ax,proj = topdown_emberstorm(extent=extent,
-                                                 lats=lats,lons=lons,
-                                                 ff=ffd, sh=shd, 
-                                                 u10=u10d, v10=v10d,
-                                                 wmap=wmapd,
-                                                 wmap_height=wmap_height)
+                fig,ax = topdown_emberstorm(extent=extent,
+                                            lats=lats,lons=lons,
+                                            ff=ffd, sh=shd, 
+                                            u10=u10d, v10=v10d,
+                                            #topog=topog,
+                                            wmap=wmapd,
+                                            wmap_height=wmap_height)
                 
                 ## Add dashed line to show where transect will be
                 start,end =transect
                 plt.plot([start[1],end[1]],[start[0],end[0], ], '--k', 
-                         linewidth=2, transform=ccrs.PlateCarree())
+                         linewidth=2, alpha=0.7)
                 
                 ## Plot title
                 LT = dt + timedelta(hours=8)
-                plt.title(LT.strftime('%b %d, %H00(local)'))
+                plt.title(LT.strftime('%b %d, %H%M(local)'))
                 fio.save_fig(mr,_sn_,dt,subdir='topdown',plt=plt)
