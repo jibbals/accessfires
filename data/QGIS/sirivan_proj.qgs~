@@ -5,9 +5,6 @@
   <evaluateDefaultValues active="0"/>
   <layer-tree-group expanded="1" checked="Qt::PartiallyChecked" name="">
     <customproperties/>
-    <layer-tree-group expanded="1" checked="Qt::Checked" name="group1">
-      <customproperties/>
-    </layer-tree-group>
     <layer-tree-layer expanded="1" providerKey="ogr" checked="Qt::Unchecked" id="ne_10m_roads20200618113130688" source="/home/jesse/Downloads/ne_10m_roads/ne_10m_roads.shp" name="ne_10m_roads">
       <customproperties/>
     </layer-tree-layer>
@@ -31,10 +28,10 @@
   <mapcanvas>
     <units>degrees</units>
     <extent>
-      <xmin>115.68272971384965331</xmin>
-      <ymin>-33.01686901972750121</ymin>
-      <xmax>116.1666158376573037</xmax>
-      <ymax>-32.78482950266450047</ymax>
+      <xmin>149.42616564930878553</xmin>
+      <ymin>-32.22374325483914959</ymin>
+      <xmax>150.1627336528030412</xmax>
+      <ymax>-31.80960734388822075</ymax>
     </extent>
     <rotation>0</rotation>
     <projections>1</projections>
@@ -52,7 +49,9 @@
     </destinationsrs>
     <rendermaptile>0</rendermaptile>
     <layer_coordinate_transform_info>
+      <layer_coordinate_transform destAuthId="EPSG:4326" srcAuthId="EPSG:3857" srcDatumTransform="-1" destDatumTransform="-1" layerid="Stamen_Toner_OSM20200422115924990"/>
       <layer_coordinate_transform destAuthId="EPSG:4326" srcAuthId="EPSG:3857" srcDatumTransform="-1" destDatumTransform="-1" layerid="OpenStreetMap20200521172908425"/>
+      <layer_coordinate_transform destAuthId="EPSG:4326" srcAuthId="EPSG:4326" srcDatumTransform="-1" destDatumTransform="-1" layerid="raster20200422115854303"/>
     </layer_coordinate_transform_info>
   </mapcanvas>
   <layer-tree-canvas>
@@ -66,7 +65,6 @@
     </custom-order>
   </layer-tree-canvas>
   <legend updateDrawingOrder="true">
-    <legendgroup open="true" checked="Qt::Checked" name="group1"/>
     <legendlayer drawingOrder="-1" open="true" checked="Qt::Unchecked" name="ne_10m_roads" showFeatureCount="0">
       <filegroup open="true" hidden="false">
         <legendlayerfile isInOverview="0" layerid="ne_10m_roads20200618113130688" visible="0"/>
@@ -151,13 +149,13 @@
           <customproperties/>
         </ComposerItem>
       </ComposerLabel>
-      <ComposerScaleBar lineCapStyle="square" style="Single Box" numMapUnitsPerScaleBarUnit="1000" segmentSizeMode="1" alignment="1" numSegments="5" segmentMillimeters="20.7196" lineJoinStyle="miter" minBarWidth="50" numUnitsPerSegment="0.2" units="1" labelBarSpace="3" outlineWidth="0.3" numSegmentsLeft="0" maxBarWidth="150" height="3" boxContentSpace="1" mapId="3" unitLabel="km">
+      <ComposerScaleBar lineCapStyle="square" style="Single Box" numMapUnitsPerScaleBarUnit="1000" segmentSizeMode="1" alignment="1" numSegments="5" segmentMillimeters="22.351" lineJoinStyle="miter" minBarWidth="50" numUnitsPerSegment="20000" units="1" labelBarSpace="3" outlineWidth="0.3" numSegmentsLeft="0" maxBarWidth="150" height="3" boxContentSpace="1" mapId="3" unitLabel="km">
         <scaleBarFont description="Ubuntu,12,-1,5,50,0,0,0,0,0" style=""/>
         <fillColor alpha="255" red="0" blue="0" green="0"/>
         <fillColor2 alpha="255" red="255" blue="255" green="255"/>
         <strokeColor alpha="255" red="0" blue="0" green="0"/>
         <textColor alpha="255" red="255" blue="255" green="255"/>
-        <ComposerItem pagey="360.074" page="1" id="" lastValidViewScaleFactor="-1" positionMode="0" positionLock="false" x="278.001" y="360.074" visibility="1" zValue="5" background="false" transparency="0" frameJoinStyle="miter" blendMode="0" width="119.413" outlineWidth="0.3" excludeFromExports="0" uuid="{d9c8e6fd-3a62-4d6a-b0e7-d4c8008d9f70}" height="22.0083" itemRotation="0" frame="false" pagex="278.001">
+        <ComposerItem pagey="360.074" page="1" id="" lastValidViewScaleFactor="-1" positionMode="0" positionLock="false" x="278.001" y="360.074" visibility="1" zValue="5" background="false" transparency="0" frameJoinStyle="miter" blendMode="0" width="125.869" outlineWidth="0.3" excludeFromExports="0" uuid="{d9c8e6fd-3a62-4d6a-b0e7-d4c8008d9f70}" height="22.0083" itemRotation="0" frame="false" pagex="278.001">
           <FrameColor alpha="255" red="0" blue="0" green="0"/>
           <BackgroundColor alpha="255" red="255" blue="255" green="255"/>
           <customproperties/>
@@ -1589,6 +1587,7 @@ def my_form_open(dialog, layer, feature):
       <variableValues type="QStringList"/>
     </Variables>
     <WMSContactPerson type="QString"></WMSContactPerson>
+    <WMSOnlineResource type="QString"></WMSOnlineResource>
     <Bookmarks>
       <Row-0>
         <Project type="QString">sirivan_proj.qgs</Project>
@@ -1601,7 +1600,6 @@ def my_form_open(dialog, layer, feature):
       </Row-0>
       <count type="int">1</count>
     </Bookmarks>
-    <WMSOnlineResource type="QString"></WMSOnlineResource>
     <WMSUseLayerIDs type="bool">false</WMSUseLayerIDs>
     <WMSContactOrganization type="QString"></WMSContactOrganization>
     <WMSKeywordList type="QStringList">
@@ -1620,8 +1618,8 @@ def my_form_open(dialog, layer, feature):
       <DegreeFormat type="QString">D</DegreeFormat>
     </PositionPrecision>
     <WCSUrl type="QString"></WCSUrl>
-    <WMSServiceCapabilities type="bool">false</WMSServiceCapabilities>
     <WMSContactPhone type="QString"></WMSContactPhone>
+    <WMSServiceCapabilities type="bool">false</WMSServiceCapabilities>
     <WMSServiceAbstract type="QString"></WMSServiceAbstract>
     <WMSContactPosition type="QString"></WMSContactPosition>
     <WMSAddWktGeometry type="bool">false</WMSAddWktGeometry>

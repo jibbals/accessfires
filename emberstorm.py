@@ -298,10 +298,10 @@ def topdown_emberstorm(fig=None, subplot_row_col_n=None,
     
     return fig, ax
 
-def make_plots_emberstorm(model_run='waroona_run3', 
-                          hours=None, 
-                          extent=None,
-                          wmap_height=300):
+def explore_emberstorm(model_run='waroona_run3', 
+                       hours=None, 
+                       extent=None,
+                       wmap_height=300):
     """
     run emberstorm plotting method on model output read by my iris fio scripts
     """
@@ -374,11 +374,13 @@ if __name__ == '__main__':
     testhours = [datetime(2016,1,6,7)]
     interesting_hours=[datetime(2016,1,6,x) for x in range(7,15)]
 
+    dtimes=interesting_hours[-5:] 
+
     if False:
         # This makes the combined 3 row plot with top down winds and 
         # transects of theta and wind
-        make_plots_emberstorm(mr, hours=interesting_hours,
-                              extent=extent1)
+        explore_emberstorm(mr, hours=interesting_hours,
+                           extent=extent1)
     
     if True:
         # newer plots showing 1: fire + town + winds (based on top panel in make_plots_emberstorm)
@@ -388,8 +390,6 @@ if __name__ == '__main__':
         
         for extent,transect in zip([extent1,],[transect1,]):
                            
-            dtimes=interesting_hours[-5:]
-            
             cubes = fio.read_model_run(mr, fdtime=dtimes, extent=extent, 
                                        add_topog=True, add_winds=True)
             w,=cubes.extract("upward_air_velocity")

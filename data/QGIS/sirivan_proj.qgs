@@ -20,7 +20,7 @@
     <layer-tree-layer expanded="1" providerKey="gdal" checked="Qt::Unchecked" id="Stamen_Toner_OSM20200422115924990" source="&lt;GDAL_WMS>&#xa;  &lt;Service name=&quot;TMS&quot;>&#xa;    &lt;ServerUrl>http://tile.stamen.com/toner/${z}/${x}/${y}.png&lt;/ServerUrl>&#xa;  &lt;/Service>&#xa;  &lt;DataWindow>&#xa;    &lt;UpperLeftX>-20037508.34&lt;/UpperLeftX>&#xa;    &lt;UpperLeftY>20037508.34&lt;/UpperLeftY>&#xa;    &lt;LowerRightX>20037508.34&lt;/LowerRightX>&#xa;    &lt;LowerRightY>-20037508.34&lt;/LowerRightY>&#xa;    &lt;TileLevel>18&lt;/TileLevel>&#xa;    &lt;TileCountX>1&lt;/TileCountX>&#xa;    &lt;TileCountY>1&lt;/TileCountY>&#xa;    &lt;YOrigin>top&lt;/YOrigin>&#xa;  &lt;/DataWindow>&#xa;  &lt;Projection>EPSG:3857&lt;/Projection>&#xa;  &lt;BlockSizeX>256&lt;/BlockSizeX>&#xa;  &lt;BlockSizeY>256&lt;/BlockSizeY>&#xa;  &lt;BandsCount>3&lt;/BandsCount>&#xa;  &lt;Cache />&#xa;&lt;/GDAL_WMS>&#xa;" name="Stamen Toner/OSM">
       <customproperties/>
     </layer-tree-layer>
-    <layer-tree-layer expanded="1" providerKey="gdal" checked="Qt::Checked" id="raster20200422115854303" source="http://server.arcgisonline.com/arcgis/rest/services/ESRI_Imagery_World_2D/MapServer?f=json&amp;pretty=true" name="raster">
+    <layer-tree-layer expanded="1" providerKey="gdal" checked="Qt::Unchecked" id="raster20200422115854303" source="http://server.arcgisonline.com/arcgis/rest/services/ESRI_Imagery_World_2D/MapServer?f=json&amp;pretty=true" name="raster">
       <customproperties/>
     </layer-tree-layer>
   </layer-tree-group>
@@ -28,10 +28,10 @@
   <mapcanvas>
     <units>degrees</units>
     <extent>
-      <xmin>115.36734793909454311</xmin>
-      <ymin>-33.30825979932642156</ymin>
-      <xmax>116.85679111959757392</xmax>
-      <ymax>-32.61416024509112788</ymax>
+      <xmin>147.85056603879721138</xmin>
+      <ymin>-33.2047887352219746</ymin>
+      <xmax>151.64895245842225791</xmax>
+      <ymax>-31.06914312942240741</ymax>
     </extent>
     <rotation>0</rotation>
     <projections>1</projections>
@@ -90,13 +90,13 @@
         <legendlayerfile isInOverview="0" layerid="Stamen_Toner_OSM20200422115924990" visible="0"/>
       </filegroup>
     </legendlayer>
-    <legendlayer drawingOrder="-1" open="true" checked="Qt::Checked" name="raster" showFeatureCount="0">
+    <legendlayer drawingOrder="-1" open="true" checked="Qt::Unchecked" name="raster" showFeatureCount="0">
       <filegroup open="true" hidden="false">
-        <legendlayerfile isInOverview="0" layerid="raster20200422115854303" visible="1"/>
+        <legendlayerfile isInOverview="0" layerid="raster20200422115854303" visible="0"/>
       </filegroup>
     </legendlayer>
   </legend>
-  <Composer title="Waroona Nests" visible="1">
+  <Composer title="Waroona Nests" visible="0">
     <Composition resizeToContentsMarginLeft="0" snapping="0" showPages="1" guidesVisible="1" resizeToContentsMarginTop="0" worldFileMap="{6fefefbd-7ba4-4dea-a9bc-39d91f22d56f}" alignmentSnap="1" printResolution="300" paperWidth="441.278" gridVisible="0" snapGridOffsetX="0" smartGuides="1" snapGridOffsetY="0" resizeToContentsMarginRight="0" snapTolerancePixels="5" printAsRaster="1" generateWorldFile="0" paperHeight="400.561" numPages="1" snapGridResolution="10" resizeToContentsMarginBottom="0">
       <symbol alpha="1" clip_to_extent="1" type="fill" name="">
         <layer pass="0" class="SimpleFill" locked="0">
