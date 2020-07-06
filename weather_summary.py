@@ -65,7 +65,7 @@ def plot_weather_summary(U,V,W, height, lat, lon, extentname,
 
     fig = plt.figure(figsize=[10,10])
     for ii,row in enumerate([row1, row2, row3, row4, row5]):
-        lax = plt.subplot(5,2,ii*2+1, )#projection=ccrs.PlateCarree())
+        lax = plt.subplot(5,2,ii*2+1, )
         
         Ui = U[row]
         Vi = V[row]
@@ -86,7 +86,7 @@ def plot_weather_summary(U,V,W, height, lat, lon, extentname,
                                cmap=hcmap, norm=hnorm)
         
         if FF is not None:
-            plotting.map_fire(FF, lat, lon, transform=False)
+            plotting.map_fire(FF, lat, lon)
         if topog is not None:
             lax.contour(lon,lat,topog,topog_contours,
                         colors='k', alpha=0.7, linewidths=1)
@@ -98,7 +98,7 @@ def plot_weather_summary(U,V,W, height, lat, lon, extentname,
         ## This shifts the subplot grid axes slightly!! 
         # this is seemingly to show the arrows in full where they extend outside the boundary
         lax.streamplot(lon,lat,Ur,Vr, 
-                       color='k', #transform=ccrs.PlateCarree(),
+                       color='k',
                        density=(0.5, 0.4))
         # set limits back to latlon limits
         lax.set_ylim(lat[0],lat[-1])  # outliers only
@@ -116,7 +116,7 @@ def plot_weather_summary(U,V,W, height, lat, lon, extentname,
         #lax.yaxis.set_label_position("right")
         
         # Now plot vertical motion
-        plt.subplot(5,2,ii*2+2,)#projection=ccrs.PlateCarree())
+        plt.subplot(5,2,ii*2+2,)
         Wi = W[row]
         Wr = np.mean(Wi,axis=0)
         
@@ -133,7 +133,7 @@ def plot_weather_summary(U,V,W, height, lat, lon, extentname,
                          extend='both',)
         
         if FF is not None:
-            plotting.map_fire(FF, lat, lon, transform=False)
+            plotting.map_fire(FF, lat, lon)
         
         if topog is not None:
             plt.contour(lon,lat,topog,topog_contours,
@@ -242,7 +242,6 @@ def weather_series(model_run='waroona_run1',
     if extent is None:
         extent=plotting._extents_[extentnamez]
     localtime = False
-    proj_latlon = ccrs.PlateCarree() # lat,lon projection
     qc_thresh = constants.cloud_threshold
     
     # READ EVERYTHING, SUBSET, CALC DESIRED METRICS, PLOT METRICS
@@ -364,12 +363,12 @@ def weather_series(model_run='waroona_run1',
     extentplus = np.array(extent)+np.array([-0.3*dx,0.3*dx,-0.2*dy,0.2*dy])
     
     # map with extent shown
-    fig, ax_map, proj = plotting.map_tiff_qgis(fname="%s.tiff"%extentname, 
-                                               fig=fig,
-                                               extent=list(extentplus), 
-                                               subplot_row_col_n = [3,1,1],
-                                               locnames=[extentname,]
-                                               )
+    fig, ax_map = plotting.map_tiff_qgis(fname="%s.tiff"%extentname, 
+                                         fig=fig,
+                                         extent=list(extentplus), 
+                                         subplot_row_col_n = [3,1,1],
+                                         locnames=[extentname,]
+                                         )
     # Add rectangle
     botleft = extent[0],extent[2]
     ax_map.add_patch(patches.Rectangle(xy=botleft,
@@ -381,7 +380,7 @@ def weather_series(model_run='waroona_run1',
                                        linewidth=2,
                                        #linestyle='-',
                                        alpha=0.6, 
-                                       transform=proj_latlon))
+                                       ))
     
     # add fire outline
     plt.sca(ax_map)
@@ -565,8 +564,7 @@ if __name__=='__main__':
         for name,zoom in zip(["day1_extent.png","day2_extent.png"],
                              [plotting._extents_['waroona'],plotting._extents_['waroonaf']]):
             
-            f,ax,proj = plotting.map_tiff_qgis("waroonas.tiff",)
-            latlon_proj = ccrs.PlateCarree()
+            f,ax = plotting.map_tiff_qgis("waroonas.tiff",)
             ## Add box around zoomed in area
             xy = [zoom[0], zoom[2]]
             width = zoom[1]-zoom[0]
@@ -580,7 +578,7 @@ if __name__=='__main__':
                                            linewidth=2,
                                            #linestyle='-',
                                            alpha=.7, 
-                                           transform=latlon_proj))
+                                           ))
             fio.save_fig("waroona_run3",_sn_,name,plt=plt)
     
     print("INFO: weather_summary.py done")

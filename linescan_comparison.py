@@ -70,7 +70,7 @@ def linescan_vs_firefront(model_run='sirivan_run1'):
         # can show either googlemap (roads, rivers), or satellite map (true colour)
         # map first
         subplot_axes2 = [0,0.02,1,0.45]
-        _,ax2,mproj = plotting.map_tiff_qgis('sirivan_map_linescan.tiff', fig=fig,
+        _,ax2 = plotting.map_tiff_qgis('sirivan_map_linescan.tiff', fig=fig,
                                         extent=linescan_extent,
                                         subplot_axes=subplot_axes2)
         plt.sca(ax2)
@@ -88,7 +88,7 @@ def linescan_vs_firefront(model_run='sirivan_run1'):
                     continue
                 plt.contour(lon, lat, ffdata.T, np.array([0]),
                             colors='pink', linewidths=2,alpha=0.8,
-                            transform=latlon_CRS)
+                            )
 
         plt.title(ffstamp)
         # final outline contour
@@ -96,7 +96,7 @@ def linescan_vs_firefront(model_run='sirivan_run1'):
         if np.min(ffdata)<0:
             plt.contour(lon, lat, ffdata.T, np.array([0]), 
                         linestyles='dotted', alpha=0.6,
-                        colors='magenta', linewidths=2, transform=latlon_CRS)
+                        colors='magenta', linewidths=2)
             shdata = sh[di].data.data
             # show heat flux:
             #print("DEBUG:",np.shape(shdata),np.min(shdata),np.max(shdata))
@@ -106,7 +106,6 @@ def linescan_vs_firefront(model_run='sirivan_run1'):
                 cnorm = col.LogNorm(vmin=shmin,vmax=shmax,)
                 shlevels = np.logspace(2,5.4,)
                 cs=plt.contourf(lon,lat,shdata.T+1,shlevels, 
-                                transform=latlon_CRS,
                                 cmap='hot', norm=cnorm, vmin=shmin, vmax=shmax,
                                 alpha=0.5)
                 cax = fig.add_axes([.91,.1,.02,.3], frameon=False)

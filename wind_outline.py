@@ -367,17 +367,17 @@ def transects_hwinds(model_run, hour=18, transects=None, extent=None, ztop=4000,
     for di, dtime in enumerate(ctimes):
         # figure:
         fig = plt.figure(figsize=[12,12])
-        _, ax1, axproj,  = plotting.map_tiff_qgis(fname=extentname+'.tiff', 
-                                                  extent=extent, 
-                                                  fig=fig, 
-                                                  subplot_row_col_n=[nrows,1,1],)
-        llproj = ccrs.PlateCarree() # lat, lon projection
+        _, ax1 = plotting.map_tiff_qgis(fname=extentname+'.tiff', 
+                                         extent=extent, 
+                                         fig=fig, 
+                                         subplot_row_col_n=[nrows,1,1],)
+        
         # plot firefront
         plotting.map_fire(ff[di].data,flats,flons)
         # add winds streamplot
         plt.streamplot(flons,flats,u10[di].data,v10[di].data, color='white',
                        density=(0.8, 0.5),
-                       transform=llproj)#alpha=0.7)
+                       )
         plt.title('10m horizontal winds')
         # loop over transects
         for ti, [lat,lon0,lon1] in enumerate(transects):
@@ -386,7 +386,7 @@ def transects_hwinds(model_run, hour=18, transects=None, extent=None, ztop=4000,
             plt.sca(ax1)
             plt.plot([lon0,lon1],[lat,lat], '--', color='k', 
                      linewidth=2, 
-                     transform=llproj) 
+                     ) 
             
             # plot transect of horizontal wind speed on new row
             plt.subplot(nrows,1,ti+2)

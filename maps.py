@@ -17,7 +17,7 @@ import cartopy
 # geometry to add onto cartopy
 import cartopy.feature
 import shapely.geometry
-import cartopy.crs
+import cartopy.crs as ccrs
 import cartopy.io.img_tiles as cimgt
 from cartopy.mpl.gridliner import LONGITUDE_FORMATTER, LATITUDE_FORMATTER
 from matplotlib.transforms import offset_copy
@@ -74,13 +74,14 @@ def outline_waroona():
     topog = cube_topog.data.data
     
     # Google map image tiles view of synoptic map
-    fig, ax, proj = plotting.map_tiff(locname='waroona',
-                                      extent=extent, #fig=fig,
-                                      subplot_row_col_n=[2,1,1],
-                                      show_grid=False, locnames=['waroona','perth'])
+    fig, ax = plotting.map_tiff_qgis(locname='waroonas_osm.tiff',
+                                     extent=extent, #fig=fig,
+                                     subplot_row_col_n=[2,1,1],
+                                     show_grid=True,
+                                     )
     
     # add coastline
-    ax.coastlines()
+    #ax.coastlines()
     plt.title("Waroona synoptic")
     
     ## Add box around zoomed in area
@@ -96,22 +97,23 @@ def outline_waroona():
                                    linewidth=2,
                                    #linestyle='-',
                                    alpha=0.6, 
-                                   transform=proj))
-    ## add text?
+                                   #transform=proj
+                                   ))
     
     ## Add scale
     scaleloc=(0.2,0.05)
-    plotting.scale_bar(ax,proj,100, location=scaleloc)
+    plotting.scale_bar(ax,ccrs.PlateCarree(),100, location=scaleloc)
     
     ## Look at waroona and yarloop
-    _, ax2, proj2 = plotting.map_tiff(locname='waroona',
-                                      extent=inner, fig=fig,
-                                      subplot_row_col_n=[2,2,3],
-                                      show_grid=False, locnames=['waroona','yarloop','fire_waroona'])
+    _, ax2 = plotting.map_tiff_qgis(locname='waroona.tiff',
+                                    extent=inner, fig=fig,
+                                    subplot_row_col_n=[2,2,3],
+                                    show_grid=True, 
+                                    locnames=['waroona','yarloop','fire_waroona'])
     plt.title("Fire location")
     
     ## Add scale
-    plotting.scale_bar(ax2,proj2,10, location=scaleloc)
+    plotting.scale_bar(ax2,ccrs.PlateCarree(), 10, location=scaleloc)
     
     ## Add contour plot showing topography
     plt.subplot(2,2,4)
@@ -132,10 +134,10 @@ def show_nests(model_run='waroona_run1', annotate_res=True, title=''):
     aust = nest['wider_view']
     
     # create figure and projection
-    fig, ax, proj = plotting.map_tiff_qgis(tiffname,
-                                           extent=aust,
-                                           show_grid=True, 
-                                           locnames=locnames)
+    fig, ax = plotting.map_tiff_qgis(tiffname,
+                                     extent=aust,
+                                     show_grid=True, 
+                                     locnames=locnames)
     
     # add coastline, stock img (tiff is currently just for zoomed in stuff)
     #ax.coastlines()
@@ -160,10 +162,10 @@ def show_nests(model_run='waroona_run1', annotate_res=True, title=''):
                                        linewidth=2,
                                        #linestyle='-',
                                        alpha=0.9,
-                                       transform=cartopy.crs.PlateCarree()
+                                       transform=ccrs.PlateCarree()
                                        ))
         # transform for our epsg
-        maptransform=cartopy.crs.PlateCarree()._as_mpl_transform(ax)
+        maptransform=ccrs.PlateCarree()._as_mpl_transform(ax)
         
         # outline for text/markers
         outlinecolor='k'

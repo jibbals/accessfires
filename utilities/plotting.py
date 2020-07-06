@@ -79,8 +79,10 @@ _extents_['sirivan_linescan']   = [149.48, 150.04, -32.18, -31.85]
 _extents_['sirivanz']   = [149.4, 150.15, -32.2, -31.8]
 _extents_['sirivans']   = [147,154, -34, -29] # synoptic
 
-_latlons_['dunedoo']    = -31.99, 149.53
-_latlons_['uarbry']      = -32.047280, 149.71
+_latlons_['dunedoo']    = -32.019, 149.39
+_latlons_['borambil']   = -32.0367, 150.00
+_latlons_['uarbry']     = -32.047280, 149.71
+_latlons_['coolah']     = -31.8234,149.722
 _latlons_['sirivan']    = _latlons_['uarbry'] # no idea where sir ivan is..
 _latlons_['cassillis']      = -32.01, 150.0
 _latlons_['fire_sirivan'] = -32.05, 149.59

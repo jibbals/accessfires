@@ -646,6 +646,8 @@ def read_model_run(model_version, fdtime=None, subdtimes=None, extent=None,
       : dewpoint_temperature / (K)     (time: 2; model_level_number: 140; latitude: 88; longitude: 106)
     ## add_RH
       : relative_humidity / (1)             (time: 6; model_level_number: 140; latitude: 14; longitude: 14)
+    ## add_theta
+      : potential_temperature / (K)                        (time ; model_level_number ; latitude ; longitude)
     '''
 
     ## make sure we have model run data

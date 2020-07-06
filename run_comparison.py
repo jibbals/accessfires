@@ -399,9 +399,9 @@ def compare_fire_spread(mrlist, mrcolors=None, extent=None,
 
 
             subplot_row_col_n=[len(mrlist),1,i+1]
-            _,ax,proj = fireplan.fireplan(ff, show_cbar=False, 
-                                          fig=fig, 
-                                          subplot_row_col_n=subplot_row_col_n,)
+            _,ax = fireplan.fireplan(ff, show_cbar=False, 
+                                     fig=fig, 
+                                     subplot_row_col_n=subplot_row_col_n,)
             plt.title(mr)
         fio.save_fig('comparison','compare_fire_spread', 'firespread.png', plt)
 
