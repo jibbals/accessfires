@@ -185,6 +185,30 @@ def annotate_max_winds(winds, upto=None, **annotateargs):
     
     plt.annotate(**annotateargs)
 
+def map_add_grid(ax, **gridargs):
+    """
+    add gridlines to some plot axis
+    ARGUMENTS:
+        ax: plt axis instance
+        arguments for ax.gridlines
+            defaults are draw_labels=True, color='gray', alpha=0.35, ls='--', lw=2
+    """
+    if 'draw_labels' not in gridargs:
+        gridargs['draw_labels']=True
+    if 'linewidth' not in gridargs:
+        gridargs['linewidth']=2
+    if 'color' not in gridargs:
+        gridargs['color']='gray'
+    if 'alpha' not in gridargs:
+        gridargs['alpha']=0.35
+    if 'linestyle' not in gridargs:
+        gridargs['linestyle']='--'
+    
+    gl = ax.grid(gridargs)
+    #gl.xlabels_top = False
+    #gl.ylabels_left = False
+    #gl.xlines = False
+
 def map_add_locations_extent(extentname, hide_text=False):
     '''
     wrapper for map_add_locations that adds all the points for that extent
@@ -269,13 +293,12 @@ def map_draw_gridlines(ax, linewidth=1, color='black', alpha=0.5,
         gl.ylocator = matplotlib.ticker.FixedLocator(yrange)
 
 def map_contourf(extent, data, lat,lon, title="",
-                 cmap=None, clabel="", clevs=None, norm=None, 
-                 cbar=True, cbarform=None, **contourfargs):
+                 clabel="", cbar=True, cbarform=None, **contourfargs):
     '''
     Show topography map matching extents
     '''
     
-    cs = plt.contourf(lon,lat,data, levels=clevs, cmap=cmap,norm=norm, **contourfargs)
+    cs = plt.contourf(lon,lat,data, **contourfargs)
     cb = None
     
     # set x and y limits to match extent
@@ -447,11 +470,7 @@ def map_tiff_qgis(fname='sirivan.tiff', extent=None, show_grid=False,
                     locnames.remove(locstr)
         
     if show_grid:
-        gl = ax.gridlines(draw_labels=True,
-                          linewidth=2, color='gray', alpha=0.35, linestyle='--')
-        gl.xlabels_top = False
-        gl.ylabels_left = False
-        gl.xlines = False
+        map_add_grid(ax)
     if locnames is not None:
         # split out fire into it's own thing
         fires = ['fire' in element for element in locnames]
@@ -692,19 +711,26 @@ def map_add_nice_text(ax, latlons, texts=None, markers=None,
             # Add background (outline)
             txt.set_path_effects(text_effects)
     
-def map_topography(extent, topog,lat,lon,title="Topography", cbar=True):
+def map_topography(extent, topog,lat,lon,title="Topography", cbar=True, **contourfargs):
     '''
     Show topography map matching extents
     '''
-    # push blue water part of scale a bit lower
-    clevs = np.linspace(-150,550,50,endpoint=True)
-    # sir ivan fire is at higher altitudes
-    if extent[0] > 140:
-        clevs = np.linspace(100,800,50,endpoint=True)
-    cmaptr=plt.cm.get_cmap("terrain")
+    # some defaults
+    if 'aspect' not in contourfargs:
+        contourfargs['aspect']='auto'
+    if 'levels' not in contourfargs:
+        # push blue water part of scale a bit lower
+        contourfargs['levels'] = np.linspace(-150,550,50,endpoint=True)
+        # sir ivan fire is at higher altitudes
+        if extent[0] > 140:
+            contourfargs['levels'] = np.linspace(100,800,50,endpoint=True)
+    if 'cmap' not in contourfargs:
+        contourfargs['cmap'] = plt.cm.get_cmap("terrain")
+        
     return map_contourf(extent, topog, lat, lon, 
-                        title=title, clevs=clevs, cmap=cmaptr, 
-                        clabel="m", cbar=cbar, cbarform=tick.ScalarFormatter())
+                        title=title, clabel="m", cbar=cbar, 
+                        cbarform=tick.ScalarFormatter(),
+                        **contourfargs)
 
 def make_patch_spines_invisible(ax):
     ax.set_frame_on(True)
