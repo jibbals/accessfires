@@ -464,7 +464,9 @@ def read_fire(model_run='waroona_run1',
               HSkip=None):
     '''
     Read fire output cubes matching dtimes time dim
-    output is transposed from [time,lon,lat] -> [time, lat, lon]
+    output is transposed from [time,lon,lat] -> [time, lat, lon] to match model output
+    ARGUMENTS:
+        
     '''
     ## If no fire exists for model run, return None
     if not model_outputs[model_run]['hasfire']:

@@ -551,7 +551,7 @@ if __name__=='__main__':
         zoom_in = plotting._extents_['waroonaf'] # full outline for now 
         
         weather_summary_model(
-            'waroona_run1',
+            'waroona_run3',
             zoom_in=zoom_in,
             subdir='waroonaf',
             HSkip=None, 

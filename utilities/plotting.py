@@ -162,9 +162,9 @@ def annotate_max_winds(winds, upto=None, **annotateargs):
     if 'textcoords' not in annotateargs:
         annotateargs['textcoords']='axes fraction'
     if 'fontsize' not in annotateargs:
-        annotateargs['fontsize']=12
+        annotateargs['fontsize']=11
     if 'xytext' not in annotateargs:
-        annotateargs['xytext']=(0, -0.025)
+        annotateargs['xytext']=(0, 1.03)
     if 'arrowprops' not in annotateargs:
         annotateargs['arrowprops'] = dict(
             arrowstyle='-|>',
@@ -176,7 +176,7 @@ def annotate_max_winds(winds, upto=None, **annotateargs):
     # 1-topright gives fractional distance from botleft (for xy)
     annotateargs['xycoords'] = 'axes fraction'
     ymax,xmax = np.shape(winds)
-    annotateargs['xy'] = [1-(ymax - mloc[0])/ymax, 1-(xmax - mloc[1])/xmax]
+    annotateargs['xy'] = [1-(xmax - mloc[1])/xmax,1-(ymax - mloc[0])/ymax]
     
     if 's' not in annotateargs:
         annotateargs['s'] = "wind max = %5.1f m/s"%(winds[:upto,:][mloc])
@@ -1044,6 +1044,14 @@ def streamplot_regridded(x,y,u,v,**kwargs):
     
     ui = interp2d(x,y,u,bounds_error=False,fill_value=np.NaN)(xi,yi)
     vi = interp2d(x,y,v,bounds_error=False,fill_value=np.NaN)(xi,yi)
+    # if linewidth is an argument 
+    if 'linewidth' in kwargs:
+        # on the same grid as input u,v
+        if len(kwargs['linewidth'].shape) > 1:
+            lwi = kwargs['linewidth']
+            kwargs['linewidth'] = interp2d(x,y,lwi,bounds_error=False,fill_value=0)(xi,yi)
+            
+    
     splot = plt.streamplot(xi,yi,ui,vi,**kwargs) 
     # set limits back to latlon limits
     #plt.gca().set_ylim(yi[0],yi[-1])

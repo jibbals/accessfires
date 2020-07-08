@@ -476,3 +476,17 @@ def wind_speed_from_uv_cubes(u,v):
     returns wind direction as a cube
     """
     return iris.analysis.maths.apply_ufunc(np.hypot,u,v)
+
+def wind_speed_to_linewidth(speed, lwmin=0.5, lwmax=5, speedmax=None):
+    ''' 
+    Function to convert windspeed into a sensible linewidth
+        returns lwmin + (lwmax-lwmin)*(speed/speedmax)
+    if speedmax is set and lower than max(speed), speed[speed>speedmax]=speedmax
+    ARGUMENTS:
+    '''
+    cpspeed=np.copy(speed)
+    if speedmax is not None:
+        cpspeed[speed>speedmax]=speedmax
+    else:
+        speedmax=np.nanmax(speed)
+    return lwmin + (lwmax-lwmin)*(speed / speedmax)
