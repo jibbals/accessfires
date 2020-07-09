@@ -58,9 +58,10 @@ def plot_weather_summary(U,V,W, height, lat, lon, extentname,
     nhcontours=16
     hcontours=nhcontours
     hcmap='plasma' #plotting._cmaps_['windspeed']
+    speedmax=None
     if hwind_limits is not None:
-        hvmin,hvmax = hwind_limits
-        hcontours=np.linspace(hvmin,hvmax,nhcontours)
+        hvmin,speedmax = hwind_limits
+        hcontours=np.linspace(hvmin,speedmax,nhcontours)
         hnorm=colors.Normalize(vmin=hwind_limits[0],vmax=hwind_limits[1], clip=True)
 
     fig = plt.figure(figsize=[10,10])
@@ -88,6 +89,7 @@ def plot_weather_summary(U,V,W, height, lat, lon, extentname,
         if FF is not None:
             plotting.map_fire(FF, lat, lon)
         if topog is not None:
+            print("DEBUG:", lon.shape, lat.shape, topog.shape,topog_contours)
             lax.contour(lon,lat,topog,topog_contours,
                         colors='k', alpha=0.7, linewidths=1)
         
@@ -97,8 +99,10 @@ def plot_weather_summary(U,V,W, height, lat, lon, extentname,
         ##Streamplot the horizontal winds
         ## This shifts the subplot grid axes slightly!! 
         # this is seemingly to show the arrows in full where they extend outside the boundary
+        streamLW=utils.wind_speed_to_linewidth(Sr,speedmax=speedmax)
         lax.streamplot(lon,lat,Ur,Vr, 
                        color='k',
+                       linewidth=streamLW,
                        density=(0.5, 0.4))
         # set limits back to latlon limits
         lax.set_ylim(lat[0],lat[-1])  # outliers only
@@ -216,7 +220,7 @@ def weather_summary_model(model_version='waroona_run1',
                                  extentname=extentname,
                                  Q = qci, FF=FF,
                                  hwind_limits=hwind_limits,
-                                 topog=topog.data)
+                                 topog=np.squeeze(topog.data))
             
             offsethours=8 if np.min(lon)<120 else 10
             ltime=dtime+timedelta(hours=offsethours)
@@ -547,11 +551,11 @@ if __name__=='__main__':
     ## Run weather summary
     # waroona day2
     if True:
-        fdt = waroona_run3times[:2] 
+        fdt = waroona_run3times[-23:-10] 
         zoom_in = plotting._extents_['waroonaf'] # full outline for now 
         
         weather_summary_model(
-            'waroona_run3',
+            'waroona_run3uc',
             zoom_in=zoom_in,
             subdir='waroonaf',
             HSkip=None, 

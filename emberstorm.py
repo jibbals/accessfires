@@ -11,6 +11,7 @@ import matplotlib
 
 # plotting stuff
 import matplotlib.pyplot as plt
+from matplotlib.ticker import FormatStrFormatter
 import matplotlib.patheffects as PathEffects
 import numpy as np
 import warnings
@@ -47,17 +48,25 @@ _emberstorm_transects_ = [
         [[-32.91,115.8],[-32.91,115.95]]
         ]
 
-32.84, 115.93  # suburb centre: -32.8430, 115.8526
--32.8725, 115.92
+#-32.84, 115.93  # suburb centre: -32.8430, 115.8526
+#-32.8725, 115.92
 
 _emberstorm_centres_ = {
     'waroona_run3':{
-        # where to centre the transect
-        'latlon':[(-32.855,115.945), # starting point to look at midway between hamel and waroona
-                  ],
-        # UTC times for latlon list above
-        'time':[datetime(2016,1,6,3,30), 
-                ]
+        # where to centre the transect and UTC time
+        'latlontime':[
+            # start midway between hamel and waroona
+            [-32.855,115.945,datetime(2016,1,6,3,30)], 
+            # first point of interest soon after spot ignited
+            [-32.875,115.96, datetime(2016,1,6,12,10)],
+            [-32.88,115.96,datetime(2016,1,6,12,40)],
+            [-32.865,115.925,datetime(2016,1,6,13,10)],
+            # just before downslope run move to southern waroona
+            [-32.86,115.92,datetime(2016,1,6,13,40)],
+            [-32.86,115.92,datetime(2016,1,6,14,10)],
+            # follow the run westwards a bit
+            [-32.857,115.89,datetime(2016,1,6,14,40)],
+            ],
         },
     }
 
@@ -66,17 +75,17 @@ def emberstorm_centres(model_run, times):
         return list of latlons, interpolated to match where pcb are 
         spotted in model_run at times given by input times
     """
-    latlons = _emberstorm_centres_[model_run]['latlon']
-    lats = [lat for lat,_ in latlons]
-    lons = [lon for _,lon in latlons]
-    pcbtimes = _emberstorm_centres_[model_run]['time']
+    latlontimes = _emberstorm_centres_[model_run]['latlontime']
+    lats = [lat for lat,_,_ in latlontimes]
+    lons = [lon for _,lon,_ in latlontimes]
+    estimes = [time for _,_,time in latlontimes]
     
     # X is hours since 2015
     # interpolate lats and lons onto new list of datetimes
-    pcb_X = [(dt - datetime(2015,1,1)).total_seconds()/3600.0 for dt in pcbtimes]
+    es_X = [(dt - datetime(2015,1,1)).total_seconds()/3600.0 for dt in estimes]
     full_X = [(dt - datetime(2015,1,1)).total_seconds()/3600.0 for dt in times]
-    full_lats = np.interp(full_X,pcb_X, lats, left=lats[0], right=lats[-1])
-    full_lons = np.interp(full_X,pcb_X, lons, left=lons[0], right=lons[-1])
+    full_lats = np.interp(full_X,es_X, lats, left=lats[0], right=lats[-1])
+    full_lons = np.interp(full_X,es_X, lons, left=lons[0], right=lons[-1])
     full_latlons = [ (lat, lon) for lat,lon in zip(full_lats, full_lons) ]
     
     return full_latlons
@@ -308,8 +317,13 @@ def topdown_emberstorm(fig=None, subplot_row_col_n=None,
     ax.set_ylim(ylims[0],ylims[1])
     ax.set_xlim(xlims[0],xlims[1])
     # 115.8, 116.1, -32.92,-32.82
-    plt.xticks(np.arange(115.8,116.11,0.05))
-    plt.yticks(np.arange(-32.92,-32.805,0.03))
+    xticks=np.arange(115.8,116.11,0.05)
+    plt.xticks(xticks,xticks)
+    yticks=np.arange(-32.92,-32.805,0.03)
+    plt.yticks(yticks,yticks)
+    
+    ax.yaxis.set_major_formatter(FormatStrFormatter('%.2f'))
+    ax.xaxis.set_major_formatter(FormatStrFormatter('%.2f'))
     # add gridlines
     #gl=ax.grid(color='gray',alpha=0.4) 
     #gl.xlabels_top = False
@@ -372,7 +386,7 @@ def explore_emberstorm(model_run='waroona_run3',
             for transecti, transect in enumerate(_transects_):
                 
                 #utcstamp = dtime.strftime("%b %d %H:%M (UTC)")
-                ltstamp = (dtime+timedelta(hours=8)).strftime("%b %d %H:%M (UTC)")
+                ltstamp = (dtime+timedelta(hours=8)).strftime("%b %d %H:%M (LT)")
                 # winds
                 u,v,w = uvw[0][i].data.data, uvw[1][i].data.data, uvw[2][i].data.data
                 

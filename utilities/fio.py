@@ -96,6 +96,28 @@ model_outputs = {
             'path_u10m2':'fire/10m_uwind.CSIRO_gadi.20160107T0300Z.nc',
             'run':'Run 6 Feb 2020',
             'origdir':'/scratch/en0/hxy548/cylc-run/au-aa799/share/cycle/20160105T1500Z/waroona/0p3/ukv_os38/um/',
+            'origdir2':'/scratch/en0/hxy548/cylc-run/au-aa876/share/cycle/20160107T0300Z/waroona/0p3/ukv_os38/um/',
+            'origfiredir':'/g/data/en0/hxy548/fire_vars/waroona/0p3/'}, 
+        ## New waroona run (on GADI) by harvey in July 2020
+        ## same as waroona_run3 but fire coupling turned off
+        'waroona_run3uc':{
+            'path':'data/waroona_run3uc/',
+            'topog':'umnsaa_2016010515_slv.nc',
+            'filedates':np.array([datetime(2016,1,5,15) + timedelta(hours=x) for x in list(range(24))+list(range(36,60))]),
+            'hasfire':True,
+            'path_firefront':'fire/firefront.CSIRO_new_gadi.20160105T1500Z.nc',
+            'path_fireflux':'fire/sensible_heat.CSIRO_new_gadi.20160105T1500Z.nc',
+            'path_firespeed':'fire/fire_speed.CSIRO_new_gadi.20160105T1500Z.nc',
+            'path_v10m':'fire/10m_vwind.CSIRO_new_gadi.20160105T1500Z.nc',
+            'path_u10m':'fire/10m_uwind.CSIRO_new_gadi.20160105T1500Z.nc',
+            'path_firefront2':'fire/firefront.CSIRO_gadi_ncp.20160107T0300Z.nc',
+            'path_fireflux2':'fire/sensible_heat.CSIRO_gadi_ncp.20160107T0300Z.nc',
+            'path_firespeed2':'fire/fire_speed.CSIRO_gadi_ncp.20160107T0300Z.nc',
+            'path_v10m2':'fire/10m_vwind.CSIRO_gadi_ncp.20160107T0300Z.nc',
+            'path_u10m2':'fire/10m_uwind.CSIRO_gadi_ncp.20160107T0300Z.nc',
+            'run':'Run 6 Feb 2020',
+            'origdir':'/scratch/en0/hxy548/cylc-run/au-aa799/share/cycle/20160105T1500Z/waroona/0p3/ukv_os38/um/',
+            'origdir2':'/scratch/en0/hxy548/cylc-run/au-aa876/share/cycle/20160107T0300Z/waroona/0p3/ukv_os38/um/',
             'origfiredir':'/g/data/en0/hxy548/fire_vars/waroona/0p3/'}, 
         ## Copy of waroona_run2 suite, with fire coupling turned off
         'waroona_run2uc':{
@@ -812,7 +834,7 @@ def read_model_run(model_version, fdtime=None, subdtimes=None, extent=None,
             topog, = read_nc_iris(ddir + model_outputs[model_version]['topog'],
                                   constraints = 'surface_altitude',
                                   HSkip=HSkip)
-            allcubes.append(topog)
+            allcubes.append(topog.squeeze()) # don't want time dim in topog
 
     ## Subset spatially
     # based on extent
