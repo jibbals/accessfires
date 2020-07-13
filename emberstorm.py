@@ -137,7 +137,7 @@ def transect_emberstorm(u,v,w,z,
                         transect,
                         topog,
                         ztop=700,
-                        ff=None,
+                        sh=None,
                         theta=None,
                         theta_contourargs={},
                         ):
@@ -177,7 +177,7 @@ def transect_emberstorm(u,v,w,z,
                                             ztop=ztop,
                                             title="",
                                             lines=None, npoints=npoints,
-                                            topog=topog, ff=ff)
+                                            topog=topog, sh=sh)
     
     # east-west and vertical winds on transect
     sliceu,_,_ = utils.transect(u,lats,lons,start,end,nx=npoints, z_th=z)
@@ -436,7 +436,7 @@ def explore_emberstorm(model_run='waroona_run3',
                 ## Finally show winds on transect
                 ax2=plt.subplot(2,1,2)
                 
-                transect_emberstorm(u,v,w,z.data,lat,lon,transect=[start,end],topog=topog.data,ztop=ztop,ff=ffi)
+                transect_emberstorm(u,v,w,z.data,lat,lon,transect=[start,end],topog=topog.data,ztop=ztop,sh=shi)
                 
                 # Save figure into folder with numeric identifier
                 stitle="Emberstorm %s"%ltstamp
@@ -507,11 +507,11 @@ def zoomed_emberstorm_plots(hours=[0],
         lons = ff.coord('longitude').points
         zd = z.data.data
         for dti, dt in enumerate(ctimes):
-            ffd = ff[dti].data.data
+            shd = sh[dti].data.data
             LT = dt + timedelta(hours=8)
             
             if topdown:
-                shd = sh[dti].data.data
+                ffd = ff[dti].data.data
                 u10d = u10[dti].data.data
                 v10d = v10[dti].data.data
                 wmapd = wmap[dti].data.data
@@ -543,7 +543,7 @@ def zoomed_emberstorm_plots(hours=[0],
                                     lats,lons,
                                     transect,
                                     topog=topog,
-                                    ff=ffd,
+                                    sh=shd,
                                     theta=theta[dti].data.data)
                 
                 plt.title(LT.strftime('Transect %b %d, %H%M(local)'))
@@ -562,26 +562,26 @@ if __name__ == '__main__':
 
     dtimes=interesting_hours[-7:] 
 
-    if True:
+    if False:
         # This makes the combined 3 row plot with top down winds and 
         # transects of theta and wind
         # Let's do half with topography and half with OSM
-        explore_emberstorm(mr, hours=hours[5:13],
-                           topography=False,
-                           extent=extent1, ztop=3000)
-        explore_emberstorm(mr, hours=hours[13:24],
+        #explore_emberstorm(mr, hours=hours[7:13],
+        #                   topography=False,
+        #                   extent=extent1, ztop=3000)
+        explore_emberstorm(mr, hours=hours[18:24],
                            topography=True,
                            extent=extent1, ztop=3000)
     
-    if False:
+    if True:
         # newer plots showing 1: fire + town + winds (based on top panel in make_plots_emberstorm)
         # First of two emberstorms
         zoomed_emberstorm_plots(
-                first=False,
-                second=True,
-                topdown=True,
+                first=True,
+                second=False,
+                topdown=False,
                 transect=True,
                 topography=True,
-                hours=np.arange(36,39)
+                hours=np.arange(15,24)
                 )
         

@@ -551,7 +551,7 @@ if __name__=='__main__':
     ## Run weather summary
     # waroona day2
     if True:
-        fdt = waroona_run3times[-23:-10] 
+        fdt = waroona_run3times[18:21] 
         zoom_in = plotting._extents_['waroonaf'] # full outline for now 
         
         weather_summary_model(

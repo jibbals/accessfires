@@ -105,11 +105,11 @@ model_outputs = {
             'topog':'umnsaa_2016010515_slv.nc',
             'filedates':np.array([datetime(2016,1,5,15) + timedelta(hours=x) for x in list(range(24))+list(range(36,60))]),
             'hasfire':True,
-            'path_firefront':'fire/firefront.CSIRO_new_gadi.20160105T1500Z.nc',
-            'path_fireflux':'fire/sensible_heat.CSIRO_new_gadi.20160105T1500Z.nc',
-            'path_firespeed':'fire/fire_speed.CSIRO_new_gadi.20160105T1500Z.nc',
-            'path_v10m':'fire/10m_vwind.CSIRO_new_gadi.20160105T1500Z.nc',
-            'path_u10m':'fire/10m_uwind.CSIRO_new_gadi.20160105T1500Z.nc',
+            'path_firefront':'fire/firefront.CSIRO_gadi_ncp.20160105T1500Z.nc',
+            'path_fireflux':'fire/sensible_heat.CSIRO_gadi_ncp.20160105T1500Z.nc',
+            'path_firespeed':'fire/fire_speed.CSIRO_gadi_ncp.20160105T1500Z.nc',
+            'path_v10m':'fire/10m_vwind.CSIRO_gadi_ncp.20160105T1500Z.nc',
+            'path_u10m':'fire/10m_uwind.CSIRO_gadi_ncp.20160105T1500Z.nc',
             'path_firefront2':'fire/firefront.CSIRO_gadi_ncp.20160107T0300Z.nc',
             'path_fireflux2':'fire/sensible_heat.CSIRO_gadi_ncp.20160107T0300Z.nc',
             'path_firespeed2':'fire/fire_speed.CSIRO_gadi_ncp.20160107T0300Z.nc',
@@ -834,7 +834,9 @@ def read_model_run(model_version, fdtime=None, subdtimes=None, extent=None,
             topog, = read_nc_iris(ddir + model_outputs[model_version]['topog'],
                                   constraints = 'surface_altitude',
                                   HSkip=HSkip)
-            allcubes.append(topog.squeeze()) # don't want time dim in topog
+            if 1 in topog.shape:
+                topog = iris.util.squeeze(topog) # don't want time dim in topog
+            allcubes.append(topog) 
 
     ## Subset spatially
     # based on extent

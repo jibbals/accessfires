@@ -782,7 +782,7 @@ def scale_bar(ax, proj, length, location=(0.5, 0.05), linewidth=3,
         linewidth=linewidth, zorder=3)
 
 def transect(data, z, lat, lon, start, end, npoints=None, 
-             topog=None, ff=None, latt=None, lont=None, ztop=4000,
+             topog=None, sh=None, latt=None, lont=None, ztop=4000,
              title="", ax=None, colorbar=True,
              cbarform=None, contours=None,lines=None,
              **contourfargs):
@@ -817,8 +817,6 @@ def transect(data, z, lat, lon, start, end, npoints=None,
         latt=lat
     if lont is None:
         lont=lon
-    if topog is not None:
-        slicetopog,_,_ = utils.transect(topog,latt,lont,start,end,nx=npoints)
     
     if ax is not None:
         plt.sca(ax)
@@ -843,39 +841,21 @@ def transect(data, z, lat, lon, start, end, npoints=None,
     xbottom = slicex[0,:]
     # make sure land is obvious
     if topog is not None:
-        #print("DEBUG: topog fill")
-        #print("     : xbottom = ", xbottom)
-        #print("     : topog = ", slicetopog)
-        # fill_between(x, ytop[, ybottom][, **args])
-        plt.fill_between(xbottom, slicetopog, zbottom, 
-                         interpolate=True, facecolor='darkgrey',
-                         zorder=2)
-    
-    # put it red where the fire is burnt
-    if ff is not None:
-        ffslice,_,_ = utils.transect(ff, lat, lon, start, end, nx=npoints)
-        burnt = np.copy(slicetopog)
-        interp=False
-        # 0.005 is close enough?
-        if not np.all(ffslice>=0.005):
-            burnt[ffslice>=0.005] = np.NaN
-            plt.fill_between(xbottom, burnt, zbottom, interpolate=interp, 
-                             facecolor='yellow', zorder=2)
-        # 0.003 is pretty near the fire front
-        if not np.all(ffslice>=0.003):
-            burnt[ffslice>=0.003] = np.NaN
-            plt.fill_between(xbottom, burnt, zbottom, interpolate=interp, 
-                             facecolor='orange', zorder=3)
-        # 0 is the front
-        if not np.all(ffslice>=0.001):
-            burnt[ffslice>=0.001] = np.NaN
-            plt.fill_between(xbottom, burnt, zbottom, interpolate=interp, 
-                             facecolor='red', zorder=4)
-        # -ve is behind the front
-        if not np.all(ffslice>=0):
-            burnt[ffslice>0]=np.NaN
-            plt.fill_between(xbottom, burnt, zbottom, interpolate=interp, 
-                             facecolor='saddlebrown', zorder=5)
+        slicetopog,_,_ = utils.transect(topog,latt,lont,start,end,nx=npoints)
+        # Plot gray fill unless we have sensible heat
+        if (sh is not None) and (np.max(sh) < 1):
+            plt.fill_between(xbottom, slicetopog, zbottom, 
+                             interpolate=True, facecolor='darkgrey',
+                             zorder=2)
+        else:
+            # 0-50k W/m2 colormap on log scale
+            cmap=plt.cm.cmap_d['plasma']
+            normalize = col.SymLogNorm(vmin=0, vmax=10000, linthresh=100)
+            
+            shslice,_,_ = utils.transect(sh, lat, lon, start, end, nx=npoints)
+            # colour a sequence of polygons with the value coming from sh
+            for i in range(len(shslice) - 1):
+                plt.fill_between([xbottom[i], xbottom[i+1]], [slicetopog[i],slicetopog[i+1]],[zbottom[i], zbottom[i+1]], color=cmap(normalize(shslice[i])))
     
     if ztop is not None:
         plt.ylim(0,ztop)
@@ -887,7 +867,7 @@ def transect(data, z, lat, lon, start, end, npoints=None,
     return slicedata, slicex, slicez
 
 def transect_s(s, z, lat, lon, start, end, npoints=100, 
-               topog=None, ff=None, latt=None, lont=None, ztop=4000,
+               topog=None, sh=None, latt=None, lont=None, ztop=4000,
                title="Wind speed (m/s)", ax=None, colorbar=True,
                cbarform=None, contours=np.arange(0,25,2.5),
                lines=np.arange(0,25,2.5), **contourfargs):
@@ -908,13 +888,13 @@ def transect_s(s, z, lat, lon, start, end, npoints=100,
     
     # call transect using some defaults for potential temperature
     return transect(s,z,lat,lon,start,end,npoints=npoints,
-                    topog=topog, ff=ff, latt=latt, lont=lont, ztop=ztop,
+                    topog=topog, sh=sh, latt=latt, lont=lont, ztop=ztop,
                     title=title, ax=ax, colorbar=colorbar,
                     cbarform=cbarform, contours=contours,lines=lines,
                     **contourfargs)
 
 def transect_theta(theta, z, lat, lon, start, end, npoints=100, 
-                   topog=None, ff=None, latt=None, lont=None, ztop=4000,
+                   topog=None, sh=None, latt=None, lont=None, ztop=4000,
                    title="$T_{\\theta}$ (K)", ax=None, colorbar=True,
                    cbarform=tick.ScalarFormatter(),
                    contours = np.arange(280,350,1),
@@ -935,13 +915,13 @@ def transect_theta(theta, z, lat, lon, start, end, npoints=100,
         
     # call transect using some defaults for potential temperature
     return transect(theta,z,lat,lon,start,end,npoints=npoints,
-                    topog=topog, ff=ff, latt=latt, lont=lont, ztop=ztop,
+                    topog=topog, sh=sh, latt=latt, lont=lont, ztop=ztop,
                     title=title, ax=ax, colorbar=colorbar,
                     cbarform=cbarform, contours=contours, lines=lines,
                     **contourfargs)
 
 def transect_w(w, z, lat, lon, start, end, npoints=100, 
-               topog=None, ff=None, latt=None, lont=None, ztop=4000,
+               topog=None, sh=None, latt=None, lont=None, ztop=4000,
                title="Vertical motion (m/s)", ax=None, colorbar=True, 
                cbarform=tick.ScalarFormatter(),
                contours=np.union1d(np.union1d(2.0**np.arange(-2,6),-1*(2.0**np.arange(-2,6))),np.array([0])),
@@ -962,13 +942,13 @@ def transect_w(w, z, lat, lon, start, end, npoints=100,
     
     # call transect using some defaults for vertical velocity w
     return transect(w, z,lat,lon,start,end,npoints=npoints,
-                    topog=topog, ff=ff, latt=latt, lont=lont, ztop=ztop,
+                    topog=topog, sh=sh, latt=latt, lont=lont, ztop=ztop,
                     title=title, ax=ax, colorbar=colorbar,
                     cbarform=cbarform, contours=contours, lines=lines,
                     **contourfargs)
 
 def transect_qc(qc, z, lat, lon, start, end, npoints=100, 
-               topog=None, ff=None, latt=None, lont=None, ztop=4000,
+               topog=None, sh=None, latt=None, lont=None, ztop=4000,
                title="Water and ice (g/kg air)", ax=None, colorbar=True,
                cbarform=tick.ScalarFormatter(), contours=np.arange(0.0,0.4,0.01),
                lines=np.array([constants.cloud_threshold]),
@@ -988,7 +968,7 @@ def transect_qc(qc, z, lat, lon, start, end, npoints=100,
         contourfargs['norm'] = col.SymLogNorm(0.02,base=np.e)
     # call transect using some defaults for vertical velocity w
     return transect(qc, z,lat,lon,start,end,npoints=npoints,
-                    topog=topog, ff=ff, latt=latt, lont=lont, ztop=ztop,
+                    topog=topog, sh=sh, latt=latt, lont=lont, ztop=ztop,
                     title=title, ax=ax, colorbar=colorbar,
                     cbarform=cbarform, contours=contours, lines=lines,
                     **contourfargs)
