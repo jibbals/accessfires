@@ -115,10 +115,24 @@ model_outputs = {
             'path_firespeed2':'fire/fire_speed.CSIRO_gadi_ncp.20160107T0300Z.nc',
             'path_v10m2':'fire/10m_vwind.CSIRO_gadi_ncp.20160107T0300Z.nc',
             'path_u10m2':'fire/10m_uwind.CSIRO_gadi_ncp.20160107T0300Z.nc',
-            'run':'Run 6 Feb 2020',
+            'run':'Run 10 July 2020',
             'origdir':'/scratch/en0/hxy548/cylc-run/au-aa799/share/cycle/20160105T1500Z/waroona/0p3/ukv_os38/um/',
             'origdir2':'/scratch/en0/hxy548/cylc-run/au-aa876/share/cycle/20160107T0300Z/waroona/0p3/ukv_os38/um/',
             'origfiredir':'/g/data/en0/hxy548/fire_vars/waroona/0p3/'}, 
+        ## Day 2 run in July, early start for day2 output with fire spreading too fast
+        'waroona_run3e':{
+            'path':'data/waroona_run3e/',
+            'topog':'umnsaa_2016010615_slv.nc',
+            'filedates':np.array([datetime(2016,1,6,15) + timedelta(hours=x) for x in list(range(24))]),
+            'hasfire':True,
+            'path_firefront':'fire/firefront.CSIRO_gadi.20160106T1500Z',
+            'path_fireflux':'fire/sensible_heat.CSIRO_gadi.20160106T1500Z',
+            'path_firespeed':'fire/fire_speed.CSIRO_gadi.20160106T1500Z',
+            'path_v10m':'fire/10m_vwind.CSIRO_gadi.20160106T1500Z',
+            'path_u10m':'fire/10m_uwind.CSIRO_gadi.20160106T1500Z',
+            'run':'Run 13 July 2020',
+            'origdir':'/scratch/en0/hxy548/cylc-run/au-aa876/share/cycle/20160106T1500Z/waroona/0p3/ukv_os38/um/',
+            },
         ## Copy of waroona_run2 suite, with fire coupling turned off
         'waroona_run2uc':{
             'path':'data/waroona_run2uc/',
@@ -130,7 +144,8 @@ model_outputs = {
             'path_firespeed':'fire/fire_speed.CSIRO_new_ncp.20160105T1500Z.nc',
             'run':'Run ~12 December 2019',
             'origdir':'/short/en0/jwg574/cylc-run/au-aa799/share/cycle/20160105T1500Z/waroona/0p3/ukv_os38/um/',
-            'origfiredir':'/raijin/short/en0/jwg574/cylc-run/au-aa799/work/20160105T1500Z/'}, # waroona_0p3_ukv_os38_um_fcst_000 to 012
+            'origfiredir':'/raijin/short/en0/jwg574/cylc-run/au-aa799/work/20160105T1500Z/',
+            },
         ## Run 1 was the first one I looked at, with east west rolls and no pyrocb
         ## Attemp to recreate 'old' run weather and pyrocb, updated fire to use mean met (rather than instantaneous)
         'waroona_run2':{
@@ -143,7 +158,8 @@ model_outputs = {
             'path_firespeed':'fire/fire_speed.CSIRO_24h_new.20160105T1500Z.nc',
             'run':'Run ~10 December 2019',
             'origdir':'/short/en0/hxy548/cylc-run/au-aa799/share/cycle/20160105T1500Z/waroona/0p3/ukv_os38/um/',
-            'origfiredir':'/short/en0/hxy548/tmp/waroona/0p3'},
+            'origfiredir':'/short/en0/hxy548/tmp/waroona/0p3',
+            },
         ## Run 1 was the first one I looked at, with east west rolls and no pyrocb
         'waroona_run1':{
             'path':'data/waroona_run1/',
@@ -157,7 +173,8 @@ model_outputs = {
             'path_v10m':'fire/10m_vwind.CSIRO_24h.20160105T1500Z.nc',
             'path_u10m':'fire/10m_uwind.CSIRO_24h.20160105T1500Z.nc',
             'origdir':'/short/en0/hxy548/cylc-run/au-aa799/share/cycle/20160105T1500Z/waroona/0p3/ukv_os38/um/',
-            'origfiredir':'/short/en0/hxy548/tmp/waroona/0p3/'},
+            'origfiredir':'/short/en0/hxy548/tmp/waroona/0p3/',
+            },
         ## Old run had pyrocb but also lots of high clouds and hooked F160 bases
         'waroona_old':{
             'path':'data/waroona_old/',
@@ -169,7 +186,8 @@ model_outputs = {
             'path_firefront':'fire/firefront.01.nc', # under the data directory
             'path_fireflux':'fire/sensible_heat.01.nc',
             'path_firespeed':'fire/fire_speed.01.nc',
-            'origfiredir':'/short/en0/mxp548/cylc-run/au-aa714/work/20160105T1500Z/waroona_0p4_ukv_os38_um_fcst_000/'},
+            'origfiredir':'/short/en0/mxp548/cylc-run/au-aa714/work/20160105T1500Z/waroona_0p4_ukv_os38_um_fcst_000/',
+            },
         ## Sirivan run (june 2019) at 100mx100m resolution
         'sirivan_run1_hr':{
             'path':'data/sirivan_run1_hr/',
@@ -214,8 +232,8 @@ model_outputs = {
             'filedates':np.array([datetime(2019,12,30,9) + timedelta(hours=x) for x in range(24)]),
             'hasfire':False,
             'run':'Run in June 2020',
-            'origdir':'/home/574/jwg574/cylc-run/u-bq575/share/cycle/20191230T0900Z/SEForest/0p3/'
-                }
+            'origdir':'/home/574/jwg574/cylc-run/u-bq575/share/cycle/20191230T0900Z/SEForest/0p3/',
+            },
         }
 
 

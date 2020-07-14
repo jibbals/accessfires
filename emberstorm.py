@@ -33,49 +33,50 @@ y0=-32.87
 yspread = np.array([0, .02, -.02])
 _transects_ = [ [[y,x0],[y,x1]] for y in y0+yspread ]
 
-# two extents worth examining:
-_emberstorm_extents_ = [
-        # first day around 10pm LT
-        [115.8, 116.1, -32.92,-32.82], 
-        # second day around 7pm LT
-        [115.72, 116.03, -33.03, -32.839],
-        ]
-
-
-# lat lon pairs for start,end of transects
-_emberstorm_transects_ = [
-        [[-32.87,115.87],[-32.87,116.02]],
-        [[-32.91,115.8],[-32.91,115.95]]
-        ]
 
 #-32.84, 115.93  # suburb centre: -32.8430, 115.8526
 #-32.8725, 115.92
 
 _emberstorm_centres_ = {
     'waroona_run3':{
-        # where to centre the transect and UTC time
-        'latlontime':[
-            # start midway between hamel and waroona
-            [-32.855,115.945,datetime(2016,1,6,3,30)], 
-            # first point of interest soon after spot ignited
-            [-32.875,115.96, datetime(2016,1,6,12,10)],
-            [-32.88,115.96,datetime(2016,1,6,12,40)],
-            [-32.865,115.925,datetime(2016,1,6,13,10)],
-            # just before downslope run move to southern waroona
-            [-32.86,115.92,datetime(2016,1,6,13,40)],
-            [-32.86,115.92,datetime(2016,1,6,14,10)],
-            # follow the run westwards a bit
-            [-32.857,115.89,datetime(2016,1,6,14,40)],
-            ],
+        'first':{
+            # where to centre the transect and UTC time
+            'latlontime':[
+                # start midway between hamel and waroona
+                [-32.855,115.945,datetime(2016,1,6,3,30)], 
+                # first point of interest soon after spot ignited
+                [-32.875,115.96, datetime(2016,1,6,12,10)],
+                [-32.88,115.96,datetime(2016,1,6,12,40)],
+                [-32.865,115.925,datetime(2016,1,6,13,10)],
+                # just before downslope run move to southern waroona
+                [-32.86,115.92,datetime(2016,1,6,13,40)],
+                [-32.86,115.92,datetime(2016,1,6,14,10)],
+                # follow the run westwards a bit
+                [-32.857,115.89,datetime(2016,1,6,14,40)],
+                ],
+            # W,E,S,N to look at
+            'extent':[115.8, 116.1, -32.92,-32.82],
+            # hours to look at
+            'hours':np.arange(15,24),
+            },
+        'second':{
+            ## NOW LOOKING TOWARDS SECOND OCCURRENCE:
+            'latlontime':[
+                # 7PM local time look at just north of yarloop
+                [-32.95, 115.90,datetime(2016,1,7,11)],
+                ],
+            'extent':[115.72, 116.03, -33.03, -32.839],
+            'hours':np.arange(31,40), 
+            },
         },
     }
 
-def emberstorm_centres(model_run, times):
+def emberstorm_centres(model_run, key, times, dx=0.07):
     """
         return list of latlons, interpolated to match where pcb are 
         spotted in model_run at times given by input times
     """
-    latlontimes = _emberstorm_centres_[model_run]['latlontime']
+    latlontimes = _emberstorm_centres_[model_run][key]['latlontime']
     lats = [lat for lat,_,_ in latlontimes]
     lons = [lon for _,lon,_ in latlontimes]
     estimes = [time for _,_,time in latlontimes]
@@ -86,9 +87,9 @@ def emberstorm_centres(model_run, times):
     full_X = [(dt - datetime(2015,1,1)).total_seconds()/3600.0 for dt in times]
     full_lats = np.interp(full_X,es_X, lats, left=lats[0], right=lats[-1])
     full_lons = np.interp(full_X,es_X, lons, left=lons[0], right=lons[-1])
-    full_latlons = [ (lat, lon) for lat,lon in zip(full_lats, full_lons) ]
-    
-    return full_latlons
+    #full_latlons = [ (lat, lon) for lat,lon in zip(full_lats, full_lons) ]
+    full_transects = [[[lat,lon-dx],[lat,lon+dx]] for lat,lon in zip(full_lats,full_lons)]
+    return full_transects
 
 ###
 ## METHODS
@@ -447,10 +448,10 @@ def explore_emberstorm(model_run='waroona_run3',
                 fio.save_fig(model_run=model_run, script_name=_sn_, pname=dtime, 
                              plt=plt, subdir='transect%d'%transecti)
             
-def zoomed_emberstorm_plots(hours=[0],
+def zoomed_emberstorm_plots(hours=None,
                             first=True,second=False,
-                            topdown=True, transect=True,
                             topography=False,
+                            extent=None,
                             wmap_height=300,):
     """
     Create zoomed in pictures showing top down winds and zmotion, with 
@@ -464,24 +465,19 @@ def zoomed_emberstorm_plots(hours=[0],
         topography: True if topography is desired instead of OSM
         wmap_height: how high to show vmotion contours, default 300m
     """
-    dtimes=fio.model_outputs['waroona_run3']['filedates'][np.array(hours)]
-    # extents: list of 4 element lists of E,W,S,N boundaries to look at
-    # transects: list of [[lat,lon],[lat1,lon1]], transects to draw
-    #    one for each extent
-    extents=[]
-    transects=[]
-    subdirs=[]
-    if first:
-        extents.append(_emberstorm_extents_[0])
-        transects.append(_emberstorm_transects_[0])
-        subdirs=["first"]
-    if second:
-        # append second emberstorm scene
-        extents.append(_emberstorm_extents_[1])
-        transects.append(_emberstorm_transects_[1])
-        subdirs.append("second")
-    
-    for extent,transect,subdir in zip(extents,transects,subdirs):
+    for i in range(2):
+        if (i==0) and not first:
+            continue
+        if (i==1) and not second:
+            continue
+        key=['first','second'][i]
+        
+        if hours is None:
+            hours = _emberstorm_centres_['waroona_run3'][key]['hours']
+        if extent is None:
+            extent = _emberstorm_centres_['waroona_run3'][key]['extent']
+        
+        dtimes=fio.model_outputs['waroona_run3']['filedates'][np.array(hours)]
         
         cubes = fio.read_model_run(mr, fdtime=dtimes, extent=extent, 
                                    add_topog=True, add_winds=True,
@@ -491,6 +487,9 @@ def zoomed_emberstorm_plots(hours=[0],
         topog=cubes.extract("surface_altitude")[0].data
         topogd = topog if topography else None
         ctimes = utils.dates_from_iris(w)
+        
+        # transects: list of [[lat,lon],[lat1,lon1]], transects to draw
+        transects=emberstorm_centres('waroona_run3',key,ctimes)
         
         # extra vert map at ~ 300m altitude
         levh  = w.coord('level_height').points
@@ -502,59 +501,59 @@ def zoomed_emberstorm_plots(hours=[0],
                                       extent=extent,
                                       sensibleheat=True,
                                       wind=True)
-        
+            
         lats = ff.coord('latitude').points
         lons = ff.coord('longitude').points
         zd = z.data.data
         for dti, dt in enumerate(ctimes):
+            transect=transects[dti]
             shd = sh[dti].data.data
             LT = dt + timedelta(hours=8)
             
-            if topdown:
-                ffd = ff[dti].data.data
-                u10d = u10[dti].data.data
-                v10d = v10[dti].data.data
-                wmapd = wmap[dti].data.data
+            ffd = ff[dti].data.data
+            u10d = u10[dti].data.data
+            v10d = v10[dti].data.data
+            wmapd = wmap[dti].data.data
                 
-                fig,ax = topdown_emberstorm(extent=extent,
-                                            lats=lats,lons=lons,
-                                            ff=ffd, sh=shd, 
-                                            u10=u10d, v10=v10d,
-                                            topog=topogd,
-                                            wmap=wmapd,
-                                            wmap_height=wmap_height)
+            fig,ax = topdown_emberstorm(extent=extent,
+                                        lats=lats,lons=lons,
+                                        ff=ffd, sh=shd, 
+                                        u10=u10d, v10=v10d,
+                                        topog=topogd,
+                                        wmap=wmapd,
+                                        wmap_height=wmap_height)
                 
-                ## Add dashed line to show where transect will be
-                if transect is not None:
-                    start,end =transect
-                    plt.plot([start[1],end[1]],[start[0],end[0], ], '--k', 
-                             linewidth=2, alpha=0.7)
-                
-                ## Plot title
-                plt.title(LT.strftime('%b %d, %H%M(local)'))
-                fio.save_fig(mr,_sn_,dt,subdir=subdir+'/topdown',plt=plt)
+            ## Add dashed line to show where transect will be
+            if transect is not None:
+                start,end =transect
+                plt.plot([start[1],end[1]],[start[0],end[0], ], '--k', 
+                         linewidth=2, alpha=0.7)
+            
+            ## Plot title
+            plt.title(LT.strftime('%b %d, %H%M(local)'))
+            fio.save_fig(mr,_sn_,dt,subdir=key+'/topdown',plt=plt)
             
             ## New plot for transect goes here
-            if transect:
-                transect_emberstorm(u[dti].data.data,
-                                    v[dti].data.data,
-                                    w[dti].data.data,
-                                    zd,
-                                    lats,lons,
-                                    transect,
-                                    topog=topog,
-                                    sh=shd,
-                                    theta=theta[dti].data.data)
-                
-                plt.title(LT.strftime('Transect %b %d, %H%M(local)'))
-                fio.save_fig(mr,_sn_,dt,subdir=subdir+'/transect',plt=plt)
+            transect_emberstorm(u[dti].data.data,
+                                v[dti].data.data,
+                                w[dti].data.data,
+                                zd,
+                                lats,lons,
+                                transect,
+                                topog=topog,
+                                sh=shd,
+                                theta=theta[dti].data.data)
+            
+            plt.title(LT.strftime('Transect %b %d, %H%M(local)'))
+            fio.save_fig(mr,_sn_,dt,subdir=key+'/transect',plt=plt)
 
 if __name__ == '__main__':
     plotting.init_plots()
     mr = 'waroona_run3'
-    extent1,extent2 = _emberstorm_extents_
-    
-    transect1 = _transects_[0]
+    #extent1,extent2 = _emberstorm_extents_
+    extent1 = _emberstorm_centres_['waroona_run3']['first']['extent']
+    extent2 = _emberstorm_centres_['waroona_run3']['second']['extent']
+    #transect1 = _transects_[0]
     
     hours=fio.model_outputs[mr]['filedates']
     testhours = [datetime(2016,1,6,7)]
@@ -578,10 +577,8 @@ if __name__ == '__main__':
         # First of two emberstorms
         zoomed_emberstorm_plots(
                 first=True,
-                second=False,
-                topdown=False,
-                transect=True,
+                second=True,
                 topography=True,
-                hours=np.arange(15,24)
+                #hours=np.arange(15,24)
                 )
         

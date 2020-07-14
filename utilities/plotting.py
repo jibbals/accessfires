@@ -855,7 +855,11 @@ def transect(data, z, lat, lon, start, end, npoints=None,
             shslice,_,_ = utils.transect(sh, lat, lon, start, end, nx=npoints)
             # colour a sequence of polygons with the value coming from sh
             for i in range(len(shslice) - 1):
-                plt.fill_between([xbottom[i], xbottom[i+1]], [slicetopog[i],slicetopog[i+1]],[zbottom[i], zbottom[i+1]], color=cmap(normalize(shslice[i])))
+                if shslice[i]<100:
+                    color='darkgrey'
+                else:
+                    color=cmap(normalize(shslice[i]))
+                plt.fill_between([xbottom[i], xbottom[i+1]], [slicetopog[i],slicetopog[i+1]],[zbottom[i], zbottom[i+1]], color=color)
     
     if ztop is not None:
         plt.ylim(0,ztop)
