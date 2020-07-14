@@ -551,8 +551,8 @@ if __name__=='__main__':
     ## Run weather summary
     # waroona day2
     if True:
-        mr = 'waroona_run3e'
-        fdt = fio.model_outputs[mr]['filedates'][:12] 
+        mr = 'waroona_run3'
+        fdt = fio.model_outputs[mr]['filedates'][31:] 
         zoom_in = plotting._extents_['waroonaf'] # full outline for now 
         
         weather_summary_model(

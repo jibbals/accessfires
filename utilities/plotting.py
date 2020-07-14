@@ -859,7 +859,11 @@ def transect(data, z, lat, lon, start, end, npoints=None,
                     color='darkgrey'
                 else:
                     color=cmap(normalize(shslice[i]))
-                plt.fill_between([xbottom[i], xbottom[i+1]], [slicetopog[i],slicetopog[i+1]],[zbottom[i], zbottom[i+1]], color=color)
+                plt.fill_between([xbottom[i], xbottom[i+1]], 
+                                 [slicetopog[i],slicetopog[i+1]],
+                                 [zbottom[i], zbottom[i+1]], 
+                                 color=color,
+                                 zorder=2) # put on top of most things
     
     if ztop is not None:
         plt.ylim(0,ztop)

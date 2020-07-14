@@ -219,15 +219,19 @@ def transect_emberstorm(u,v,w,z,
                           theta_contourargs['levels'][-1])
         plt.clabel(contours, inline=True, fontsize=10)
 
-def topdown_emberstorm(fig=None, subplot_row_col_n=None, 
+def topdown_emberstorm(fig=None, subplot_row_col_n=None, ax=None,
                        extent=[115.68, 116.15, -33.025,-32.79],
                        lats=None,lons=None, ff=None, sh=None, 
                        u10=None, v10=None, 
                        wmap=None, wmap_height=None,
-                       topog=None):
+                       topog=None,
+                       annotate=True, showlatlons=True
+                       ):
     """
     Top down view of Waroona/Yarloop, adding fire front and heat flux and 10m winds
     ARGUMENTS:
+        ax: plotting axis, if this is provided then no backdrop is drawn (assume axis already has backdrop)
+            In this case just winds/fire/etc will be overplotted
         lats/lons are 1D arrays, required if adding other stuff
         ff [lats,lons] : firefront array
         sh [lats,lons] : sensible heat flux
@@ -235,51 +239,55 @@ def topdown_emberstorm(fig=None, subplot_row_col_n=None,
         v10 [lats,lons] : 10m altitude latitudinal winds
         topog [lats,lons] : surface altitude - can use this instead of tiff
         topog_contours : list of values to contour topography at - default 50m
+        annotate: True if annotations are desired for winds and heat flux
+        showlatlons: True if latlons should be added to border
     RETURNS:
         fig, ax
     """
-    if fig is None:
-        xsize = 12
-        ysize = 12
-        if extent is not None:
-            # try to guess a good size for aspect ratio
-            width = extent[1]-extent[0]
-            height = extent[3]-extent[2]
-            if width > (1.5*height):
-                xsize=16
-            if width > (2*height):
-                xsize=20
-                ysize=10
-            if width < (0.75 * height):
-                ysize=16
-        fig=plt.figure(figsize=(xsize,ysize))
-    # first create map from tiff file unless topography passed in
-    if topog is None:
-        fig, ax = plotting.map_tiff_qgis(
-            fname="waroonaz_osm.tiff", 
-            extent=extent,
-            fig=fig,
-            subplot_row_col_n=subplot_row_col_n,
-            show_grid=True,
-            aspect='equal',
-            )
-    else:
-        if subplot_row_col_n is not None:
-            prow,pcol,pnum=subplot_row_col_n
-            ax = plt.subplot(prow,pcol,pnum)
-        plotting.map_topography(extent,topog,lats,lons,
-                                cbar=False,title="")
-        ax=plt.gca()
-        ax.set_aspect('equal')
-        
-        ## Add waroona, hamel, yarloop if possible
-        for txt in ['Waroona','Hamel','Yarloop']:
-            ax.annotate(txt, xy=np.array(plotting._latlons_[str.lower(txt)])[::-1],
-                        xycoords="data", # lat lon xy as coords are platecarree
-                        fontsize=12, ha="center",
-                        color='k',
-                        path_effects=[PathEffects.withStroke(linewidth=2,
-                                                             foreground="w")])
+    # if we already have an axis, assume the backdrop is provided
+    if ax is None:
+        if fig is None:
+            xsize = 12
+            ysize = 12
+            if extent is not None:
+                # try to guess a good size for aspect ratio
+                width = extent[1]-extent[0]
+                height = extent[3]-extent[2]
+                if width > (1.5*height):
+                    xsize=16
+                if width > (2*height):
+                    xsize=20
+                    ysize=10
+                if width < (0.75 * height):
+                    ysize=16
+            fig=plt.figure(figsize=(xsize,ysize))
+        # first create map from tiff file unless topography passed in
+        if topog is None:
+            fig, ax = plotting.map_tiff_qgis(
+                fname="waroonaz_osm.tiff", 
+                extent=extent,
+                fig=fig,
+                subplot_row_col_n=subplot_row_col_n,
+                show_grid=True,
+                aspect='equal',
+                )
+        else:
+            if subplot_row_col_n is not None:
+                prow,pcol,pnum=subplot_row_col_n
+                ax = plt.subplot(prow,pcol,pnum)
+            plotting.map_topography(extent,topog,lats,lons,
+                                    cbar=False,title="")
+            ax=plt.gca()
+            ax.set_aspect('equal')
+            
+            ## Add waroona, hamel, yarloop if possible
+            for txt in ['Waroona','Hamel','Yarloop']:
+                ax.annotate(txt, xy=np.array(plotting._latlons_[str.lower(txt)])[::-1],
+                            xycoords="data", # lat lon xy as coords are platecarree
+                            fontsize=12, ha="center",
+                            color='k',
+                            path_effects=[PathEffects.withStroke(linewidth=2,
+                                                                 foreground="w")])
             
     xlims = ax.get_xlim()
     ylims = ax.get_ylim()
@@ -290,10 +298,11 @@ def topdown_emberstorm(fig=None, subplot_row_col_n=None,
     if sh is not None:
         # add hot spots for heat flux
         cs_sh, cb_sh = plotting.map_sensibleheat(sh,lats,lons,alpha=0.6)
-        plt.annotate(s="max heat flux = %6.1e W/m2"%np.max(sh),
-                     xy=[0,1.11],
-                     xycoords='axes fraction', 
-                     fontsize=8)
+        if annotate:
+            plt.annotate(s="max heat flux = %6.1e W/m2"%np.max(sh),
+                         xy=[0,1.11],
+                         xycoords='axes fraction', 
+                         fontsize=8)
     if u10 is not None:
         # winds, assume v10 is also not None
         s10 = np.hypot(u10,v10)
@@ -305,7 +314,8 @@ def topdown_emberstorm(fig=None, subplot_row_col_n=None,
                        color='k',
                        density=density,
                        )
-        plotting.annotate_max_winds(s10, s="10m wind max = %5.1f m/s")
+        if annotate:
+            plotting.annotate_max_winds(s10, s="10m wind max = %5.1f m/s")
     
     if wmap is not None:
         add_vertical_contours(wmap,lats,lons,
@@ -318,19 +328,15 @@ def topdown_emberstorm(fig=None, subplot_row_col_n=None,
     ax.set_ylim(ylims[0],ylims[1])
     ax.set_xlim(xlims[0],xlims[1])
     # 115.8, 116.1, -32.92,-32.82
-    xticks=np.arange(115.8,116.11,0.05)
-    plt.xticks(xticks,xticks)
-    yticks=np.arange(-32.92,-32.805,0.03)
-    plt.yticks(yticks,yticks)
+    if showlatlons:
+        xticks=np.arange(115.8,116.11,0.05)
+        plt.xticks(xticks,xticks)
+        yticks=np.arange(-32.92,-32.805,0.03)
+        plt.yticks(yticks,yticks)
+        
+        ax.yaxis.set_major_formatter(FormatStrFormatter('%.2f'))
+        ax.xaxis.set_major_formatter(FormatStrFormatter('%.2f'))
     
-    ax.yaxis.set_major_formatter(FormatStrFormatter('%.2f'))
-    ax.xaxis.set_major_formatter(FormatStrFormatter('%.2f'))
-    # add gridlines
-    #gl=ax.grid(color='gray',alpha=0.4) 
-    #gl.xlabels_top = False
-    #gl.xlabels_bottom = True
-    #gl.ylabels_left = True
-    #gl.ylabels_right = False
     
     return fig, ax
 
@@ -524,15 +530,38 @@ def zoomed_emberstorm_plots(hours=None,
                                         wmap_height=wmap_height)
                 
             ## Add dashed line to show where transect will be
-            if transect is not None:
-                start,end =transect
-                plt.plot([start[1],end[1]],[start[0],end[0], ], '--k', 
-                         linewidth=2, alpha=0.7)
+            start,end =transect
+            plt.plot([start[1],end[1]],[start[0],end[0], ], '--k', 
+                     linewidth=2, alpha=0.5)
             
             ## Plot title
             plt.title(LT.strftime('%b %d, %H%M(local)'))
             fio.save_fig(mr,_sn_,dt,subdir=key+'/topdown',plt=plt)
             
+            ## Transect plot has map top left, showing transect winds and fire
+            ## then transect for most of map
+            ## annotations will be top right
+            fig=plt.figure(figsize=[13,13])
+            topleft=[0.04,0.74,0.4,0.22] #left, bottom, width, height
+            bottom=[0.04,0.04,0.92,0.7]
+            _,ax1 = plotting.map_tiff_qgis(
+                        fname="waroonaz_osm.tiff", 
+                        extent=extent,
+                        fig=fig,
+                        subplot_axes=topleft,
+                        #subplot_row_col_n=subplot_row_col_n,
+                        show_grid=True,
+                        #aspect='equal',
+                        )
+            # add winds and firefront
+            topdown_emberstorm(fig=fig, ax=ax1,
+                       extent=extent, lats=lats, lons=lons, 
+                       ff=ffd, sh=shd, u10=u10d, v10=v10d,
+                       annotate=False, showlatlons=False)
+            # add transect
+            ax1.plot([start[1],end[1]],[start[0],end[0], ], '--k', 
+                     linewidth=2, alpha=0.8)
+            ax2 = fig.add_axes(bottom)
             ## New plot for transect goes here
             transect_emberstorm(u[dti].data.data,
                                 v[dti].data.data,
@@ -543,7 +572,7 @@ def zoomed_emberstorm_plots(hours=None,
                                 topog=topog,
                                 sh=shd,
                                 theta=theta[dti].data.data)
-            
+            # finally add desired annotations
             plt.title(LT.strftime('Transect %b %d, %H%M(local)'))
             fio.save_fig(mr,_sn_,dt,subdir=key+'/transect',plt=plt)
 
@@ -577,7 +606,7 @@ if __name__ == '__main__':
         # First of two emberstorms
         zoomed_emberstorm_plots(
                 first=True,
-                second=True,
+                second=False,
                 topography=True,
                 #hours=np.arange(15,24)
                 )
