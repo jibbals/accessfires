@@ -131,7 +131,7 @@ def fireplan(ff, fire_contour_map = 'autumn',
                  path_effects=[patheffects.withStroke(linewidth=3, foreground="k")])
         # return focus to newly created plot
         plt.sca(ax)
-    plotting.scale_bar(ax, ccrs.PlateCarree(), 10)
+    #plotting.scale_bar(ax, ccrs.PlateCarree(), 10)
 
     return fig, ax
 
