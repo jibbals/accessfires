@@ -409,13 +409,18 @@ def compare_fire_spread(mrlist, mrcolors=None, extent=None,
 if __name__=='__main__':
     
     if True:
-        compare_fire_spread(['sirivan_run1','sirivan_run1_hr', 'sirivan_run3_hr'], HSkip=7)
+        #compare_fire_spread(['sirivan_run1','sirivan_run1_hr', 'sirivan_run3_hr'], HSkip=7)
+        compare_fire_spread(['waroona_run3','waroona_run3e'], HSkip=7)
     
-    if False:
+    if True:
         ## Lets loop over and compare run2 to run2uc
-        mr1,mr2 = ['waroona_run3','waroona_run2']
+        mr1,mr2 = ['waroona_run3uc','waroona_run3']
         for fdate in fio.model_outputs[mr1]['filedates']:
+            if fdate not in fio.model_outputs[mr2]['filedates']:
+                print("INFO: skipping %s: it is in %s but not in %s"%(fdate.strftime("%Y%m%d"),mr1,mr2))
+                continue
+                
             compare_winds(mr1=mr1,mr2=mr2, hour=fdate)
             compare_clouds(mr1=mr1,mr2=mr2, hour=fdate)
     
-    print("run_comparison.py done")
+    print("INFO: run_comparison.py done")
