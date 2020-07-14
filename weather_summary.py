@@ -534,7 +534,6 @@ def weather_series(model_run='waroona_run1',
 
 if __name__=='__main__':
     
-    CanPlotTiff=False
     
     waroona_run3times = fio.model_outputs['waroona_run3']['filedates']
     waroona_day2zoom = [115.7,116.0, -33.18,-32.9]
@@ -552,7 +551,7 @@ if __name__=='__main__':
     # waroona day2
     if True:
         mr = 'waroona_run3e'
-        fdt = fio.model_outputs[mr]['filedates'][:12] 
+        fdt = fio.model_outputs[mr]['filedates'][12:] 
         zoom_in = plotting._extents_['waroonaf'] # full outline for now 
         
         weather_summary_model(
@@ -564,7 +563,8 @@ if __name__=='__main__':
             hwind_limits=[0,30],
             )
     
-    if CanPlotTiff:
+    ## Plot tiff to show where summary is taking place
+    if True:
         # Make a helper figure to show where the summary is located
         for name,zoom in zip(["day1_extent.png","day2_extent.png"],
                              [plotting._extents_['waroona'],plotting._extents_['waroonaf']]):
@@ -584,7 +584,7 @@ if __name__=='__main__':
                                            #linestyle='-',
                                            alpha=.7, 
                                            ))
-            fio.save_fig("waroona_run3",_sn_,name,plt=plt)
+            fio.save_fig("waroona_run3e",_sn_,name,plt=plt)
     
     print("INFO: weather_summary.py done")
 

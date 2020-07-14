@@ -122,8 +122,9 @@ def compare_winds(mr1='waroona_run2', mr2='waroona_run2uc', hour=datetime(2016,1
             
             # plot the filled contour for h-wind speeds
             plotting.map_contourf(extent, si, lats, lons, cmap=hcmap,
-                                  clabel="", clevs=hcontours, cbar=False,
-                                  cbarform=None)
+                                  clabel="", cbar=False,
+                                  cbarform=None,
+                                  levels=hcontours)
             # overlaid with quiver of wind dir
             plotting.map_quiver(ui,vi,lats,lons,nquivers=7)
             # Add locations and fire
@@ -138,8 +139,9 @@ def compare_winds(mr1='waroona_run2', mr2='waroona_run2uc', hour=datetime(2016,1
             ## for comparison model also
             plt.sca(axes[1,i])
             img,_ = plotting.map_contourf(extent, csi, lats, lons, cmap=hcmap, 
-                                          clabel="", clevs=hcontours, 
-                                          cbar=False, cbarform=None)
+                                          clabel="",  
+                                          cbar=False, cbarform=None,
+                                          levels=hcontours,)
             
             # overlaid with quiver of wind dir
             plotting.map_quiver(cui,cvi,lats,lons,nquivers=7)
@@ -195,7 +197,7 @@ def compare_winds(mr1='waroona_run2', mr2='waroona_run2uc', hour=datetime(2016,1
         for i, (wi, cwi) in enumerate(zip([w1,w2,w3,w4],[cw1,cw2,cw3,cw4])):
             ## Show contourf of wind speed
             plt.sca(axes[0,i])
-            plotting.map_contourf(extent, wi, lats,lons,cmap=wcmap,clabel="",clevs=wcontours,norm=wnorm,cbar=False,cbarform=None)
+            plotting.map_contourf(extent, wi, lats,lons,cmap=wcmap,clabel="",levels=wcontours,norm=wnorm,cbar=False,cbarform=None)
             plotting.map_add_locations_extent(extentname, hide_text=True)
             if ff1 is not None:
                 plotting.map_fire(ff1[di].data,lats,lons)
@@ -204,7 +206,7 @@ def compare_winds(mr1='waroona_run2', mr2='waroona_run2uc', hour=datetime(2016,1
             
             ## for comparison model also
             plt.sca(axes[1,i])
-            img,_=plotting.map_contourf(extent, cwi, lats,lons,cmap=wcmap,clabel="",clevs=wcontours,norm=wnorm,cbar=False,cbarform=None)
+            img,_=plotting.map_contourf(extent, cwi, lats,lons,cmap=wcmap,clabel="",levels=wcontours,norm=wnorm,cbar=False,cbarform=None)
             plotting.map_add_locations_extent(extentname, hide_text=True)
             if ff2 is not None:
                 plotting.map_fire(ff2[di].data,lats,lons)
@@ -293,7 +295,7 @@ def compare_clouds(mr1='waroona_run2', mr2='waroona_run2uc',
             plt.sca(axes[0,i])
             
             plotting.map_contourf(extent, qci, lats, lons, cmap=cmap, 
-                                  clabel="", norm=norm, cbar=False, clevs=clevs,
+                                  clabel="", norm=norm, cbar=False, levels=clevs,
                                   cbarform=None, extend='max')
             
             # overlaid with cloud thresh line
@@ -313,7 +315,7 @@ def compare_clouds(mr1='waroona_run2', mr2='waroona_run2uc',
             ## for comparison model also
             plt.sca(axes[1,i])
             img,_ = plotting.map_contourf(extent, cqci, lats, lons, cmap=cmap, 
-                                          norm=norm, clabel="", clevs=clevs, 
+                                          norm=norm, clabel="", levels=clevs, 
                                           cbar=False, cbarform=None, extend='max')
             
             # overlaid with cloud thresh line
@@ -386,7 +388,7 @@ def compare_fire_spread(mrlist, mrcolors=None, extent=None,
             # ff is [time,lon,lat]
             # find most eastern part for each hour
             skip=30 # actually do 30 mins
-            ffmin = np.min(ff.data[::skip],axis=2) # remove lat dimension
+            ffmin = np.min(ff.data[::skip],axis=1) # remove lat dimension
             fflons = ff.coord('longitude').points
             fftimes = utils.dates_from_iris(ff)[::skip]
             print("INFO: ", mr, ff.shape)
