@@ -729,7 +729,7 @@ def map_topography(extent, topog,lat,lon,title="Topography", cbar=True, **contou
         
     return map_contourf(extent, topog, lat, lon, 
                         title=title, clabel="m", cbar=cbar, 
-                        cbarform=tick.ScalarFormatter(),
+                        cbar_args={'format':tick.ScalarFormatter()},
                         **contourfargs)
 
 def make_patch_spines_invisible(ax):
@@ -784,7 +784,8 @@ def scale_bar(ax, proj, length, location=(0.5, 0.05), linewidth=3,
 def transect(data, z, lat, lon, start, end, npoints=None, 
              topog=None, sh=None, latt=None, lont=None, ztop=4000,
              title="", ax=None, colorbar=True,
-             cbarform=None, contours=None,lines=None,
+             contours=None,lines=None,
+             cbar_args={},
              **contourfargs):
     '''
     Draw cross section
@@ -793,6 +794,7 @@ def transect(data, z, lat, lon, start, end, npoints=None,
         start, end are [lat0,lon0], [lat1,lon1]
         contours will be filled colours
         lines will be where to draw black lines
+        cbar_args = dict of options for colorbar, drawn if colorbar==True
     return slicedata, slicex, slicez
     '''
     ## Default contourfargs
@@ -828,7 +830,21 @@ def transect(data, z, lat, lon, start, end, npoints=None,
         plt.contourf(slicex,slicez,slicedata,contours,**contourfargs)
     
     if colorbar:
-        plt.colorbar(format=cbarform, pad=0.01) # pad is distance from axes
+        # defaults if not set
+        #orientation 	vertical or horizontal
+        #fraction 	0.15; fraction of original axes to use for colorbar
+        #pad 	0.05 if vertical, 0.15 if horizontal; fraction of original axes between colorbar and new image axes
+        #shrink 	1.0; fraction by which to multiply the size of the colorbar
+        #aspect 	20; ratio of long to short dimensions
+        if 'pad' not in cbar_args:
+            cbar_args['pad']=0.01
+        if 'aspect' not in cbar_args:
+            cbar_args['aspect']=30
+        if 'shrink' not in cbar_args:
+            cbar_args['shrink'] = 0.7
+        if 'fraction' not in cbar_args:
+            cbar_args['fraction'] = .075
+        plt.colorbar(**cbar_args)
     
     # Add contour lines
     if lines is not None:
@@ -877,8 +893,10 @@ def transect(data, z, lat, lon, start, end, npoints=None,
 def transect_s(s, z, lat, lon, start, end, npoints=100, 
                topog=None, sh=None, latt=None, lont=None, ztop=4000,
                title="Wind speed (m/s)", ax=None, colorbar=True,
-               cbarform=None, contours=np.arange(0,25,2.5),
-               lines=np.arange(0,25,2.5), **contourfargs):
+               contours=np.arange(0,25,2.5),
+               lines=np.arange(0,25,2.5), 
+               cbar_args={},
+               **contourfargs):
     '''
     Draw wind speed cross section
         s is 3d wind speed
@@ -898,15 +916,16 @@ def transect_s(s, z, lat, lon, start, end, npoints=100,
     return transect(s,z,lat,lon,start,end,npoints=npoints,
                     topog=topog, sh=sh, latt=latt, lont=lont, ztop=ztop,
                     title=title, ax=ax, colorbar=colorbar,
-                    cbarform=cbarform, contours=contours,lines=lines,
+                    contours=contours,lines=lines,
+                    cbar_args=cbar_args,
                     **contourfargs)
 
 def transect_theta(theta, z, lat, lon, start, end, npoints=100, 
                    topog=None, sh=None, latt=None, lont=None, ztop=4000,
                    title="$T_{\\theta}$ (K)", ax=None, colorbar=True,
-                   cbarform=tick.ScalarFormatter(),
                    contours = np.arange(280,350,1),
                    lines = np.union1d(np.arange(280,301,2), np.arange(310,351,10)),
+                   cbar_args={},
                    **contourfargs):
     '''
     Draw theta cross section
@@ -920,20 +939,22 @@ def transect_theta(theta, z, lat, lon, start, end, npoints=100,
         contourfargs['cmap'] = _cmaps_['th']
     if 'norm' not in contourfargs:
         contourfargs['norm'] = col.SymLogNorm(300,np.e)
-        
+    if 'format' not in cbar_args:
+        cbar_args['format']=tick.ScalarFormatter()
     # call transect using some defaults for potential temperature
     return transect(theta,z,lat,lon,start,end,npoints=npoints,
                     topog=topog, sh=sh, latt=latt, lont=lont, ztop=ztop,
                     title=title, ax=ax, colorbar=colorbar,
-                    cbarform=cbarform, contours=contours, lines=lines,
+                    contours=contours, lines=lines,
+                    cbar_args=cbar_args,
                     **contourfargs)
 
 def transect_w(w, z, lat, lon, start, end, npoints=100, 
                topog=None, sh=None, latt=None, lont=None, ztop=4000,
                title="Vertical motion (m/s)", ax=None, colorbar=True, 
-               cbarform=tick.ScalarFormatter(),
                contours=np.union1d(np.union1d(2.0**np.arange(-2,6),-1*(2.0**np.arange(-2,6))),np.array([0])),
                lines=np.array([0]),
+               cbar_args={},
                **contourfargs):
     '''
     Draw theta cross section
@@ -947,19 +968,23 @@ def transect_w(w, z, lat, lon, start, end, npoints=100,
         contourfargs['cmap'] = _cmaps_['verticalvelocity']
     if 'norm' not in contourfargs:
         contourfargs['norm'] = col.SymLogNorm(0.25)
-    
+    if 'format' not in cbar_args:
+        cbar_args['format']=tick.ScalarFormatter()
+        
     # call transect using some defaults for vertical velocity w
     return transect(w, z,lat,lon,start,end,npoints=npoints,
                     topog=topog, sh=sh, latt=latt, lont=lont, ztop=ztop,
                     title=title, ax=ax, colorbar=colorbar,
-                    cbarform=cbarform, contours=contours, lines=lines,
+                    contours=contours, lines=lines,
+                    cbar_args=cbar_args,
                     **contourfargs)
 
 def transect_qc(qc, z, lat, lon, start, end, npoints=100, 
                topog=None, sh=None, latt=None, lont=None, ztop=4000,
                title="Water and ice (g/kg air)", ax=None, colorbar=True,
-               cbarform=tick.ScalarFormatter(), contours=np.arange(0.0,0.4,0.01),
+               contours=np.arange(0.0,0.4,0.01),
                lines=np.array([constants.cloud_threshold]),
+               cbar_args={},
                **contourfargs):
     '''
     Draw theta cross section
@@ -974,11 +999,14 @@ def transect_qc(qc, z, lat, lon, start, end, npoints=100,
         contourfargs['cmap'] = _cmaps_['qc']
     if 'norm' not in contourfargs:
         contourfargs['norm'] = col.SymLogNorm(0.02,base=np.e)
+    if 'format' not in cbar_args:
+        cbar_args['format']=tick.ScalarFormatter()
     # call transect using some defaults for vertical velocity w
     return transect(qc, z,lat,lon,start,end,npoints=npoints,
                     topog=topog, sh=sh, latt=latt, lont=lont, ztop=ztop,
                     title=title, ax=ax, colorbar=colorbar,
-                    cbarform=cbarform, contours=contours, lines=lines,
+                    contours=contours, lines=lines,
+                    cbar_args=cbar_args,
                     **contourfargs)
 
 def transect_ticks_labels(start,end, metres=True):

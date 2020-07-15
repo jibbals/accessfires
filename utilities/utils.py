@@ -389,6 +389,18 @@ def wind_speed(u,v, fix=True):
     # could also jsut set them to the adjacent edge
     #s[:,:,:,0] = s[:,:,:,1]
 
+def find_max_index_2d(field):
+    """
+    Find maximum location from 2d field
+    Arguments:
+        field [y,x] : 2d field 
+    
+    return yi,xi
+    """
+    # find max windspeed, put into same shape as winds [y,x]
+    mloc = np.unravel_index(np.argmax(field,axis=None),field.shape)
+    return mloc
+
 def vorticity(u,v,lats,lons):
     """
     

@@ -158,6 +158,8 @@ def transect_emberstorm(u,v,w,z,
             defaults: levels=[300,305,310]
         
     """
+    retdict = {} # return info for whatever use
+    
     # First we subset all the arrays so to be below the z limit
     zmin = np.min(z,axis=(1,2)) # lowest altitude on each model level
     ztopi = np.argmax(ztop<zmin)+1 # highest index where ztop is less than model level altitude
@@ -172,7 +174,7 @@ def transect_emberstorm(u,v,w,z,
     s = np.hypot(u,v)
     # contourf of horizontal wind speeds
     #print("DEBUG:", s.shape, z.shape, lats.shape, lons.shape, start, end)
-    _, slicex, slicez = plotting.transect_s(s,z, 
+    slices, slicex, slicez = plotting.transect_s(s,z, 
                                             lats,lons, 
                                             start, end,
                                             ztop=ztop,
@@ -180,6 +182,12 @@ def transect_emberstorm(u,v,w,z,
                                             lines=None, npoints=npoints,
                                             topog=topog, sh=sh)
     
+    # save the max windspeed and location
+    mlocs = utils.find_max_index_2d(slices)
+    retdict['max_s'] = slices[mlocs]
+    retdict['max_s_index'] = mlocs
+    retdict['x'] = slicex
+    retdict['y'] = slicez
     # east-west and vertical winds on transect
     sliceu,_,_ = utils.transect(u,lats,lons,start,end,nx=npoints, z_th=z)
     slicew,_,_ = utils.transect(w,lats,lons,start,end,nx=npoints, z_th=z)
@@ -193,6 +201,7 @@ def transect_emberstorm(u,v,w,z,
                                   )
     plt.xlim(np.min(slicex),np.max(slicex))
     plt.ylim(np.min(slicez),ztop)
+    
     
     
     ## Theta contours
@@ -218,6 +227,7 @@ def transect_emberstorm(u,v,w,z,
         contours.set_clim(theta_contourargs['levels'][0], 
                           theta_contourargs['levels'][-1])
         plt.clabel(contours, inline=True, fontsize=10)
+    return retdict
 
 def topdown_emberstorm(fig=None, subplot_row_col_n=None, ax=None,
                        extent=[115.68, 116.15, -33.025,-32.79],
@@ -297,7 +307,7 @@ def topdown_emberstorm(fig=None, subplot_row_col_n=None, ax=None,
         cs_ff = plotting.map_fire(ff,lats,lons)
     if sh is not None:
         # add hot spots for heat flux
-        cs_sh, cb_sh = plotting.map_sensibleheat(sh,lats,lons,alpha=0.6)
+        cs_sh, cb_sh = plotting.map_sensibleheat(sh,lats,lons,alpha=0.6, cbar_kwargs={'label':"Wm$^{-2}$"})
         if annotate:
             plt.annotate(s="max heat flux = %6.1e W/m2"%np.max(sh),
                          xy=[0,1.11],
@@ -536,14 +546,16 @@ def zoomed_emberstorm_plots(hours=None,
             
             ## Plot title
             plt.title(LT.strftime('%b %d, %H%M(local)'))
+            plt.tight_layout()
             fio.save_fig(mr,_sn_,dt,subdir=key+'/topdown',plt=plt)
             
             ## Transect plot has map top left, showing transect winds and fire
             ## then transect for most of map
             ## annotations will be top right
             fig=plt.figure(figsize=[13,13])
-            topleft=[0.04,0.74,0.4,0.22] #left, bottom, width, height
-            bottom=[0.04,0.04,0.92,0.7]
+            topleft=[0.04,0.74,0.55,0.22] #left, bottom, width, height
+            bottom=[0.04,0.04,0.92,0.68]
+            topright = [.6,.74,.36,0.22]
             _,ax1 = plotting.map_tiff_qgis(
                         fname="waroonaz_osm.tiff", 
                         extent=extent,
@@ -561,19 +573,47 @@ def zoomed_emberstorm_plots(hours=None,
             # add transect
             ax1.plot([start[1],end[1]],[start[0],end[0], ], '--k', 
                      linewidth=2, alpha=0.8)
-            ax2 = fig.add_axes(bottom)
+            # Add latlon labels to left and top
+            xticks=np.arange(115.8,116.11,0.05)
+            plt.xticks(xticks,xticks)
+            yticks=np.arange(-32.92,-32.805,0.03)
+            plt.yticks(yticks,yticks)
+            ax1.xaxis.tick_top()
+        
+            ax1.yaxis.set_major_formatter(FormatStrFormatter('%.2f'))
+            ax1.xaxis.set_major_formatter(FormatStrFormatter('%.2f'))
+            
+            ## Transect
+            ax2 = fig.add_axes(bottom,frameon=False)
             ## New plot for transect goes here
-            transect_emberstorm(u[dti].data.data,
-                                v[dti].data.data,
-                                w[dti].data.data,
-                                zd,
-                                lats,lons,
-                                transect,
-                                topog=topog,
-                                sh=shd,
-                                theta=theta[dti].data.data)
+            rets = transect_emberstorm(u[dti].data.data,
+                                       v[dti].data.data,
+                                       w[dti].data.data,
+                                       zd,
+                                       lats,lons,
+                                       transect,
+                                       topog=topog,
+                                       sh=shd,
+                                       theta=theta[dti].data.data)
             # finally add desired annotations
-            plt.title(LT.strftime('Transect %b %d, %H%M(local)'))
+            ax3 = fig.add_axes(topright,frameon=False)
+            plt.xticks([],[])
+            plt.yticks([],[])
+            
+            title = LT.strftime('Transect %b %d, %H%M(local)')
+            ax3.annotate(title, xy=(0.01,0.9),xycoords='axes fraction', fontsize=18)
+            maxwinds="Maximum horizontal wind speed (red cirle)= %3.1fms$^{-1}$"%rets['max_s']
+            ax3.annotate(maxwinds, xy=(0.01,0.7),xycoords='axes fraction', fontsize=12)
+            maxwindloc = 'occurs at %5.1fm altitude'%(rets['y'][rets['max_s_index']])
+            ax3.annotate(maxwindloc,xy=(0.01,0.6), xycoords='axes fraction', fontsize=12)
+            ax2.scatter(rets['x'][rets['max_s_index']], 
+                        rets['y'][rets['max_s_index']], 
+                        marker='o', s=100, 
+                        facecolors='none', edgecolors='r',
+                        zorder=5)
+            
+            ## SAVE FIGURE
+            
             fio.save_fig(mr,_sn_,dt,subdir=key+'/transect',plt=plt)
 
 if __name__ == '__main__':
@@ -605,9 +645,16 @@ if __name__ == '__main__':
         # newer plots showing 1: fire + town + winds (based on top panel in make_plots_emberstorm)
         # First of two emberstorms
         zoomed_emberstorm_plots(
+                hours=np.arange(12), # first 12 hours
+                first=True,
+                second=False,
+                topography=False,
+                )
+        # second 12 hours do with topography for clarity
+        zoomed_emberstorm_plots(
+                hours=np.arange(12,24), # first 12 hours
                 first=True,
                 second=False,
                 topography=True,
-                #hours=np.arange(15,24)
                 )
         
