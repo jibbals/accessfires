@@ -16,11 +16,12 @@ from matplotlib import colors, ticker
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.lines import Line2D
-from datetime import datetime
+from datetime import datetime,timedelta
 from scipy.stats import gaussian_kde, cumfreq
 
 from utilities import utils, plotting, fio, constants
 import fireplan
+import emberstorm
 
 ## GLOBAL
 #Script name
@@ -31,7 +32,8 @@ def compare_surface(mr1='waroona_run2', mr2='waroona_run2uc', hour=datetime(2016
         3 by 3 plot, ROWS: H winds, V winds, Theta, COLS: Run2, Run2UC, DIFF
     """
     fig, axes = plt.subplots(3,3)
-    
+
+
 
 def compare_winds(mr1='waroona_run2', mr2='waroona_run2uc', hour=datetime(2016,1,5,15)):
     """
@@ -126,7 +128,12 @@ def compare_winds(mr1='waroona_run2', mr2='waroona_run2uc', hour=datetime(2016,1
                                   cbarform=None,
                                   levels=hcontours)
             # overlaid with quiver of wind dir
-            plotting.map_quiver(ui,vi,lats,lons,nquivers=7)
+            #plotting.map_quiver(ui,vi,lats,lons,nquivers=7)
+            plt.streamplot(lons,lats,ui,vi)
+            # set limits back to latlon limits
+            plt.ylim(lats[0],lats[-1])
+            plt.xlim(lons[0],lons[-1])
+            
             # Add locations and fire
             plotting.map_add_locations_extent(extentname, hide_text=True)
             if ff1 is not None:
@@ -144,7 +151,13 @@ def compare_winds(mr1='waroona_run2', mr2='waroona_run2uc', hour=datetime(2016,1
                                           levels=hcontours,)
             
             # overlaid with quiver of wind dir
-            plotting.map_quiver(cui,cvi,lats,lons,nquivers=7)
+            #plotting.map_quiver(cui,cvi,lats,lons,nquivers=7)
+            
+            plt.streamplot(lons,lats,cui,cvi)
+            # set limits back to latlon limits
+            plt.ylim(lats[0],lats[-1])
+            plt.xlim(lons[0],lons[-1])
+            
             # add fire
             if ff2 is not None:
                 plotting.map_fire(ff2[di].data,lats,lons)
@@ -408,13 +421,131 @@ def compare_fire_spread(mrlist, mrcolors=None, extent=None,
         fio.save_fig('comparison','compare_fire_spread', 'firespread.png', plt)
 
 
+def compare_transects(run1, run2, hours=[12,], extent=None, ztop=1000,
+                      columntitles=['coupled','uncoupled'],
+                      subsubdir=None):
+    """
+    examine some transects side by side for two runs
+    PLOTS: 2 columns: one for each run, 4 rows:
+        top row: topdown topog+winds+fire+3 transect lines
+        3 more rows: transect views of wind (emberstorm_transect method)
+    Transect lines roughly spread based on extent middle + 50% of the distance to extent edges
+    """
+    if extent is None:
+        extent = plotting._extents_[run1.split('_')[0]]
+    
+    # transects = extent centre +- frac of extent width/height
+    y0,x0 = (extent[2]+extent[3])/2.0, (extent[0]+extent[1])/2.0
+    dx = (extent[1]-extent[0]) / 2.0
+    dy = (extent[3]-extent[2]) / 2.0
+    # transects: [[[lat,lon],[lat,lon]],...]
+    transects = [[[y0+dy,x0-dx], [y0+dy, x0+dx]],
+                 [[y0,x0-dx], [y0, x0+dx]],
+                 [[y0-dy,x0-dx], [y0-dy, x0+dx]],
+                 ]
+    
+    dtimes=fio.model_outputs['waroona_run3']['filedates'][np.array(hours)]
+    
+    ## for each time slice
+    for dti, dt in enumerate(dtimes):
+        
+        ## FIGURE BEGIN:
+        fig = plt.figure(figsize=[13,14])
+        for runi, run in enumerate([run1,run2]):
+            # read datacubes
+            cubes = fio.read_model_run(run, fdtime=[dt], extent=extent, 
+                                       add_topog=True, add_winds=True,
+                                       add_z=True, add_theta=True)
+            print("DEBUG:", cubes)
+            u,v,w,z = cubes.extract(["u","v","upward_air_velocity","z_th"])
+            zd = z.data.data
+            theta, = cubes.extract("potential_temperature")
+            topog=cubes.extract("surface_altitude")[0].data
+            ctimes = utils.dates_from_iris(w)
+            
+            # read fire outputs
+            ff,sh,u10,v10 = fio.read_fire(model_run=run,
+                                          dtimes=ctimes, 
+                                          extent=extent,
+                                          sensibleheat=True,
+                                          wind=True)
+                
+            lats = ff.coord('latitude').points
+            lons = ff.coord('longitude').points
+        
+            
+            shd = sh[dti].data.data
+            LT = dt + timedelta(hours=8)
+            
+            ffd = ff[dti].data.data
+            u10d = u10[dti].data.data
+            v10d = v10[dti].data.data
+            
+            
+            #plt.subplot(4,2,1+runi) # top row
+            emberstorm.topdown_emberstorm(
+                fig=fig, subplot_row_col_n=(4,2,1+runi),
+                extent=extent, lats=lats, lons=lons,
+                ff=ffd, sh=shd, u10=u10d, v10=v10d,
+                topog=topog,
+                annotate=False,
+                )
+            
+            for transect in transects:
+                ## Add dashed line to show where transect will be
+                start,end = transect
+                plt.plot([start[1],end[1]],[start[0],end[0], ], '--k', 
+                         linewidth=2, alpha=0.9)
+            
+            ## Plot title
+            plt.suptitle(LT.strftime('%b %d, %H%M (UTC+8)'))
+            
+            # Transect plots
+            for trani,transect in enumerate(transects):
+                plt.subplot(4,2,3+runi+2*trani)
+            
+                trets = emberstorm.transect_emberstorm(
+                    u[dti].data.data,
+                    v[dti].data.data,
+                    w[dti].data.data,
+                    zd, lats, lons, transect,
+                    topog=topog,
+                    sh=shd,
+                    theta=theta[dti].data.data,
+                    ztop=ztop,
+                    )
+            
+                # finally add desired annotations
+                plotting.annotate_max_winds(trets['s'])
+                
+                #plt.scatter(maxwinds_x,maxwinds_y, 
+                #            marker='o', s=70, 
+                #            facecolors='none', edgecolors='r',
+                #            )
+            
+        ## SAVE FIGURE
+        subdir='transects'
+        if subsubdir is not None:
+            subdir += '/'+subsubdir
+        fio.save_fig(run1,_sn_,dt,subdir=subdir,plt=plt)
+    
+
 if __name__=='__main__':
     
+    
+    ## Compare transects
     if True:
+        compare_transects('waroona_run3','waroona_run3uc', hours=[12,13], )
+    
+    ## Compare firefronts
+    ## TODO NEEDS UPDATING to fix contour colouring
+    if False:
         #compare_fire_spread(['sirivan_run1','sirivan_run1_hr', 'sirivan_run3_hr'], HSkip=7)
         compare_fire_spread(['waroona_run3','waroona_run3e'], HSkip=7)
     
-    if True:
+    ## Compare topdown views of winds and clouds
+    ## TODO NEEDS UPDATING to fix quivers -> streamplot
+    if False:
         ## Lets loop over and compare run2 to run2uc
         mr1,mr2 = ['waroona_run3uc','waroona_run3']
         for fdate in fio.model_outputs[mr1]['filedates']:

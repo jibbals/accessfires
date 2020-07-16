@@ -179,7 +179,7 @@ def annotate_max_winds(winds, upto=None, **annotateargs):
     annotateargs['xy'] = [1-(xmax - mloc[1])/xmax,1-(ymax - mloc[0])/ymax]
     
     if 's' not in annotateargs:
-        annotateargs['s'] = "wind max = %5.1f m/s"%(winds[:upto,:][mloc])
+        annotateargs['s'] = "wind max = %5.1f ms$^{-1}$"%(winds[:upto,:][mloc])
     else:
         annotateargs['s'] = annotateargs['s']%(winds[:upto,:][mloc])
     
