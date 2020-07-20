@@ -43,7 +43,13 @@ def plot_weather_summary(U,V,W, height, lat, lon, extentname,
         hwind_limits: None, or [vmin, vmax]
             horizontal wind map contourf colorbar limits
     '''
-    
+    if not np.all(np.equal(np.diff(lat),lat[1]-lat[0])):
+        print("WARNING: lats adjusted in plot_weather_summary")
+        lat = np.linspace(lat[0],lat[-1],len(lat))
+    if not np.all(np.equal(np.diff(lon),lon[1]-lon[0])):
+        print("WARNING: lons adjusted in plot_weather_summary")
+        lon = np.linspace(lon[0],lon[-1],len(lon))
+
     row1 = (100<=height) * (height<500)
     row2 = (500<=height) * (height<1500)
     row3 = (1500<=height) * (height<3000)
@@ -90,6 +96,10 @@ def plot_weather_summary(U,V,W, height, lat, lon, extentname,
             plotting.map_fire(FF, lat, lon)
         if topog is not None:
             print("DEBUG:", lon.shape, lat.shape, topog.shape,topog_contours)
+            print("     : lons", lon[:7])
+            print("     : lats", lat[:7])
+            print("     :", type(topog))
+            
             lax.contour(lon,lat,topog,topog_contours,
                         colors='k', alpha=0.7, linewidths=1)
         
@@ -220,7 +230,8 @@ def weather_summary_model(model_version='waroona_run1',
                                  extentname=extentname,
                                  Q = qci, FF=FF,
                                  hwind_limits=hwind_limits,
-                                 topog=np.squeeze(topog.data))
+                                 topog=topog.data.data,
+                                 )
             
             offsethours=8 if np.min(lon)<120 else 10
             ltime=dtime+timedelta(hours=offsethours)
@@ -549,9 +560,9 @@ if __name__=='__main__':
     
     ## Run weather summary
     # waroona day2
-    if False:
-        mr = 'waroona_run3'
-        fdt = fio.model_outputs[mr]['filedates'][31:] 
+    if True:
+        mr = 'waroona_run3_1p0'
+        fdt = fio.model_outputs[mr]['filedates'][-10:] 
 
         zoom_in = plotting._extents_['waroonaf'] # full outline for now 
         
@@ -565,7 +576,7 @@ if __name__=='__main__':
             )
     
     ## Plot tiff to show where summary is taking place
-    if True:
+    if False:
         # Make a helper figure to show where the summary is located
         for name,zoom in zip(["day1_extent.png","day2_extent.png"],
                              [plotting._extents_['waroona'],plotting._extents_['waroonaf']]):

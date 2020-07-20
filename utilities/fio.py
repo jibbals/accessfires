@@ -133,6 +133,15 @@ model_outputs = {
             'run':'Run 13 July 2020',
             'origdir':'/scratch/en0/hxy548/cylc-run/au-aa876/share/cycle/20160106T1500Z/waroona/0p3/ukv_os38/um/',
             },
+        ## Latest run from may 2020, 1p0 resolution run
+        'waroona_run3_1p0':{
+            'path':'data/waroona_run3_1p0/',
+            'topog':'umnsaa_2016010515_slv.nc',
+            'filedates':np.array([datetime(2016,1,5,15) + timedelta(hours=x) for x in list(range(24))]),
+            'hasfire':False,
+            'run':'Run may 2020',
+            'origdir':'/scratch/en0/hxy548/cylc-run/au-aa799/share/cycle/20160106T1500Z/waroona/1p0/ukv_os38/um/',
+            },
         ## Copy of waroona_run2 suite, with fire coupling turned off
         'waroona_run2uc':{
             'path':'data/waroona_run2uc/',
