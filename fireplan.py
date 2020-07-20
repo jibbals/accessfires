@@ -32,6 +32,7 @@ _sn_ = 'fireplan'
 
 def fireplan(ff, fire_contour_map = 'autumn',
              show_cbar=True, cbar_XYWH= [0.65, 0.63, .2, .02],
+             color_by_day=None,
              **kwtiffargs):
 #             fig=None,subplot_row_col_n=None,
 #             draw_grid=False,gridlines=None):
@@ -44,6 +45,9 @@ def fireplan(ff, fire_contour_map = 'autumn',
         show_cbar: bool
             draw a little colour bar showing date range of contours?
         cbar_XYHW: 4-length list where to put cbar
+        color_by_day: dictionary for colouring by day
+            {"6":"red",...,"8":None}
+            Set contour colours based on "%-d" of localtime
         fig,... arguments to plotting.map_tiff_qgis()
     '''
     lon,lat = ff.coord('longitude').points, ff.coord('latitude').points
@@ -59,8 +63,9 @@ def fireplan(ff, fire_contour_map = 'autumn',
     ff_f = ff[subset_with_fire]
     ftimes = ftimes[subset_with_fire]
     
-    # just read hourly
-    hourinds = [(ft.minute==0) and (ft.second==0) for ft in ftimes]
+    # just read hourly by checking when the hour changes
+    hourinds = [ftimes[i].hour != ftimes[i-1].hour for i in range(len(ftimes)+1)[:-1]]
+    #hourinds = [(ft.minute==0) and (ft.second==0) for ft in ftimes]
     nt = np.sum(hourinds)
     
     ## fire contour colour map
@@ -90,15 +95,11 @@ def fireplan(ff, fire_contour_map = 'autumn',
         LT = dt + timedelta(hours=offset)
         color=[rgba[ii]]
         # Colour waroona by day of firefront
-        if "waroona" in extentname:
-            dnum = int(LT.strftime("%d"))
-            if dnum == 6:
-                color = 'red'
-            elif dnum==7:
-                color="orange"
-            else:
-                color = "grey"
-                
+        if color_by_day is not None:
+            dnum = LT.strftime("%-d")
+            color = color_by_day[dnum]
+            if color is None:
+                continue # Skip if None used as colour
         tstamp.append(LT.strftime('%b %d, %H%m(local)'))
 
         ffdata = ff_f[hourinds][ii].data.data
@@ -107,14 +108,14 @@ def fireplan(ff, fire_contour_map = 'autumn',
         fire_line = plt.contour(lon, lat, ffdata, np.array([0]),
                                 colors=color, linewidths=linewidth,
                                 )
-    
-    # final contour gets bonus blue line
-    final_line=plt.contour(lon,lat,ff_f[-1].data.data, np.array([0]), 
-                           linestyles='dotted',
-                           colors='cyan', linewidths=1)
-    clbls = plt.clabel(final_line,[0],fmt=LT.strftime('%H:%M'), 
-                       inline=True, colors='wheat')
-    plt.setp(clbls, path_effects=[patheffects.withStroke(linewidth=3, foreground="k")])
+    if color is not None:
+        # final contour gets bonus blue line
+        final_line=plt.contour(lon,lat,ff_f[-1].data.data, np.array([0]), 
+                               linestyles='dotted',
+                               colors='cyan', linewidths=1)
+        clbls = plt.clabel(final_line,[0],fmt=LT.strftime('%H:%M'), 
+                           inline=True, colors='wheat')
+        plt.setp(clbls, path_effects=[patheffects.withStroke(linewidth=3, foreground="k")])
 
     ## Add tiny colour bar showing overall time of fire
     if show_cbar:
@@ -255,15 +256,13 @@ def fireplan_comparison(model_runs=['waroona_old','waroona_run1','waroona_run2',
 def fireplan_vs_isochrones():
     """
     Show isochrones over waroona, look at flux over yarloop and compare to iso
-    4 panels: 
+    2 panels: 
         A: isochrones, 
         B: FF contours (hourly coloured by localtime day)
-        C: flux at 3pm on day2? zoomed into yarloop a bit
-        D: flux at 8pm on day2? zoomed a bit
     """
     mr='waroona_run3'
-    fig = plt.figure(figsize=[14,12])
-    ax1 = plt.subplot(2,2,1)
+    fig = plt.figure(figsize=[12,12])
+    ax1 = plt.subplot(2,1,1)
     ## Top left is the isochrones picture
     iso = image.imread('data/Waroona_Fire_Isochrones.png')
     ax1.imshow(iso)
@@ -273,8 +272,6 @@ def fireplan_vs_isochrones():
     # Read fire output
     # area affected by fire
     extentA = [115.6,116.21, -33.05,-32.8]
-    # area to zoom in on for yarloop
-    extentB = [115.7,116.05, -33,-32.82]
     
     FFront, SHeat, = fio.read_fire(model_run=mr, dtimes=None, 
                                    extent=extentA, 
@@ -282,11 +279,31 @@ def fireplan_vs_isochrones():
                                    sensibleheat=True,
                                    day1=True, day2=True
                                    )
-    lon, lat = FFront.coord('longitude').points, FFront.coord('latitude').points
-    fdates=utils.dates_from_iris(FFront)
+    print("DEBUG:", FFront)
 
     ## PANEL B: firefronts hourly contours
-    _,ax2 = fireplan(FFront, show_cbar=False, fig=fig, subplot_row_col_n=[2,2,2])
+    _,ax2 = fireplan(FFront, 
+                     show_cbar=False, fig=fig, subplot_row_col_n=[2,1,2],
+                     color_by_day={'6':'red','7':'orange','8':None},
+                     )
+    
+    plt.subplots_adjust(left=.05, right=.95, top=.96, bottom=.04,
+                        wspace=.03, hspace=.01,
+                        )
+    
+    fio.save_fig(mr,_sn_,"fireplan_vs_isochrones.png",plt)
+
+def flux_summary():
+    """
+    TODO: move this to emberstorms script
+    C: flux at 3pm on day2? zoomed into yarloop a bit
+    D: flux at 8pm on day2? zoomed a bit
+    """
+    # area to zoom in on for yarloop
+    extentB = [115.7,116.05, -33,-32.82]
+    
+    lon, lat = FFront.coord('longitude').points, FFront.coord('latitude').points
+    fdates=utils.dates_from_iris(FFront)
     
     ## PANEL C: flux at 3PM local time over yarloop (day 2?)
     dt1 = datetime(2016,1,7,7,30)
@@ -314,12 +331,7 @@ def fireplan_vs_isochrones():
             )
         plt.xticks([],[])
         plt.yticks([],[])
-    plt.subplots_adjust(left=.03, right=.97, top=.96, bottom=.04,
-            wspace=.03, hspace=.01)
     
-    fio.save_fig(mr,_sn_,"fireplan_vs_isochrones.png",plt)
-
-
 if __name__=='__main__':
     ### Run the stuff
     
