@@ -780,6 +780,10 @@ def read_model_run(model_version, fdtime=None, subdtimes=None, extent=None,
                                 HSkip=HSkip)
             zro.rename('z_rho')
             zth.rename('z_th')
+            if 1 in zth.shape:
+                zth = iris.util.squeeze(zth)
+            if 1 in zro.shape:
+                zro = iris.util.squeeze(zro)
             timelesscubes.append(zth)
             timelesscubes.append(zro)
 
@@ -1214,6 +1218,7 @@ def read_waroona_oldold(constraints=None, extent=None):
     topog = topog1[0,0]
     zth   = zth1[0]
     zrho   = zrho1[0]
+    
     # update z_theta and z_rho names
     iris.std_names.STD_NAMES['z_th'] = {'canonical_units': 'm'}
     iris.std_names.STD_NAMES['z_rho'] = {'canonical_units': 'm'}

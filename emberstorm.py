@@ -184,6 +184,7 @@ def transect_emberstorm(u,v,w,z,
     
     # save the max windspeed and location
     mlocs = utils.find_max_index_2d(slices)
+    retdict['s'] = slices
     retdict['max_s'] = slices[mlocs]
     retdict['max_s_index'] = mlocs
     retdict['x'] = slicex
