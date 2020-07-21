@@ -70,6 +70,8 @@ _emberstorm_centres_ = {
             },
         },
     }
+## Duplicates
+_emberstorm_centres_['waroona_run3_1p0']=_emberstorm_centres_['waroona_run3']
 
 def emberstorm_centres(model_run, key, times, dx=0.07):
     """
@@ -286,6 +288,7 @@ def topdown_emberstorm(fig=None, subplot_row_col_n=None, ax=None,
             if subplot_row_col_n is not None:
                 prow,pcol,pnum=subplot_row_col_n
                 ax = plt.subplot(prow,pcol,pnum)
+            print("DEBUG:",topog.shape,lats.shape,lons.shape)
             plotting.map_topography(extent,topog,lats,lons,
                                     cbar=False,title="")
             ax=plt.gca()
@@ -409,11 +412,14 @@ def explore_emberstorm(model_run='waroona_run3',
                 u,v,w = uvw[0][i].data.data, uvw[1][i].data.data, uvw[2][i].data.data
                 
                 # fire
-                ffi,shi=None,None
+                ffi,shi,u10i,v10i=None,None,None,None
                 if ff is not None:
                     ffi = ff[i].data 
                 if sh is not None:
                     shi = sh[i].data
+                if u10 is not None:
+                    u10i = u10[i].data
+                    v10i = v10[i].data
                 #vertical motion at roughly 300m altitude
                 wmap=w[levhind]
                 topogd=topog.data if topography else None
@@ -426,7 +432,7 @@ def explore_emberstorm(model_run='waroona_run3',
                         extent=extent, lats=lat, lons=lon, 
                         topog=topogd,
                         ff=ffi, sh=shi, 
-                        u10=u10[i].data, v10=v10[i].data,
+                        u10=u10i, v10=v10i,
                         wmap=wmap, wmap_height=wmap_height, 
                         )
                 
@@ -465,8 +471,9 @@ def explore_emberstorm(model_run='waroona_run3',
                 fio.save_fig(model_run=model_run, script_name=_sn_, pname=dtime, 
                              plt=plt, subdir='transect%d'%transecti)
             
-def zoomed_emberstorm_plots(hours=None,
-                            first=True,second=False,
+def zoomed_emberstorm_plots(mr='waroona_run3',
+                            hours=None,
+                            first=True, second=False,
                             topography=False,
                             extent=None,
                             wmap_height=300,):
@@ -490,11 +497,11 @@ def zoomed_emberstorm_plots(hours=None,
         key=['first','second'][i]
         
         if hours is None:
-            hours = _emberstorm_centres_['waroona_run3'][key]['hours']
+            hours = _emberstorm_centres_[mr][key]['hours']
         if extent is None:
-            extent = _emberstorm_centres_['waroona_run3'][key]['extent']
+            extent = _emberstorm_centres_[mr][key]['extent']
         
-        dtimes=fio.model_outputs['waroona_run3']['filedates'][np.array(hours)]
+        dtimes=fio.model_outputs[mr]['filedates'][np.array(hours)]
         
         cubes = fio.read_model_run(mr, fdtime=dtimes, extent=extent, 
                                    add_topog=True, add_winds=True,
@@ -506,7 +513,7 @@ def zoomed_emberstorm_plots(hours=None,
         ctimes = utils.dates_from_iris(w)
         
         # transects: list of [[lat,lon],[lat1,lon1]], transects to draw
-        transects=emberstorm_centres('waroona_run3',key,ctimes)
+        transects=emberstorm_centres(mr,key,ctimes)
         
         # extra vert map at ~ 300m altitude
         levh  = w.coord('level_height').points
@@ -619,7 +626,7 @@ def zoomed_emberstorm_plots(hours=None,
 
 if __name__ == '__main__':
     plotting.init_plots()
-    mr = 'waroona_run3'
+    mr = 'waroona_run3_1p0'
     #extent1,extent2 = _emberstorm_extents_
     extent1 = _emberstorm_centres_['waroona_run3']['first']['extent']
     extent2 = _emberstorm_centres_['waroona_run3']['second']['extent']
@@ -631,7 +638,7 @@ if __name__ == '__main__':
 
     dtimes=interesting_hours[-7:] 
 
-    if False:
+    if True:
         # This makes the combined 3 row plot with top down winds and 
         # transects of theta and wind
         # Let's do half with topography and half with OSM

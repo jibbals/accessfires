@@ -78,7 +78,8 @@ model_outputs = {
             'origdir':'/scratch/en0/hxy548/cylc-run/au-aa860/share/cycle/20170211T2100Z/sirivan/0p1/ukv_os38/um/',
             'origfiredir':'/g/data/en0/hxy548/fire_vars/sirivan/0p1/'},
         ## New waroona run (on GADI) by harvey in Feb 2020
-        ## Day 2 run on May 18th, 12 hour gap exists after the end of day 1
+        ## Day 2 run on July 17th, 12 hour gap exists after the end of day 1,
+        ## heat flux ramps up over 30 minutes, initial fuel load zero within fire ignition area
         'waroona_run3':{
             'path':'data/waroona_run3/',
             'topog':'umnsaa_2016010515_slv.nc',
@@ -89,11 +90,11 @@ model_outputs = {
             'path_firespeed':'fire/fire_speed.CSIRO_new_gadi.20160105T1500Z.nc',
             'path_v10m':'fire/10m_vwind.CSIRO_new_gadi.20160105T1500Z.nc',
             'path_u10m':'fire/10m_uwind.CSIRO_new_gadi.20160105T1500Z.nc',
-            'path_firefront2':'fire/firefront.CSIRO_gadi.20160107T0300Z.nc',
-            'path_fireflux2':'fire/sensible_heat.CSIRO_gadi.20160107T0300Z.nc',
-            'path_firespeed2':'fire/fire_speed.CSIRO_gadi.20160107T0300Z.nc',
-            'path_v10m2':'fire/10m_vwind.CSIRO_gadi.20160107T0300Z.nc',
-            'path_u10m2':'fire/10m_uwind.CSIRO_gadi.20160107T0300Z.nc',
+            'path_firefront2':'fire/firefront.CSIRO_gadi_ramp_start.20160107T0300Z.nc',
+            'path_fireflux2':'fire/sensible_heat.CSIRO_gadi_ramp_start.20160107T0300Z.nc',
+            'path_firespeed2':'fire/fire_speed.CSIRO_gadi_ramp_start.20160107T0300Z.nc',
+            'path_v10m2':'fire/10m_vwind.CSIRO_gadi_ramp_start.20160107T0300Z.nc',
+            'path_u10m2':'fire/10m_uwind.CSIRO_gadi_ramp_start.20160107T0300Z.nc',
             'run':'Run 6 Feb 2020',
             'origdir':'/scratch/en0/hxy548/cylc-run/au-aa799/share/cycle/20160105T1500Z/waroona/0p3/ukv_os38/um/',
             'origdir2':'/scratch/en0/hxy548/cylc-run/au-aa876/share/cycle/20160107T0300Z/waroona/0p3/ukv_os38/um/',
@@ -117,6 +118,25 @@ model_outputs = {
             'path_u10m2':'fire/10m_uwind.CSIRO_gadi_ncp.20160107T0300Z.nc',
             'run':'Run 10 July 2020',
             'origdir':'/scratch/en0/hxy548/cylc-run/au-aa799/share/cycle/20160105T1500Z/waroona/0p3/ukv_os38/um/',
+            'origdir2':'/scratch/en0/hxy548/cylc-run/au-aa876/share/cycle/20160107T0300Z/waroona/0p3/ukv_os38/um/',
+            'origfiredir':'/g/data/en0/hxy548/fire_vars/waroona/0p3/'}, 
+        ## Day 2 run in July 2020, Day 2 with no ramp for heat flux at fire ignition
+        'waroona_run3_day2_orig':{
+            'path':'data/waroona_run3_day2_orig/',
+            'topog':'umnsaa_2016010703_slv.nc',
+            'filedates':np.array([datetime(2016,1,7,3) + timedelta(hours=x) for x in list(range(24))]),
+            'hasfire':True,
+            'path_firefront':'fire/firefront.CSIRO_new_gadi.20160105T1500Z.nc',
+            'path_fireflux':'fire/sensible_heat.CSIRO_new_gadi.20160105T1500Z.nc',
+            'path_firespeed':'fire/fire_speed.CSIRO_new_gadi.20160105T1500Z.nc',
+            'path_v10m':'fire/10m_vwind.CSIRO_new_gadi.20160105T1500Z.nc',
+            'path_u10m':'fire/10m_uwind.CSIRO_new_gadi.20160105T1500Z.nc',
+            'path_firefront2':'fire/firefront.CSIRO_gadi.20160107T0300Z.nc',
+            'path_fireflux2':'fire/sensible_heat.CSIRO_gadi.20160107T0300Z.nc',
+            'path_firespeed2':'fire/fire_speed.CSIRO_gadi.20160107T0300Z.nc',
+            'path_v10m2':'fire/10m_vwind.CSIRO_gadi.20160107T0300Z.nc',
+            'path_u10m2':'fire/10m_uwind.CSIRO_gadi.20160107T0300Z.nc',
+            'run':'Run 6 Feb 2020',
             'origdir2':'/scratch/en0/hxy548/cylc-run/au-aa876/share/cycle/20160107T0300Z/waroona/0p3/ukv_os38/um/',
             'origfiredir':'/g/data/en0/hxy548/fire_vars/waroona/0p3/'}, 
         ## Day 2 run in July, early start for day2 output with fire spreading too fast
@@ -508,7 +528,7 @@ def read_fire(model_run='waroona_run1',
               sensibleheat=False,
               firespeed=False,
               wind=False,
-              day1=True,
+              day1=None,
               day2=False,
               HSkip=None):
     '''
@@ -519,27 +539,33 @@ def read_fire(model_run='waroona_run1',
     '''
     ## If no fire exists for model run, return None
     if not model_outputs[model_run]['hasfire']:
-        # needs to be iterable to match cubelist return type 
-        return [None]*np.sum([firefront,sensibleheat,firespeed]) 
+        # needs to be iterable to match cubelist return type (with wind counted twice) 
+        return [None]*np.sum([firefront,sensibleheat,firespeed,wind,wind]) 
     
     ## Set hskip automatically for high res output
     HSkip = _set_hskip_for_hr_(model_run,HSkip)
     
     ## if dtimes are passed, maybe we want some of day1 and day2,
     ## set day flag automatically using dtimes if available
-    if dtimes is not None:
-        modelhours = model_outputs[model_run]['filedates']
-        if len(modelhours) < 25:
-            day2=False
-            day1=True
+    ## if day flags are already set then just move on
+    if day1 is None:
+        if dtimes is not None:
+            day1,day2 = False,False
+            modelhours = model_outputs[model_run]['filedates']
+            if "waroona" in model_run and dtimes[-1] >= datetime(2016,1,6,15,1):
+                day2 = True
+            if "waroona" in model_run and dtimes[0] < datetime(2016,1,6,15,1):
+                day1 = True
+            if "sirivan" in model_run:
+                day1 = True
+                day2 = False
         else:
-            day1 = True if dtimes[0] < modelhours[24] else False
-            day2 = True if dtimes[-1] >= modelhours[24] else False
-            #print("DEBUG: fire_read recursion")
-            #print("     : model hours 0, -1: ",modelhours[0], modelhours[-1])
-            #print("     : model hours 25, 24: ",modelhours[25], modelhours[24])
-            #print("     : dtimes 0, -1: ",dtimes[0],dtimes[-1])
-            #print("     : day1, day2:", day1, day2)
+            day1=True
+        #print("DEBUG: fire_read recursion")
+        #print("     : model hours 0, -1: ",modelhours[0], modelhours[-1])
+        #print("     : model hours 25, 24: ",modelhours[25], modelhours[24])
+        #print("     : dtimes 0, -1: ",dtimes[0],dtimes[-1])
+        #print("     : day1, day2:", day1, day2)
 
     ## if reading both days, read one at a time and combine
     if day1 and day2:
@@ -1341,6 +1367,8 @@ def read_topog(model_version, extent=None, HSkip=None):
     topog, = read_nc_iris(ddir + model_outputs[model_version]['topog'],
                           constraints = constraints, HSkip=HSkip)
 
+    # don't want time dim in topog
+    topog = iris.util.squeeze(topog) 
     return topog
 
 def subset_time_iris(cube,dtimes,seccheck=121):
