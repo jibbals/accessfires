@@ -241,22 +241,26 @@ def weather_summary_model(model_version='waroona_run1',
                 subdir = 'zoomed'
             fio.save_fig(model_version,_sn_, dtime, plt, subdir=subdir)
 
-def weather_series(model_run='waroona_run1', 
+def weather_series(model_run='waroona_run3', 
                    extent=None,
                    HSkip=None,
                    day2=False,
-                   showPFT=True):
+                   showFP=False,
+                   showPFT=False,
+                   showwsmax=False,
+                   showmap=False,
+                   localtime=True,
+                   ):
     """
         time series of surface weather
     """
-    
     
     extentname=model_run.split('_')[0]
     # zoomed extent for analysis
     extentnamez = extentname + 'z'
     if extent is None:
         extent=plotting._extents_[extentnamez]
-    localtime = False
+    
     qc_thresh = constants.cloud_threshold
     
     # READ EVERYTHING, SUBSET, CALC DESIRED METRICS, PLOT METRICS
@@ -278,11 +282,15 @@ def weather_series(model_run='waroona_run1',
     assert sh is not None, "Missing sensible heat file"
     # datetimes list, convert to local time if desired
     ftimes = utils.dates_from_iris(sh)
+    ftimes_lt = ftimes
+    ctimes_lt = ctimes
+    offset_hrs = 8
     if localtime:
-        offset = timedelta(hours=8)
         if extent[0] > 130:
-            offset = timedelta(hours=10)
-        ftimes = np.array([ft + offset for ft in ftimes ])
+            offset_hrs = 10
+        offset = timedelta(hours=offset_hrs)
+        ftimes_lt = np.array([ft + offset for ft in ftimes ])
+        ctimes_lt = np.array([ct + offset for ct in ctimes ])
     
     # spatial sum over time of sensible heat gives firepower
     # gives GWatts
@@ -298,9 +306,10 @@ def weather_series(model_run='waroona_run1',
     lat,lon = plotting._latlons_["fire_%s_upwind"%extentname]
     if showPFT:
         pft, ptimes, _, _ = fio.read_pft(model_run,lats=lat,lons=lon)
+        ptimes_lt = ptimes
         #pft = np.nanmean(pft,axis=(1,2)) # average spatially
         if localtime:
-            ptimes = np.array([pt + offset for pt in ptimes ])
+            ptimes_lt = np.array([pt + offset for pt in ptimes ])
     
     ## Read Temperature:
     # just want surface for most of these, lets just take bottom two rows:
@@ -377,108 +386,124 @@ def weather_series(model_run='waroona_run1',
     dx,dy = extent[1]-extent[0], extent[3]-extent[2]
     extentplus = np.array(extent)+np.array([-0.3*dx,0.3*dx,-0.2*dy,0.2*dy])
     
-    # map with extent shown
-    fig, ax_map = plotting.map_tiff_qgis(fname="%s.tiff"%extentname, 
-                                         fig=fig,
-                                         extent=list(extentplus), 
-                                         subplot_row_col_n = [3,1,1],
-                                         locnames=[extentname,]
-                                         )
-    # Add rectangle
-    botleft = extent[0],extent[2]
-    ax_map.add_patch(patches.Rectangle(xy=botleft,
-                                       width=dx,
-                                       height=dy,
-                                       #facecolor=None,
-                                       fill=False,
-                                       edgecolor='blue',
-                                       linewidth=2,
-                                       #linestyle='-',
-                                       alpha=0.6, 
-                                       ))
+    if showmap:
+        # map with extent shown
+        fig, ax_map = plotting.map_tiff_qgis(fname="%s.tiff"%extentname, 
+                                             fig=fig,
+                                             extent=list(extentplus), 
+                                             subplot_row_col_n = [3,1,1],
+                                             locnames=[extentname,]
+                                             )
+        # Add rectangle
+        botleft = extent[0],extent[2]
+        ax_map.add_patch(patches.Rectangle(xy=botleft,
+                                           width=dx,
+                                           height=dy,
+                                           #facecolor=None,
+                                           fill=False,
+                                           edgecolor='blue',
+                                           linewidth=2,
+                                           #linestyle='-',
+                                           alpha=0.6, 
+                                           ))
+        
+        # add fire outline
+        plt.sca(ax_map)
+        # Firefront shown at each 6 hour increment:
+        ffhours = fdtimes[6::6]
+        for ffhour in ffhours:
+            ffhind = utils.date_index(ffhour, ctimes) 
+            if ffhind is None:
+                ffhind = 0
+                ffhour = ctimes[0]
+            else:
+                ffhind = ffhind[0]
+            print("DEBUG:", type(ffhind), ffhind)
+            ffline = plotting.map_fire(ff[ffhind].data, lats, lons)
+            print("DEBUG: ffline: ", ffline)
+            if ffline is not None:
+                clbls = plt.clabel(ffline, [0], fmt=ffhour.strftime('%H'), 
+                                   inline=True, colors='wheat')
+                # padding so label is readable
+                plt.setp(clbls, path_effects=[patheffects.withStroke(linewidth=3, foreground="k")])
+        ax_map.set_title("Surface area-average over time")
     
-    # add fire outline
-    plt.sca(ax_map)
-    # Firefront shown at each 6 hour increment:
-    ffhours = fdtimes[::6]
-    for ffhour in ffhours:
-        ffhind = utils.date_index(ffhour, ctimes) 
-        if ffhind is None:
-            ffhind = 0
-            ffhour = ctimes[0]
-        else:
-            ffhind = ffhind[0]
-        print("DEBUG:", type(ffhind), ffhind)
-        ffline = plotting.map_fire(ff[ffhind].data, lats, lons)
-        print("DEBUG: ffline: ", ffline)
-        if ffline is not None:
-            clbls = plt.clabel(ffline, [0], fmt=ffhour.strftime('%H'), 
-                               inline=True, colors='wheat')
-            # padding so label is readable
-            plt.setp(clbls, path_effects=[patheffects.withStroke(linewidth=3, foreground="k")])
     
-    
-    ax_fp = plt.subplot(3,1,2) # firepower axis
+    ax_fp = plt.subplot(2+showmap,1,1+showmap) # firepower axis
     color_fp = "orange"
     ax_T = ax_fp.twinx() # Temperature
     color_T = "red"
-    ax_RH = ax_fp.twinx() # Rel Humid
+    if (not showFP) and (not showPFT):
+        ax_RH = ax_fp # just use left axis if no firepower
+    else:
+        ax_RH = ax_fp.twinx() # Rel Humid
+        # offsets for extra y axes, and make just the one spine visible
+        ax_RH.spines["right"].set_position(("axes", 1.07))
+        plotting.make_patch_spines_invisible(ax_RH)
+        ax_RH.spines["right"].set_visible(True)
+        ax_fp.set_ylabel("GWatts")
+        ax_fp.yaxis.label.set_color(color_fp)
     color_RH = "magenta"
-    ax_ws = plt.subplot(3,1,3, sharex=ax_fp) # Wind speed
+    ax_ws = plt.subplot(2+showmap,1,2+showmap, sharex=ax_fp) # Wind speed
     color_ws = 'black'
     color_qc = "darkblue"
     color_wd = "brown"
-    ax_ws500 = ax_ws.twinx() # wind speed at 500m
+    # wind speed at 500m on same axis as at 10m
+    #ax_ws500 = ax_ws.twinx() # wind speed at 500m
     color_ws500 = 'chocolate'
     
-    # offsets for extra y axes, and make just the one spine visible
-    ax_RH.spines["right"].set_position(("axes", 1.07))
-    plotting.make_patch_spines_invisible(ax_RH)
-    ax_RH.spines["right"].set_visible(True)
+    
     
     ## Plot firepower, and PFT on one axis
     plt.sca(ax_fp)
     if showPFT:
-        line_pft, = plt.plot_date(ptimes, pft, '--', 
+        line_pft, = plt.plot_date(ptimes_lt, pft, '--', 
                                  color=color_fp, label='PFT', alpha=0.6)
-    line_fp, = plt.plot_date(ftimes, firepower, '-',
-                            color=color_fp, label='firepower')
+    if showFP:
+        line_fp, = plt.plot_date(ftimes_lt, firepower, '-',
+                                 color=color_fp, label='firepower')
+    else:
+        ignition=ftimes_lt[~prefire][0]
+        plt.annotate("ignition",(mdates.date2num(ignition), 0), xytext=(-60, -5), 
+                     textcoords='offset points', arrowprops=dict(arrowstyle='-|>'), 
+                     color='red')
     ## plot temperature on right axis
     plt.sca(ax_T)
-    line_T, = plt.plot_date(ctimes, T-273.15, '-',
+    line_T, = plt.plot_date(ctimes_lt, T-273.15, '-',
                            color=color_T, label="Temperature",)
     ## plot RH on further right axis
     plt.sca(ax_RH)
-    line_RH, = plt.plot_date(ctimes, RH, '-',
+    line_RH, = plt.plot_date(ctimes_lt, RH, '-',
                              color=color_RH, label="RH",)
-    plt.plot_date(ctimes, qc_frac, 'o',
+    plt.plot_date(ctimes_lt, qc_frac, 'o',
                   color=color_qc, 
                   fillstyle='none', 
                   mec=color_qc,
                   mew=1,)
-    line_qc, = plt.plot_date(ctimes[qc_heavy], qc_frac[qc_heavy], 'o',
+    line_qc, = plt.plot_date(ctimes_lt[qc_heavy], qc_frac[qc_heavy], 'o',
                              color=color_qc,
                              label="Clouds",
                              fillstyle='full')
-    plt.plot_date(ctimes[qc_mid], qc_frac[qc_mid], 'o',
+    plt.plot_date(ctimes_lt[qc_mid], qc_frac[qc_mid], 'o',
                   color=color_qc,
                   fillstyle='bottom')
     
     ## Wind speed, wind speed stdev, wind dir quiver
     plt.sca(ax_ws)
-    line_ws, = plt.plot_date(ctimes, ws10, 'o',
+    line_ws, = plt.plot_date(ctimes_lt, ws10, 'o',
                              color=color_ws, label="10m wind speed (+IQR)",)
-    line_wsmax, = plt.plot_date(ctimes, ws10_max, '^', 
-                                color=color_ws, label="10m max wind speed")
+    if showwsmax:
+        line_wsmax, = plt.plot_date(ctimes_lt, ws10_max, '^', 
+                                    color=color_ws, label="10m max wind speed")
     
     # add quartiles
-    plt.fill_between(ctimes, ws10_q3, ws10_q1, alpha=0.6, color='grey')
+    plt.fill_between(ctimes_lt, ws10_q3, ws10_q1, alpha=0.6, color='grey')
     
     # normalize windspeed for unit length quivers
     wdnorm = np.sqrt(u10_mean**2 + v10_mean**2)
     # dont show quiver at every single point
     qskip = len(wdnorm)//24 # just show 24 arrows
-    plt.quiver(ctimes[::qskip], ws10_q1[::qskip], 
+    plt.quiver(ctimes_lt[::qskip], ws10_q1[::qskip], 
                u10_mean[::qskip]/wdnorm[::qskip], 
                v10_mean[::qskip]/wdnorm[::qskip], 
                pivot='mid', 
@@ -487,17 +512,17 @@ def weather_series(model_run='waroona_run1',
                headwidth=3, headlength=2, headaxislength=2,
                width=.004)
     ## Same again but for 500m wind
-    plt.sca(ax_ws500)
-    line_ws500, = plt.plot_date(ctimes, ws500, '.',
+    #plt.sca(ax_ws500)
+    line_ws500, = plt.plot_date(ctimes_lt, ws500, '.',
                                 color=color_ws500, 
                                 label="500m wind speed (+IQR)",)
     # add quartiles
-    plt.fill_between(ctimes, ws500_q3, ws500_q1, alpha=0.4, color=color_ws500)
+    plt.fill_between(ctimes_lt, ws500_q3, ws500_q1, alpha=0.4, color=color_ws500)
     
     # normalize windspeed for unit length quivers
     wdnorm500 = np.sqrt(u500_mean**2 + v500_mean**2)
     
-    plt.quiver(ctimes[::qskip], ws500_q3[::qskip], 
+    plt.quiver(ctimes_lt[::qskip], ws500_q3[::qskip], 
                u500_mean[::qskip]/wdnorm500[::qskip], 
                v500_mean[::qskip]/wdnorm500[::qskip], 
                pivot='mid', 
@@ -507,8 +532,7 @@ def weather_series(model_run='waroona_run1',
                width=.003)
     
     # top row:
-    ax_fp.set_ylabel("GWatts")
-    ax_fp.yaxis.label.set_color(color_fp)
+    
     ax_T.set_ylabel("Temperature (C)")
     ax_T.yaxis.label.set_color(color_T)
     ax_RH.set_ylabel("RH and rain (frac)")
@@ -517,19 +541,24 @@ def weather_series(model_run='waroona_run1',
     # bottom row:
     ax_ws.set_ylabel("wind speed (m/s)")
     ax_ws.yaxis.label.set_color(color_ws)
-    ax_ws.set_xlabel("Time")
-    ax_ws500.set_ylabel("500m wind speed (m/s)")
-    ax_ws500.yaxis.label.set_color(color_ws500)
+    ax_ws.set_xlabel("UTC + %d"%offset_hrs)
+    #ax_ws500.set_ylabel("500m wind speed (m/s)")
+    #ax_ws500.yaxis.label.set_color(color_ws500)
     
     ## Plot periphery
-    lines = [line_fp, line_T, line_RH, line_qc]
+    lines = [line_T, line_RH, line_qc]
+    if showFP:
+        lines.append(line_fp)
     if showPFT:
-        lines = [line_pft, line_fp, line_T, line_RH, line_qc]
+        lines.append(line_pft)
     labels = [l.get_label() for l in lines]
     ax_fp.legend(lines, labels, loc='upper left')
     #plt.suptitle(model_run,y=0.9)
     
-    lines2 = [line_ws, line_wsmax, line_ws500]
+    if showwsmax:
+        lines2 = [line_ws, line_wsmax, line_ws500]
+    else:
+        lines2 = [line_ws, line_ws500]
     labels2 = [l.get_label() for l in lines2]
     ax_ws.legend(lines2,labels2, loc='best')
     
@@ -538,7 +567,6 @@ def weather_series(model_run='waroona_run1',
     ax_fp.xaxis.set_minor_locator(mdates.HourLocator())
     ax_fp.xaxis.set_major_formatter(mdates.DateFormatter("%H:%M"))
     
-    ax_map.set_title("Surface area-average over time")
     fig.tight_layout(rect=[0,0,.99,1]) # left, bottom, right, top
     pname = 'timeseries_day2.png' if day2 else 'timeseries.png'
     fio.save_fig(model_run, _sn_, pname, plt=plt)
@@ -552,15 +580,16 @@ if __name__=='__main__':
     #weather_summary_model(model_version='waroona_run3')
     
     ## Run timeseries
-    if False:
-        # day2 waroona:
-        weather_series('waroona_run3',day2=True, showPFT=False, extent=waroona_day2zoom)
+    if True:
         # day1 waroona:
         weather_series('waroona_run3')
+        # day2 waroona:
+        weather_series('waroona_run3', day2=True, showPFT=False, extent=waroona_day2zoom)
+        
     
     ## Run weather summary
     # waroona day2
-    if True:
+    if False:
         mr = 'waroona_run3_1p0'
         fdt = fio.model_outputs[mr]['filedates'][-10:] 
 
