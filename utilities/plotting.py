@@ -321,6 +321,8 @@ def map_fire(ff,lats,lons, **contourargs):
         lats,lons : 1darray (degrees)
         
     """
+    if ff is None:
+        return None
     # default fire colour:
     if 'colors' not in contourargs:
         contourargs['colors']='red'

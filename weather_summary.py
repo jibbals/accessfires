@@ -582,7 +582,7 @@ if __name__=='__main__':
     ## Run timeseries
     if True:
         # day1 waroona:
-        weather_series('waroona_run3')
+        weather_series('waroona_run3',showmap=True)
         # day2 waroona:
         weather_series('waroona_run3', day2=True, showPFT=False, extent=waroona_day2zoom)
         

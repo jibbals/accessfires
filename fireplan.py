@@ -292,45 +292,6 @@ def fireplan_vs_isochrones():
                         )
     
     fio.save_fig(mr,_sn_,"fireplan_vs_isochrones.png",plt)
-
-def flux_summary():
-    """
-    TODO: move this to emberstorms script
-    C: flux at 3pm on day2? zoomed into yarloop a bit
-    D: flux at 8pm on day2? zoomed a bit
-    """
-    # area to zoom in on for yarloop
-    extentB = [115.7,116.05, -33,-32.82]
-    
-    lon, lat = FFront.coord('longitude').points, FFront.coord('latitude').points
-    fdates=utils.dates_from_iris(FFront)
-    
-    ## PANEL C: flux at 3PM local time over yarloop (day 2?)
-    dt1 = datetime(2016,1,7,7,30)
-    dt2 = datetime(2016,1,7,12,30)
-    for i,dt in enumerate([dt1,dt2]):
-        dti = utils.nearest_date_index(dt,fdates)
-        lt = dt + timedelta(hours=8)
-
-        _,ax3,_ = plotting.map_tiff_qgis(
-            "waroonaf.tiff", 
-            extent=extentB, 
-            fig=fig, 
-            subplot_row_col_n=[2,2,3+i],
-            locnames=['yarloop','waroona'],
-            )
-    
-        cs,cbar = plotting.map_sensibleheat(SHeat[dti].data.data,
-                                            lat,lon,
-                                            colorbar=True,
-                                            alpha=0.8)
-        plt.title(
-            lt.strftime('Sensible heat flux, %d %H:%M (LT)'),
-            fontsize=14,
-            #,y=.74)
-            )
-        plt.xticks([],[])
-        plt.yticks([],[])
     
 if __name__=='__main__':
     ### Run the stuff

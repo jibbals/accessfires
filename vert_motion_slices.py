@@ -12,7 +12,7 @@ import matplotlib.pyplot as plt
 import matplotlib.ticker as tick
 
 import numpy as np
-from datetime import datetime
+from datetime import datetime,timedelta
 import warnings
 
 from utilities import utils,fio,plotting, constants
@@ -25,12 +25,18 @@ _sn_ = 'vert_motion_slices'
 def vert_motion_slices(qc,w,lh,lat,lon,
                        ff=None,
                        extentname=None,
-                       ext='.png',
                        cloud_threshold=constants.cloud_threshold,
-                       dpi=300):
+                       three_by_three=False,
+                       ):
     '''
     44i showing vertical motion contourf plots, at different model levels
     Trying to see pyroCB cloud
+    ARGUMENTS:
+        qc [lev,lat,lon] : sum of water and ice content kg/kg air
+        w [lev,lat,lon] : vertical motion m/s
+        lh [lev] : approximate level height above ground level (m)
+        ff [lat,lon] : fire front field
+        three_by_three : True if you want 3x3 subset of default 4x4 plot
     '''
     
     # colour bar stuff
@@ -45,13 +51,17 @@ def vert_motion_slices(qc,w,lh,lat,lon,
     f=plt.figure(figsize=[11,10])
     m_lvls = np.array([10, 20, 32,  40,  48,  56,  64,  72,  80,  88,  96,
        104, 108, 112, 116, 120],np.int)
+    nrows,ncols=4,4
+    if three_by_three:
+        nrows,ncols=3,3
+        m_lvls = m_lvls[np.array([0,3,6,8,10,12,13,14,15])]
     #m_lvls = np.round(np.linspace(0,120,16)).astype(int)
-    for i in range(16):
-        plt.subplot(4,4,i+1)
+    for i in range(len(m_lvls)):
+        plt.subplot(nrows,ncols,i+1)
         
         # top panel is wind speed surface values
         cs,cb=plotting.map_contourf(extent,w[m_lvls[i]],lat,lon,
-                                    clevs = contours,
+                                    levels = contours,
                                     cmap=cmap, norm=norm,
                                     cbar=False,)#clabel='m/s', cbarform=cbarform)
         
@@ -68,15 +78,12 @@ def vert_motion_slices(qc,w,lh,lat,lon,
         if extentname is not None:
             plotting.map_add_locations_extent(extentname,hide_text=True)
             
-        # Add fire front to first column
-        if ff is not None:
-            # Add fire outline
-            with warnings.catch_warnings():
-                # ignore warning when there is no fire yet:
-                warnings.simplefilter('ignore')
-                plt.contour(lon,lat,np.transpose(ff),np.array([0]), 
-                            colors='red',linewidths=1, alpha=0.5 + 0.5*(i==0))
-    
+        # Add fire front
+        plotting.map_fire(ff,lat,lon,
+                          colors='red',
+                          linewidths=1, 
+                          alpha=0.5 + 0.5*(i==0),
+                          )
     
     # add colour bar
     axes=[0.87, 0.20, 0.04, 0.6] 
@@ -97,7 +104,6 @@ def vert_motion_hour(dtime=datetime(2016,1,6,7),
     if extentname is None:
         extentname=model_run.split('_')[0]
     extent=plotting._extents_[extentname]
-    ext='.png'
     
     # Read vert motion, clouds
     cubes = fio.read_model_run(model_run, 
@@ -118,19 +124,27 @@ def vert_motion_hour(dtime=datetime(2016,1,6,7),
     lh  = w.coord('level_height').points
     lat = w.coord('latitude').points
     lon = w.coord('longitude').points
+    offset=8 if extent[0]<120 else 10
     
     for i in range(len(ff_dtimes)):
         
-        vert_motion_slices(qc[i].data, w[i].data,lh,lat,lon,
-                           ff=ff[i].data,
-                           extentname=extentname,
-                           dpi=dpi, ext=ext)                
+        utc = ff_dtimes[i]
+        ltime = utc+timedelta(hours=offset)
+        stitle = ltime.strftime("%Y %b %d %H:%M (LT)")
         
-        stitle = ff_dtimes[i].strftime("%Y %b %d %H:%M (UTC)")
-        # Save figure into animation folder with numeric identifier
-        plt.suptitle(stitle)
-        fio.save_fig(model_run,_sn_,ff_dtimes[i],plt,
-                     ext=ext,dpi=dpi)
+        # Run 4x4 and 3x3 plot creation
+        for flag,subdir in zip([False,True],["4x4","3x3"]):
+            vert_motion_slices(qc[i].data, w[i].data,lh,lat,lon,
+                               ff=ff[i].data,
+                               extentname=extentname,
+                               three_by_three=flag,
+                               )                
+            # Save figure into animation folder with numeric identifier
+            plt.suptitle(stitle)
+            fio.save_fig(model_run,_sn_,utc,plt,
+                         subdir=subdir,dpi=dpi)
+        
+
 
 ### RUN THE CODE:
 if __name__ == '__main__':

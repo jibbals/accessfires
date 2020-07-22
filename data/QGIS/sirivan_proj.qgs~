@@ -28,10 +28,10 @@
   <mapcanvas>
     <units>degrees</units>
     <extent>
-      <xmin>149.42616564930878553</xmin>
-      <ymin>-32.22374325483914959</ymin>
-      <xmax>150.1627336528030412</xmax>
-      <ymax>-31.80960734388822075</ymax>
+      <xmin>147.85056603879721138</xmin>
+      <ymin>-33.2047887352219746</ymin>
+      <xmax>151.64895245842225791</xmax>
+      <ymax>-31.06914312942240741</ymax>
     </extent>
     <rotation>0</rotation>
     <projections>1</projections>
@@ -96,7 +96,7 @@
       </filegroup>
     </legendlayer>
   </legend>
-  <Composer title="Waroona Nests" visible="1">
+  <Composer title="Waroona Nests" visible="0">
     <Composition resizeToContentsMarginLeft="0" snapping="0" showPages="1" guidesVisible="1" resizeToContentsMarginTop="0" worldFileMap="{6fefefbd-7ba4-4dea-a9bc-39d91f22d56f}" alignmentSnap="1" printResolution="300" paperWidth="441.278" gridVisible="0" snapGridOffsetX="0" smartGuides="1" snapGridOffsetY="0" resizeToContentsMarginRight="0" snapTolerancePixels="5" printAsRaster="1" generateWorldFile="0" paperHeight="400.561" numPages="1" snapGridResolution="10" resizeToContentsMarginBottom="0">
       <symbol alpha="1" clip_to_extent="1" type="fill" name="">
         <layer pass="0" class="SimpleFill" locked="0">

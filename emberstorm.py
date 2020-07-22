@@ -624,6 +624,80 @@ def zoomed_emberstorm_plots(mr='waroona_run3',
             
             fio.save_fig(mr,_sn_,dt,subdir=key+'/transect',plt=plt)
 
+def flux_plot(SH, lat, lon,FF=None, map_tiff_args={}):
+    """
+    flux over qgis map
+    plotting.map_tiff_qgis is called using args from map_tiff_args
+    with defaults being:
+        fname="waroonaf_osm.tiff"
+        extent=[based on lats,lons]
+        locnames=['yarloop','waroona']
+    returns fig,ax from map_tiff_qgis
+    """
+    # area to zoom in on for yarloop
+    dlat,dlon = lat[1]-lat[0], lon[1]-lon[0]
+    extent = [lon[0]-dlon,lon[-1]+dlon,lat[0]-dlat,lat[-1]+dlat]
+    
+    ## DEFAULTS FOR MAP TIFF
+    if 'fname' not in map_tiff_args:
+        map_tiff_args['fname']='waroonaf_osm.tiff'
+    if 'extent' not in map_tiff_args:
+        map_tiff_args['extent']=extent
+    if 'locnames' not in map_tiff_args:
+        map_tiff_args['locnames']=['yarloop','waroona']
+    
+    mtq = plotting.map_tiff_qgis(**map_tiff_args)
+    
+    # add sensible heat overlay
+    cs,cbar = plotting.map_sensibleheat(SH,
+                                        lat,lon,
+                                        colorbar=True,
+                                        alpha=0.8)
+    return mtq
+
+def flux_plot_hour(mr='waroona_run3', extent=None, hour=12, 
+                   map_tiff_args={}):
+    """
+    run flux_plot over an hour of model output
+    can add map_tiff_qgis arguments in map_tiff_args dict
+    Default tiff to use is the waroonaf_osm.tiff
+    """
+    
+    modelhours = fio.model_outputs[mr]['filedates']
+    dtime=modelhours[hour]
+    which = "first" if hour < 24 else "second"
+    # if not defined, pull first or second tiff for backdrop
+    osm="_osm" if hour > 14 else ""
+    #if "fname" not in map_tiff_args:
+    #    print("DEBUG: in fname check")
+    map_tiff_args['fname']="waroona_%s%s.tiff"%(which,osm)
+    if extent is None:
+        extent = _emberstorm_centres_[mr][which]['extent']
+    
+    #print("DEBUG:",map_tiff_args['fname'], osm, hour, dtime)
+    
+    # Read front and SH
+    ftimes = [dtime + timedelta(minutes=mins) for mins in np.arange(0,60.1,5)]
+    FF, SH = fio.read_fire(model_run=mr, 
+                           dtimes=ftimes, 
+                           extent=extent, 
+                           firefront=True, 
+                           sensibleheat=True,
+                           )
+    lats,lons = FF.coord('latitude').points, FF.coord('longitude').points
+    
+    for i,dt in enumerate(ftimes):
+        lt = dt+timedelta(hours=8)
+        flux_plot(SH[i].data, lats, lons, 
+                  FF=FF[i].data, 
+                  map_tiff_args=map_tiff_args)
+        plt.title(lt.strftime("Heat flux on the %-dth at %H:%M (LT)"))
+        plt.tight_layout()
+        fio.save_fig(model_run=mr, script_name=_sn_, pname=dt, plt=plt, 
+                     subdir=which+"/flux")
+    
+        
+
 if __name__ == '__main__':
     plotting.init_plots()
     mr = 'waroona_run3_1p0'
@@ -637,8 +711,13 @@ if __name__ == '__main__':
     interesting_hours=hours[12:24]
 
     dtimes=interesting_hours[-7:] 
-
+        
     if True:
+        # Plat the heat flux over time
+        for hr in range(13,16):
+            flux_plot_hour(hour=hr)
+    
+    if False:
         # This makes the combined 3 row plot with top down winds and 
         # transects of theta and wind
         # Let's do half with topography and half with OSM
@@ -649,7 +728,7 @@ if __name__ == '__main__':
                            topography=True,
                            extent=extent1, ztop=3000)
     
-    if True:
+    if False:
         # newer plots showing 1: fire + town + winds (based on top panel in make_plots_emberstorm)
         # First of two emberstorms
         zoomed_emberstorm_plots(
