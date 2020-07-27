@@ -18,6 +18,7 @@ import matplotlib.pyplot as plt
 from matplotlib.lines import Line2D
 from datetime import datetime,timedelta
 from scipy.stats import gaussian_kde, cumfreq
+import warnings # silence some contour warnings
 
 from utilities import utils, plotting, fio, constants
 import fireplan
@@ -337,8 +338,10 @@ def compare_clouds(mr1='waroona_run2', mr2='waroona_run2uc',
             
             # overlaid with cloud thresh line
             if np.max(qci)>cloud_threshold:
-                plt.contour(lons,lats, qci, np.array([cloud_threshold]),
-                            colors='teal', linewidths=2)
+                with warnings.catch_warnings():
+                    warnings.simplefilter('ignore')
+                    plt.contour(lons,lats, qci, np.array([cloud_threshold]),
+                                colors='teal', linewidths=2)
             
             # Add locations and fire
             plotting.map_add_locations_extent(extentname, hide_text=True)
@@ -357,8 +360,10 @@ def compare_clouds(mr1='waroona_run2', mr2='waroona_run2uc',
             
             # overlaid with cloud thresh line
             if np.max(cqci)>cloud_threshold:
-                plt.contour(lons, lats, cqci, np.array([cloud_threshold]),
-                            colors='teal', linewidths=2)
+                with warnings.catch_warnings():
+                    warnings.simplefilter('ignore')
+                    plt.contour(lons, lats, cqci, np.array([cloud_threshold]),
+                                colors='teal', linewidths=2)
             # add fire
             if ff2 is not None:
                 plotting.map_fire(ff2[di].data,lats,lons)
@@ -580,7 +585,7 @@ if __name__=='__main__':
         mr1,mr2 = ['waroona_run3','waroona_run3uc']
         extent=emberstorm._emberstorm_centres_[mr1]['second']['extent']
         #hours = emberstorm._emberstorm_centres_[mr1]['first']['hours']
-        hours = range(30,48)
+        hours = range(40,48)
         subsubdir='emberstorm2'
         for fdate in fio.model_outputs[mr1]['filedates'][hours]:
             compare_winds(mr1=mr1,mr2=mr2, hour=fdate,
