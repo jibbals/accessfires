@@ -209,7 +209,9 @@ def map_add_grid(ax, **gridargs):
     #gl.ylabels_left = False
     #gl.xlines = False
 
-def map_add_locations_extent(extentname, hide_text=False):
+def map_add_locations_extent(extentname, 
+                             hide_text=False,
+                             color='grey'):
     '''
     wrapper for map_add_locations that adds all the points for that extent
     '''
@@ -238,7 +240,7 @@ def map_add_locations_extent(extentname, hide_text=False):
     if hide_text:
         text = ['']*len(locs)
     
-    map_add_locations(locs, text=text, textcolor='k', dx=dx,dy=dy)
+    map_add_locations(locs, text=text, color=color, textcolor='k', dx=dx,dy=dy)
     # add fire ignition
     map_add_locations([firename], text=[['Ignition',''][hide_text]], 
                       color='r', marker='*', dx=dxfire, dy=dyfire, textcolor='k')

@@ -35,7 +35,10 @@ def compare_surface(mr1='waroona_run2', mr2='waroona_run2uc', hour=datetime(2016
 
 
 
-def compare_winds(mr1='waroona_run2', mr2='waroona_run2uc', hour=datetime(2016,1,5,15)):
+def compare_winds(mr1='waroona_run2', mr2='waroona_run2uc', 
+                  hour=datetime(2016,1,5,15),
+                  extent=None,
+                  subsubdir=None):
     """
         Compare winds between two different runs, looking at vertically binned averages
         first row shows model run 1 (and figures are saved under this run)
@@ -52,7 +55,8 @@ def compare_winds(mr1='waroona_run2', mr2='waroona_run2uc', hour=datetime(2016,1
                 same as horizontal, with cdf for wind speed
     """
     extentname = mr1.split('_')[0]
-    extent = plotting._extents_[extentname]
+    if extent is None:
+        extent = plotting._extents_[extentname]
     
 
     cubes1 = fio.read_model_run(mr1, hour, extent=extent, add_winds=True)
@@ -135,7 +139,9 @@ def compare_winds(mr1='waroona_run2', mr2='waroona_run2uc', hour=datetime(2016,1
             plt.xlim(lons[0],lons[-1])
             
             # Add locations and fire
-            plotting.map_add_locations_extent(extentname, hide_text=True)
+            plotting.map_add_locations_extent(extentname, 
+                                              hide_text=True,
+                                              color='k')
             if ff1 is not None:
                 plotting.map_fire(ff1[di].data,lats,lons)
             # Add ylabel on left most plot
@@ -158,6 +164,9 @@ def compare_winds(mr1='waroona_run2', mr2='waroona_run2uc', hour=datetime(2016,1
             plt.ylim(lats[0],lats[-1])
             plt.xlim(lons[0],lons[-1])
             
+            plotting.map_add_locations_extent(extentname, 
+                                              hide_text=True,
+                                              color='k')
             # add fire
             if ff2 is not None:
                 plotting.map_fire(ff2[di].data,lats,lons)
@@ -195,7 +204,10 @@ def compare_winds(mr1='waroona_run2', mr2='waroona_run2uc', hour=datetime(2016,1
             if i==3: plt.legend()
             
         plt.suptitle(date.strftime("%Y%m%d %H:%M(UTC)"))
-        fio.save_fig(mr2, _sn_, date, plt, subdir='horizontal')
+        subdir='horizontal'
+        if subsubdir is not None:
+            subdir += '/'+subsubdir
+        fio.save_fig(mr2, _sn_, date, plt, subdir=subdir)
     
         ## Also want to look at vertical winds
         w, = cubes1.extract(['upward_air_velocity'])
@@ -211,7 +223,9 @@ def compare_winds(mr1='waroona_run2', mr2='waroona_run2uc', hour=datetime(2016,1
             ## Show contourf of wind speed
             plt.sca(axes[0,i])
             plotting.map_contourf(extent, wi, lats,lons,cmap=wcmap,clabel="",levels=wcontours,norm=wnorm,cbar=False,cbarform=None)
-            plotting.map_add_locations_extent(extentname, hide_text=True)
+            plotting.map_add_locations_extent(extentname, 
+                                              hide_text=True,
+                                              color='k')
             if ff1 is not None:
                 plotting.map_fire(ff1[di].data,lats,lons)
             if i==0: plt.ylabel(mr1)
@@ -220,7 +234,9 @@ def compare_winds(mr1='waroona_run2', mr2='waroona_run2uc', hour=datetime(2016,1
             ## for comparison model also
             plt.sca(axes[1,i])
             img,_=plotting.map_contourf(extent, cwi, lats,lons,cmap=wcmap,clabel="",levels=wcontours,norm=wnorm,cbar=False,cbarform=None)
-            plotting.map_add_locations_extent(extentname, hide_text=True)
+            plotting.map_add_locations_extent(extentname, 
+                                              hide_text=True,
+                                              color='k')
             if ff2 is not None:
                 plotting.map_fire(ff2[di].data,lats,lons)
             if i==0: plt.ylabel(mr2)
@@ -248,10 +264,17 @@ def compare_winds(mr1='waroona_run2', mr2='waroona_run2uc', hour=datetime(2016,1
         cbar.set_ticklabels([-32,-8,-2,0,2,8,32])
         # title and save
         plt.suptitle(date.strftime("%Y%m%d %H:%M(UTC)"))
-        fio.save_fig(mr2, _sn_, date, plt, subdir='vertical')
+        
+        subdir='vertical'
+        if subsubdir is not None:
+            subdir += '/'+subsubdir
+        fio.save_fig(mr2, _sn_, date, plt, subdir=subdir)
     
 def compare_clouds(mr1='waroona_run2', mr2='waroona_run2uc', 
-                   hour=datetime(2016,1,5,15), cloud_threshold=constants.cloud_threshold):
+                   hour=datetime(2016,1,5,15), 
+                   cloud_threshold=constants.cloud_threshold,
+                   extent=None,
+                   subsubdir=None):
     """
     Plot top-down view of cloud content within summed vertical bins
         also show distributions
@@ -268,7 +291,8 @@ def compare_clouds(mr1='waroona_run2', mr2='waroona_run2uc',
     clevs=np.union1d(np.union1d(np.logspace(-2,logmax,30),0),colormax) 
     
     extentname = mr1.split('_')[0]
-    extent = plotting._extents_[extentname]
+    if extent is None:
+        extent = plotting._extents_[extentname]
     
     ## Read a model run
     cubes1 = fio.read_model_run(mr1, hour, extent=extent)
@@ -373,7 +397,10 @@ def compare_clouds(mr1='waroona_run2', mr2='waroona_run2uc',
         cbar.set_ticklabels([0,0.01,0.05,0.1,0.2,0.4])
         plt.suptitle(date.strftime("Max cloud content:  %Y%m%d %H:%M(UTC)"),
                      fontsize=20)
-        fio.save_fig(mr2, _sn_, date, plt, subdir='clouds')
+        subdir='clouds'
+        if subsubdir is not None:
+            subdir += '/'+subsubdir
+        fio.save_fig(mr2, _sn_, date, plt, subdir=subdir)
 
 def compare_at_site(mr1='waroona_run2', mr2='waroona_run2uc', latlon = plotting._latlons_['AWS_wagerup']):
     """
@@ -532,13 +559,13 @@ def compare_transects(run1, run2, hours=[12,], extent=None, ztop=1000,
 
 if __name__=='__main__':
     
-    
     ## Compare transects
     if False:
         compare_transects('waroona_run3','waroona_run3_day2_orig', 
                 hours=[2,3,4,5,6], 
                 columntitles=['run3 new day2','run3 orig day2'],
                 )
+        # look at emberstorm area
     
     ## Compare firefronts
     ## TODO NEEDS UPDATING to fix contour colouring
@@ -547,15 +574,30 @@ if __name__=='__main__':
         compare_fire_spread(['waroona_run3','waroona_run3e'], HSkip=7)
     
     ## Compare topdown views of winds and clouds
-    ## TODO NEEDS UPDATING to fix quivers -> streamplot
+    ## focus on emberstorm area:
+    if True:
+        print("INFO: running comparison plots for emberstorm area")
+        mr1,mr2 = ['waroona_run3','waroona_run3uc']
+        extent=emberstorm._emberstorm_centres_[mr1]['second']['extent']
+        #hours = emberstorm._emberstorm_centres_[mr1]['first']['hours']
+        hours = range(30,48)
+        subsubdir='emberstorm2'
+        for fdate in fio.model_outputs[mr1]['filedates'][hours]:
+            compare_winds(mr1=mr1,mr2=mr2, hour=fdate,
+                          extent=extent,
+                          subsubdir=subsubdir)
+            compare_clouds(mr1=mr1,mr2=mr2, hour=fdate,
+                           extent=extent,
+                           subsubdir=subsubdir)
+        
+    ## look at overall burn area
+    # Lets loop over and compare run3 with it's uncoupled brother
     if False:
-        ## Lets loop over and compare run2 to run2uc
-        mr1,mr2 = ['waroona_run3','waroona_run3_day2_orig']
+        mr1,mr2 = ['waroona_run3','waroona_run3uc']
         for fdate in fio.model_outputs[mr1]['filedates']:
             if fdate not in fio.model_outputs[mr2]['filedates']:
                 print("INFO: skipping %s: it is in %s but not in %s"%(fdate.strftime("%Y%m%d"),mr1,mr2))
                 continue
-                
             compare_winds(mr1=mr1,mr2=mr2, hour=fdate)
             compare_clouds(mr1=mr1,mr2=mr2, hour=fdate)
     

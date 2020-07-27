@@ -714,7 +714,7 @@ if __name__ == '__main__':
         
     if True:
         # Plat the heat flux over time
-        for hr in range(13,16):
+        for hr in range(29,34):
             flux_plot_hour(hour=hr)
     
     if False:
