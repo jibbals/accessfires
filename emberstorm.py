@@ -11,7 +11,7 @@ import matplotlib
 
 # plotting stuff
 import matplotlib.pyplot as plt
-from matplotlib.ticker import FormatStrFormatter
+from matplotlib.ticker import FormatStrFormatter,LinearLocator
 import matplotlib.patheffects as PathEffects
 import numpy as np
 import warnings
@@ -63,15 +63,21 @@ _emberstorm_centres_ = {
             ## NOW LOOKING TOWARDS SECOND OCCURRENCE:
             'latlontime':[
                 # 7PM local time look at just north of yarloop
-                [-32.95, 115.90,datetime(2016,1,7,11)],
+                [-32.95, 115.90,datetime(2016,1,7,11,10)],
+                # southwards progression starts around then
+                [-32.96, 115.88,datetime(2016,1,7,12,10)],
+                [-32.96, 115.87,datetime(2016,1,7,12,40)],
+                
+                [-32.95, 115.81,datetime(2016,1,7,13,30)],
                 ],
             'extent':[115.72, 116.03, -33.03, -32.839],
-            'hours':np.arange(31,40), 
+            'hours':np.arange(28,35), 
             },
         },
     }
 ## Duplicates
 _emberstorm_centres_['waroona_run3_1p0']=_emberstorm_centres_['waroona_run3']
+_emberstorm_centres_['waroona_run3uc']=_emberstorm_centres_['waroona_run3']
 
 def emberstorm_centres(model_run, key, times, dx=0.07):
     """
@@ -126,13 +132,13 @@ def add_vertical_contours(w,lat,lon,
         'vertical motion at %dm altitude'%wmap_height, 
         xy=xy0, 
         xycoords='axes fraction', 
-        fontsize=8
+        fontsize=9
         )
     plt.annotate(
         'dashed is %.1fm/s, solid is %.1fm/s'%(wmap_levels[0],wmap_levels[1]), 
         xy=xy1, 
         xycoords='axes fraction', 
-        fontsize=8
+        fontsize=9
         )
 
 def transect_emberstorm(u,v,w,z,
@@ -288,7 +294,6 @@ def topdown_emberstorm(fig=None, subplot_row_col_n=None, ax=None,
             if subplot_row_col_n is not None:
                 prow,pcol,pnum=subplot_row_col_n
                 ax = plt.subplot(prow,pcol,pnum)
-            print("DEBUG:",topog.shape,lats.shape,lons.shape)
             plotting.map_topography(extent,topog,lats,lons,
                                     cbar=False,title="")
             ax=plt.gca()
@@ -311,16 +316,18 @@ def topdown_emberstorm(fig=None, subplot_row_col_n=None, ax=None,
         cs_ff = plotting.map_fire(ff,lats,lons)
     if sh is not None:
         # add hot spots for heat flux
-        cs_sh, cb_sh = plotting.map_sensibleheat(sh,lats,lons,alpha=0.6, cbar_kwargs={'label':"Wm$^{-2}$"})
+        cs_sh, cb_sh = plotting.map_sensibleheat(sh,lats,lons,alpha=0.6,
+                                                 cbar_kwargs={'label':"Wm$^{-2}$"})
         if annotate:
             plt.annotate(s="max heat flux = %6.1e W/m2"%np.max(sh),
-                         xy=[0,1.11],
+                         xy=[0,1.06],
                          xycoords='axes fraction', 
-                         fontsize=8)
+                         fontsize=10)
     if u10 is not None:
         # winds, assume v10 is also not None
         s10 = np.hypot(u10,v10)
-        lw10 = utils.wind_speed_to_linewidth(s10, lwmax=5, speedmax=20)
+        speedmax=20
+        lw10 = utils.wind_speed_to_linewidth(s10, lwmax=7, speedmax=speedmax)
         # higher density if using topography instead of OSM
         density=(0.6,0.5) if topog is None else (0.75,0.7)
         plt.streamplot(lons,lats,u10,v10, 
@@ -329,25 +336,32 @@ def topdown_emberstorm(fig=None, subplot_row_col_n=None, ax=None,
                        density=density,
                        )
         if annotate:
-            plotting.annotate_max_winds(s10, s="10m wind max = %5.1f m/s")
+            plt.annotate("10m wind linewidth increases up to %dms$^{-1}$"%(speedmax),
+                         xy=[0,1.9], 
+                         xycoords="axes fraction", 
+                         fontsize=10)
+        if annotate:
+            plotting.annotate_max_winds(s10, s="10m wind max = %5.1f m/s",
+                                        xytext=[0,1.025])
     
     if wmap is not None:
         add_vertical_contours(wmap,lats,lons,
                               wmap_height=wmap_height,
                               wmap_levels=[1,3],
                               annotate=True,
-                              xy0=[0.7,1.08])
+                              xy0=[0.73,1.07])
         
     # set limits back to latlon limits
     ax.set_ylim(ylims[0],ylims[1])
     ax.set_xlim(xlims[0],xlims[1])
     # 115.8, 116.1, -32.92,-32.82
     if showlatlons:
-        xticks=np.arange(115.8,116.11,0.05)
-        plt.xticks(xticks,xticks)
-        yticks=np.arange(-32.92,-32.805,0.03)
-        plt.yticks(yticks,yticks)
-        
+        #xticks=np.arange(115.8,116.11,0.05)
+        #plt.xticks(xticks,xticks)
+        #yticks=np.arange(-32.92,-32.805,0.03)
+        #plt.yticks(yticks,yticks)
+        ax.xaxis.set_major_locator(LinearLocator(numticks=5))
+        ax.yaxis.set_major_locator(LinearLocator(numticks=5))
         ax.yaxis.set_major_formatter(FormatStrFormatter('%.2f'))
         ax.xaxis.set_major_formatter(FormatStrFormatter('%.2f'))
     
@@ -473,10 +487,11 @@ def explore_emberstorm(model_run='waroona_run3',
             
 def zoomed_emberstorm_plots(mr='waroona_run3',
                             hours=None,
-                            first=True, second=False,
+                            first=False, second=True,
                             topography=False,
                             extent=None,
-                            wmap_height=300,):
+                            wmap_height=300,
+                            ):
     """
     Create zoomed in pictures showing top down winds and zmotion, with 
     either topography or open street maps underlay
@@ -580,12 +595,12 @@ def zoomed_emberstorm_plots(mr='waroona_run3',
                        annotate=False, showlatlons=False)
             # add transect
             ax1.plot([start[1],end[1]],[start[0],end[0], ], '--k', 
-                     linewidth=2, alpha=0.8)
+                     linewidth=2, alpha=0.6)
             # Add latlon labels to left and top
-            xticks=np.arange(115.8,116.11,0.05)
-            plt.xticks(xticks,xticks)
-            yticks=np.arange(-32.92,-32.805,0.03)
-            plt.yticks(yticks,yticks)
+            ax.xaxis.set_major_locator(LinearLocator(numticks=5))
+            ax.yaxis.set_major_locator(LinearLocator(numticks=5))
+            ax.yaxis.set_major_formatter(FormatStrFormatter('%.2f'))
+            ax.xaxis.set_major_formatter(FormatStrFormatter('%.2f'))
             ax1.xaxis.tick_top()
         
             ax1.yaxis.set_major_formatter(FormatStrFormatter('%.2f'))
@@ -712,7 +727,7 @@ if __name__ == '__main__':
 
     dtimes=interesting_hours[-7:] 
         
-    if True:
+    if False:
         # Plat the heat flux over time
         for hr in range(29,34):
             flux_plot_hour(hour=hr)
@@ -728,20 +743,21 @@ if __name__ == '__main__':
                            topography=True,
                            extent=extent1, ztop=3000)
     
-    if False:
+    if True:
         # newer plots showing 1: fire + town + winds (based on top panel in make_plots_emberstorm)
         # First of two emberstorms
         zoomed_emberstorm_plots(
-                hours=np.arange(12), # first 12 hours
-                first=True,
-                second=False,
-                topography=False,
-                )
-        # second 12 hours do with topography for clarity
-        zoomed_emberstorm_plots(
-                hours=np.arange(12,24), # first 12 hours
-                first=True,
-                second=False,
+                hours=np.arange(27,36), # first 12 hours
+                first=False,
+                second=True,
                 topography=True,
                 )
-        
+    if True:
+        # Show a couple hours from the uncoupled run
+        zoomed_emberstorm_plots(
+                mr="waroona_run3uc",
+                hours=np.arange(28,34), # first 12 hours
+                first=False,
+                second=True,
+                topography=True,
+                )

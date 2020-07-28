@@ -49,8 +49,8 @@ def f160(press,Temp,Tempd, latlon,
     
     Wind barbs will be shown if p_ro,u,v are set
     '''
-    tcolor='r'
-    tdcolor='g'
+    tcolor='k'
+    tdcolor='m'
     
     ## first interpolate pressure and temperature to latlon
     lons=press.coord('longitude')
@@ -182,7 +182,7 @@ if __name__ == '__main__':
     waroona_upwind = []
     waroona_0630_pcb = [-32.9,116.05] # latlon
     waroona_0630_pcb_stamp = "32.90S, 116.05E"
-    if True:
+    if False:
         # show waroona f160 at PCB
         f160_hour(dtime=datetime(2016,1,6,6),
                   latlon=waroona_0630_pcb,
@@ -190,6 +190,14 @@ if __name__ == '__main__':
                   model_version='waroona_run3', 
                   nearby=1)
     
+    if True: # lets look at sirivan f160
+        sirivan_middle = -32, 149.8
+        for hour in fio.model_outputs['sirivan_run1']['filedates']:
+            f160_hour(dtime=hour,
+                      latlon=sirivan_middle,
+                      latlon_stamp="32.9S,116.05E",
+                      model_version='sirivan_run1', 
+                      nearby=0)
     
     if False: # old stuff
         topleft = [-32.75, 115.8] # random point away from the fire influence

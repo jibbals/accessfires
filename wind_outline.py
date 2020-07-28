@@ -412,7 +412,57 @@ def transects_hwinds(model_run, hour=18, transects=None, extent=None, ztop=4000,
         plt.suptitle(dtime.strftime("Horizontal winds %Y%m%d %H%M (UTC)"))
         fio.save_fig(model_run, script_name=_sn_, pname=dtime, plt=plt, 
                      subdir=subdir)
-                
+ 
+
+
+def vertical_vortex(mr='waroona_run3',
+                    vlevels=[4,12,15,20,25,30],
+                    hours=[12,13,14],
+                    extent=None,
+                    HSKIP=None,
+                    minimap=True,
+                    **map_tiff_args,
+                    ):
+    """
+    show horizontal slices of horizontal wind streamplots 
+    with vertical motion contourf and optional minimap
+    layout:
+        [ 3 ] [ 6 ]
+        [ 2 ] [ 5 ]
+        [ 1 ] [ 4 ]
+        [ minimap ]
+    """
+    extentname=mr.split('_')[0]
+    if extent is None:
+        extent = plotting._extents_[extentname]
+    dx=extent[1]-extent[0]
+    dy=extent[3]-extent[2]
+    full_extent= extent[0]-dx/4.0, extent[1]+dx/4, extent[2]-dy/4.0, extent[3]+dy/4.0
+    
+    ## loop over desired hours
+    
+    ## pull out info to plot
+    
+    
+    fig=plt.figure(figsize=(12,16))
+    levelmap = {0:5,1:3,2:1,3:6,4:4,5:2} # map level index to subplot index
+    for i in range(6):
+        plt.subplot(3+minimap,2,levelmap[i])
+        plt.plot(range(vlevels[i]))
+    
+    if minimap:
+        # defaults:
+        if 'fname' not in map_tiff_args:
+            map_tiff_args['fname']=extentname+'.tiff'
+        if 'extent' not in map_tiff_args:
+            map_tiff_args['extent']=full_extent
+        map_tiff_args['subplot_row_col_n']=[4,1,4]
+        map_tiff_args['fig'] = fig
+        # grab tiff and plot onto row 1 of 4
+        fig,ax = plotting.map_tiff_qgis(**map_tiff_args)
+        
+    
+    
 #########################################################################
 #########################################################################
 #########################################################################
@@ -440,7 +490,7 @@ if __name__ == '__main__':
                              hour=hour,
                              extent=Waroona)
     
-    if True:
+    if False:
         allmr = fio.model_outputs.keys()
         allmr = ['waroona_run1']
         for mr in allmr:
@@ -449,3 +499,5 @@ if __name__ == '__main__':
                 print("info: wind_outline", mr, hour)
                 outline_model_winds(mr, hours=[hour])
     
+    if True:
+        vertical_vortex()
