@@ -11,7 +11,7 @@ Created on Mon Aug 12 14:06:49 2019
 # Plotting stuff
 import numpy as np
 import matplotlib
-from matplotlib import patheffects
+from matplotlib import patheffects, patches
 import matplotlib.colors as col
 import matplotlib.pyplot as plt
 import matplotlib.ticker as tick
@@ -279,6 +279,31 @@ def map_add_locations(namelist, text=None, proj=None,
                      horizontalalignment='right',
                      transform=proj)
 
+def map_add_rectangle(LRBT, **rectargs):
+    """
+        Add rectangle based on passed in [left,right,bottom,top]
+        can also pass arguments to patches.Rectangle
+    """
+    ## Add box around zoomed in area
+    xy = [LRBT[0], LRBT[2]]
+    width = LRBT[1]-LRBT[0]
+    height = LRBT[3]-LRBT[2]
+    rectargs['xy']=xy
+    rectargs['width']=width
+    rectargs['height']=height
+    if 'facecolor' not in rectargs:
+        rectargs['facecolor']=None
+    if 'fill' not in rectargs:
+        rectargs['fill']=False
+    if 'edgecolor' not in rectargs:
+        rectargs['edgecolor']='k'
+    if 'linewidth' not in rectargs:
+        rectargs['linewidth']=2
+    #linestyle='-'
+    if 'alpha' not in rectargs:
+        rectargs['alpha']=0.7
+    #transform=proj
+    plt.gca().add_patch(patches.Rectangle(**rectargs))
 
 def map_draw_gridlines(ax, linewidth=1, color='black', alpha=0.5, 
                        linestyle='--', draw_labels=True,
@@ -364,9 +389,13 @@ def map_sensibleheat(sh, lat, lon,
         contourfargs['vmin']=100
     if 'cmap' not in contourfargs:
         contourfargs['cmap']='gnuplot2'
-        
-        
-    cs = plt.contourf(lon, lat, flux,
+    
+    shlatlon=flux
+    if (sh.shape[0] == len(lon)) and (sh.shape[0] != len(lat)):
+        shlatlon = sh.T
+        print("WARNING: Heat flux is in [lon,lat]")
+    
+    cs = plt.contourf(lon, lat, shlatlon,
                       levels, # color levels
                       **contourfargs,
                       )

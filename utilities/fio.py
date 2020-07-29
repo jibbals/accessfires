@@ -653,12 +653,16 @@ def read_fire(model_run='waroona_run1',
     
     # finally put latitude before longitude
     for cube in cubelist:
+        
+        nx = len(cube.coord('longitude').points)
         if len(cube.shape) == 2:
-            cube.transpose()
+            if cube.shape[0] == nx:
+                cube.transpose()
         if len(cube.shape) == 3:
-            # t, lon, lat -> t, lat, lon
-            cube.transpose([0, 2, 1])
-    
+            if cube.shape[1] == nx:
+                # t, lon, lat -> t, lat, lon
+                cube.transpose([0, 2, 1])
+        
     return cubelist
 
 def _set_hskip_for_hr_(model_version,HSkip):

@@ -13,13 +13,13 @@ import matplotlib
 matplotlib.use('Agg',warn=False)
 
 # plotting stuff
-import matplotlib.colors as col
+from matplotlib import colors, ticker
 import matplotlib.pyplot as plt
 #import matplotlib.ticker as tick
 #import matplotlib.patches as mpatches
 import numpy as np
 import cartopy.crs as ccrs # projection stuff
-
+from datetime import timedelta
 import warnings
 
 # local modules
@@ -353,8 +353,6 @@ def transects_hwinds(model_run, hour=18, transects=None, extent=None, ztop=4000,
     cubes = fio.read_model_run(model_run, fdtime=dt,
                                HSkip=HSkip, 
                                add_winds=True, add_z=True, add_topog=True)
-    print("DEBUG: still missing winds?")
-    print(cubes)
     u,v,s,z,topog,w = cubes.extract(['u','v','s','z_th','surface_altitude','upward_air_velocity'])
     ctimes = utils.dates_from_iris(u)
     clats, clons = u.coord('latitude').points, u.coord('longitude').points
@@ -416,10 +414,10 @@ def transects_hwinds(model_run, hour=18, transects=None, extent=None, ztop=4000,
 
 
 def vertical_vortex(mr='waroona_run3',
-                    vlevels=[4,12,15,20,25,30],
+                    zlevels=[15,30,45,60,75,90],
                     hours=[12,13,14],
                     extent=None,
-                    HSKIP=None,
+                    HSkip=None,
                     minimap=True,
                     **map_tiff_args,
                     ):
@@ -432,34 +430,129 @@ def vertical_vortex(mr='waroona_run3',
         [ 1 ] [ 4 ]
         [ minimap ]
     """
+    ##### set up extent, colormap, streamplot linewidths
     extentname=mr.split('_')[0]
     if extent is None:
         extent = plotting._extents_[extentname]
-    dx=extent[1]-extent[0]
-    dy=extent[3]-extent[2]
-    full_extent= extent[0]-dx/4.0, extent[1]+dx/4, extent[2]-dy/4.0, extent[3]+dy/4.0
+    dtimes = fio.model_outputs[mr]['filedates'][hours]
+    # vertical wind colourbar is constant
+    wcmap=plotting._cmaps_['verticalvelocity']
+    wnorm=colors.SymLogNorm(0.25) # linear to +- 0.25, then log scale
+    wcontours=np.union1d(np.union1d(2.0**np.arange(-2,6),-1*(2.0**np.arange(-2,6))),np.array([0]))
+    speedmax=20
     
-    ## loop over desired hours
-    
-    ## pull out info to plot
-    
-    
-    fig=plt.figure(figsize=(12,16))
-    levelmap = {0:5,1:3,2:1,3:6,4:4,5:2} # map level index to subplot index
-    for i in range(6):
-        plt.subplot(3+minimap,2,levelmap[i])
-        plt.plot(range(vlevels[i]))
-    
-    if minimap:
-        # defaults:
-        if 'fname' not in map_tiff_args:
-            map_tiff_args['fname']=extentname+'.tiff'
-        if 'extent' not in map_tiff_args:
-            map_tiff_args['extent']=full_extent
-        map_tiff_args['subplot_row_col_n']=[4,1,4]
-        map_tiff_args['fig'] = fig
-        # grab tiff and plot onto row 1 of 4
-        fig,ax = plotting.map_tiff_qgis(**map_tiff_args)
+    ##### loop over desired hours #####
+    for dtime in dtimes:
+        
+        ##### Grab hour of model run output #####
+        cubes = fio.read_model_run(mr, fdtime=dtime,
+                                   extent=extent,
+                                   HSkip=HSkip, 
+                                   add_winds=True, 
+                                   add_z=True, 
+                                   add_topog=True)
+        u,v,s,z,topog,w = cubes.extract(['u','v','s','z_th','surface_altitude','upward_air_velocity'])
+        ctimes = utils.dates_from_iris(u)
+        lats, lons = u.coord('latitude').points, u.coord('longitude').points
+        height = w.coord('level_height').points
+        
+        # maybe want minimap with fire etc.
+        if minimap:
+            # extent plus a little for clarity
+            dx=extent[1]-extent[0]
+            dy=extent[3]-extent[2]
+            full_extent= extent[0]-dx/4.0, extent[1]+dx/4, extent[2]-dy/5.0, extent[3]+dy/5.0
+            FF, SH, u10,v10 = fio.read_fire(model_run=mr, 
+                                            dtimes=ctimes, 
+                                            extent=full_extent, 
+                                            firefront=True, 
+                                            sensibleheat=True,
+                                            wind=True,
+                                            )
+            flons,flats = FF.coord('longitude').points, FF.coord('latitude').points
+        
+        ##### Loop over time slices #####
+        for cti, ctime in enumerate(ctimes):
+            
+            fig=plt.figure(figsize=(12,16))
+            levelmap = {0:5,1:3,2:1,3:6,4:4,5:2} # map level index to subplot index
+            for i in range(6):
+                ax=plt.subplot(3+minimap,2,levelmap[i])
+                zi=zlevels[i]
+                Ui = u[cti,zi].data.data
+                Vi = v[cti,zi].data.data
+                Si = np.hypot(Ui,Vi)
+                Wi = w[cti,zi].data.data
+                # Plot vertical motion colours
+                cs=plt.contourf(lons, lats, Wi, 
+                                levels=wcontours,
+                                cmap=wcmap, norm=wnorm)
+                # streamplot of horizontal winds
+                streamLW=utils.wind_speed_to_linewidth(Si,speedmax=speedmax,lwmax=6)
+                plt.streamplot(lons,lats,Ui,Vi,
+                               linewidth=streamLW,
+                               color='k',
+                               density=[.5,.5],
+                               )
+                # reset axes
+                plt.xlim(lons[0],lons[-1])
+                plt.ylim(lats[0],lats[-1])
+                plt.title("~%.2fkm"%(height[zi]/1000.))
+                
+                # fix ticks
+                if (levelmap[i]%2) == 1:
+                    ax.yaxis.set_major_locator(ticker.LinearLocator(numticks=4))
+                    ax.yaxis.set_major_formatter(ticker.FormatStrFormatter('%.2f'))
+                else:
+                    plt.yticks([],[])
+                if levelmap[i] > 4:
+                    ax.xaxis.set_major_locator(ticker.LinearLocator(numticks=4))
+                    ax.xaxis.set_major_formatter(ticker.FormatStrFormatter('%.2f'))
+                else:
+                    plt.xticks([],[])
+            
+            if minimap:
+                
+                # defaults:
+                if 'fname' not in map_tiff_args:
+                    map_tiff_args['fname']=extentname+'.tiff'
+                if 'extent' not in map_tiff_args:
+                    map_tiff_args['extent']=full_extent
+                map_tiff_args['subplot_row_col_n']=[4,1,4]
+                map_tiff_args['fig'] = fig
+                # grab tiff and plot onto row 1 of 4
+                fig,ax = plotting.map_tiff_qgis(**map_tiff_args)
+                
+                # add heat flux and fire and winds
+                plotting.map_sensibleheat(SH[cti].data,flats,flons,alpha=0.6,
+                                          colorbar=False, cbar_kwargs={'label':"Wm$^{-2}$"})
+                plotting.map_fire(FF[cti].data,flats,flons)
+                S10 = np.hypot(u10[cti].data,v10[cti].data)
+                streamLW=utils.wind_speed_to_linewidth(S10,speedmax=speedmax,lwmax=6)
+                
+                plt.streamplot(flons,flats,u10[cti].data,v10[cti].data,
+                               linewidth=streamLW,
+                               density=[0.4,0.4])
+                # reset axes
+                plt.xlim(flons[0],flons[-1])
+                plt.ylim(flats[0],flats[-1])
+                # add rectangle
+                plotting.map_add_rectangle(extent,edgecolor='darkgrey')
+                plotting.map_add_locations_extent(extentname,hide_text=True)
+                ax.yaxis.set_major_locator(ticker.LinearLocator(numticks=5))
+                ax.xaxis.set_major_locator(ticker.LinearLocator(numticks=5))
+                ax.xaxis.set_major_formatter(ticker.FormatStrFormatter('%.2f'))
+                ax.yaxis.set_major_formatter(ticker.FormatStrFormatter('%.2f'))
+            
+            offsethours=8 if np.min(lons)<120 else 10
+            ltime=ctime+timedelta(hours=offsethours)
+            plt.suptitle(ltime.strftime("wind slices at %Y %b %d %H:%M (LT)"))
+            
+            # add vert wind colourbar
+            cbar_ax = fig.add_axes([0.49, 0.4+0.1*minimap, 0.01, 0.2]) # X Y Width Height
+            fig.colorbar(cs, cax=cbar_ax, format=ticker.ScalarFormatter(), pad=0)
+            plt.tight_layout(rect=[0, 0.03, 1, 0.95]) #LEFT,BOT,Right,Top
+            fio.save_fig(mr,_sn_,ctime,plt=plt,subdir="vortex")
         
     
     
@@ -488,7 +581,7 @@ if __name__ == '__main__':
         for hour in np.arange(16,18):
             vorticity_layers("waroona_run1",
                              hour=hour,
-                             extent=Waroona)
+                             extent=Waroona,)
     
     if False:
         allmr = fio.model_outputs.keys()
@@ -500,4 +593,6 @@ if __name__ == '__main__':
                 outline_model_winds(mr, hours=[hour])
     
     if True:
-        vertical_vortex()
+        vertical_vortex(
+            mr='sirivan_run1',
+            hours=range(5,24))
