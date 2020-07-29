@@ -478,97 +478,102 @@ def compare_transects(run1, run2, hours=[12,], extent=None, ztop=1000,
     
     dtimes=fio.model_outputs['waroona_run3']['filedates'][np.array(hours)]
     
-    ## for each time slice
+    ## for each hour
     for dti, dt in enumerate(dtimes):
+        # read sample cube to get times to loop over
+        samplecube = fio.read_model_run(run1,fdtime=[dt])
+        ctimes = utils.dates_from_iris(samplecube.extract("upward_air_velocity")[0])
+        for cti,ct in enumerate(ctimes):
         
-        ## FIGURE BEGIN:
-        fig = plt.figure(figsize=[13,14])
-        for runi, run in enumerate([run1,run2]):
-            # read datacubes
-            cubes = fio.read_model_run(run, fdtime=[dt], extent=extent, 
-                                       add_topog=True, add_winds=True,
-                                       add_z=True, add_theta=True)
-            print("DEBUG:", cubes)
-            u,v,w,z = cubes.extract(["u","v","upward_air_velocity","z_th"])
-            zd = z.data.data
-            theta, = cubes.extract("potential_temperature")
-            topog=cubes.extract("surface_altitude")[0].data
-            ctimes = utils.dates_from_iris(w)
-            
-            # read fire outputs
-            ff,sh,u10,v10 = fio.read_fire(model_run=run,
-                                          dtimes=ctimes, 
-                                          extent=extent,
-                                          sensibleheat=True,
-                                          wind=True)
+            ## FIGURE BEGIN:
+            fig = plt.figure(figsize=[13,14])
+            ## looking at two separate runs
+            for runi, run in enumerate([run1,run2]):
+                # read datacubes
+                cubes = fio.read_model_run(run, fdtime=[dt], extent=extent, 
+                                           add_topog=True, add_winds=True,
+                                           add_z=True, add_theta=True)
                 
-            lats = ff.coord('latitude').points
-            lons = ff.coord('longitude').points
-        
-            
-            shd = sh[dti].data.data
-            LT = dt + timedelta(hours=8)
-            
-            ffd = ff[dti].data.data
-            u10d = u10[dti].data.data
-            v10d = v10[dti].data.data
-            
-            
-            #plt.subplot(4,2,1+runi) # top row
-            emberstorm.topdown_emberstorm(
-                fig=fig, subplot_row_col_n=(4,2,1+runi),
-                extent=extent, lats=lats, lons=lons,
-                ff=ffd, sh=shd, u10=u10d, v10=v10d,
-                topog=topog,
-                annotate=False,
-                )
-            
-            for transect in transects:
-                ## Add dashed line to show where transect will be
-                start,end = transect
-                plt.plot([start[1],end[1]],[start[0],end[0], ], '--k', 
-                         linewidth=2, alpha=0.9)
-            
-            ## Plot title
-            plt.suptitle(LT.strftime('%b %d, %H%M (UTC+8)'))
-            
-            # Transect plots
-            for trani,transect in enumerate(transects):
-                plt.subplot(4,2,3+runi+2*trani)
-            
-                trets = emberstorm.transect_emberstorm(
-                    u[dti].data.data,
-                    v[dti].data.data,
-                    w[dti].data.data,
-                    zd, lats, lons, transect,
+                u,v,w,z = cubes.extract(["u","v","upward_air_velocity","z_th"])
+                zd = z.data.data
+                theta, = cubes.extract("potential_temperature")
+                topog=cubes.extract("surface_altitude")[0].data
+                
+                # read fire outputs
+                ff,sh,u10,v10 = fio.read_fire(model_run=run,
+                                              dtimes=ctimes, 
+                                              extent=extent,
+                                              sensibleheat=True,
+                                              wind=True)
+                
+                lats = ff.coord('latitude').points
+                lons = ff.coord('longitude').points
+                    
+                shd = sh[cti].data.data
+                LT = ct + timedelta(hours=8)
+                
+                ffd = ff[cti].data.data
+                u10d = u10[cti].data.data
+                v10d = v10[cti].data.data
+                
+                
+                #plt.subplot(4,2,1+runi) # top row
+                _,ax = emberstorm.topdown_emberstorm(
+                    fig=fig, subplot_row_col_n=(4,2,1+runi),
+                    extent=extent, lats=lats, lons=lons,
+                    ff=ffd, sh=shd, u10=u10d, v10=v10d,
                     topog=topog,
-                    sh=shd,
-                    theta=theta[dti].data.data,
-                    ztop=ztop,
+                    annotate=False,
                     )
-            
-                # finally add desired annotations
-                plotting.annotate_max_winds(trets['s'])
+                plt.title(columntitles[runi])
+                for transect in transects:
+                    ## Add dashed line to show where transect will be
+                    start,end = transect
+                    ax.plot([start[1],end[1]],[start[0],end[0], ], '--k', 
+                             linewidth=2, alpha=0.9)
                 
-                #plt.scatter(maxwinds_x,maxwinds_y, 
-                #            marker='o', s=70, 
-                #            facecolors='none', edgecolors='r',
-                #            )
-            
-        ## SAVE FIGURE
-        subdir='transects'
-        if subsubdir is not None:
-            subdir += '/'+subsubdir
-        fio.save_fig(run2,_sn_,dt,subdir=subdir,plt=plt)
+                ## Plot title
+                plt.suptitle(LT.strftime('%b %d, %H%M (UTC+8)'))
+                
+                # Transect plots
+                for trani,transect in enumerate(transects):
+                    ax=plt.subplot(4,2,3+runi+2*trani)
+                    
+                    trets = emberstorm.transect_emberstorm(
+                        u[cti].data.data,
+                        v[cti].data.data,
+                        w[cti].data.data,
+                        zd, lats, lons, transect,
+                        topog=topog,
+                        sh=shd,
+                        theta=theta[cti].data.data,
+                        ztop=ztop,
+                        )
+                
+                    # finally add desired annotations
+                    plotting.annotate_max_winds(trets['s'])
+                    
+                    #plt.scatter(maxwinds_x,maxwinds_y, 
+                    #            marker='o', s=70, 
+                    #            facecolors='none', edgecolors='r',
+                    #            )
+                
+            ## SAVE FIGURE
+            subdir='transects'
+            if subsubdir is not None:
+                subdir += '/'+subsubdir
+            fio.save_fig(run2,_sn_,ct,subdir=subdir,plt=plt)
     
 
 if __name__=='__main__':
     
     ## Compare transects
-    if False:
-        compare_transects('waroona_run3','waroona_run3_day2_orig', 
-                hours=[2,3,4,5,6], 
-                columntitles=['run3 new day2','run3 orig day2'],
+    if True:
+        compare_transects('waroona_run3','waroona_run3uc', 
+                          extent=plotting._extents_['waroonaz'],
+                          hours=range(12,20), 
+                          subsubdir='pcb',
+                          columntitles=['coupled','uncoupled'],
                 )
         # look at emberstorm area
     
@@ -580,7 +585,7 @@ if __name__=='__main__':
     
     ## Compare topdown views of winds and clouds
     ## focus on emberstorm area:
-    if True:
+    if False:
         print("INFO: running comparison plots for emberstorm area")
         mr1,mr2 = ['waroona_run3','waroona_run3uc']
         extent=emberstorm._emberstorm_centres_[mr1]['second']['extent']
