@@ -95,10 +95,10 @@ def plot_weather_summary(U,V,W, height, lat, lon, extentname,
         if FF is not None:
             plotting.map_fire(FF, lat, lon)
         if topog is not None:
-            print("DEBUG:", lon.shape, lat.shape, topog.shape,topog_contours)
-            print("     : lons", lon[:7])
-            print("     : lats", lat[:7])
-            print("     :", type(topog))
+            #print("DEBUG:", lon.shape, lat.shape, topog.shape,topog_contours)
+            #print("     : lons", lon[:7])
+            #print("     : lats", lat[:7])
+            #print("     :", type(topog))
             
             lax.contour(lon,lat,topog,topog_contours,
                         colors='k', alpha=0.7, linewidths=1)
@@ -580,7 +580,7 @@ if __name__=='__main__':
     #weather_summary_model(model_version='waroona_run3')
     
     ## Run timeseries
-    if True:
+    if False:
         # day1 waroona:
         weather_series('waroona_run3',showmap=True)
         # day2 waroona:
@@ -589,17 +589,18 @@ if __name__=='__main__':
     
     ## Run weather summary
     # waroona day2
-    if False:
-        mr = 'waroona_run3_1p0'
-        fdt = fio.model_outputs[mr]['filedates'][-10:] 
+    if True:
+        mr = 'sirivan_run1'
+        exname = 'sirivan' # extent to zoom in on
+        fdt = fio.model_outputs[mr]['filedates']
 
-        zoom_in = plotting._extents_['waroonaf'] # full outline for now 
-        
+        zoom_in = plotting._extents_[exname]
+
         weather_summary_model(
             mr,
-            zoom_in=zoom_in,
-            subdir='waroonaf',
-            HSkip=None, 
+            #zoom_in=zoom_in,
+            #subdir=,
+            HSkip=None,
             fdtimes=fdt,
             hwind_limits=[0,30],
             )

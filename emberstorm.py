@@ -349,7 +349,7 @@ def topdown_emberstorm(fig=None, subplot_row_col_n=None, ax=None,
                        )
         if annotate:
             plt.annotate("10m wind linewidth increases up to %dms$^{-1}$"%(speedmax),
-                         xy=[0,1.9], 
+                         xy=[0,1.09], 
                          xycoords="axes fraction", 
                          fontsize=10)
         if annotate:
@@ -499,7 +499,7 @@ def explore_emberstorm(model_run='waroona_run3',
             
 def zoomed_emberstorm_plots(mr='waroona_run3',
                             hours=None,
-                            first=False, second=True,
+                            first=True, second=True,
                             topography=False,
                             extent=None,
                             wmap_height=300,
@@ -516,6 +516,8 @@ def zoomed_emberstorm_plots(mr='waroona_run3',
         topography: True if topography is desired instead of OSM
         wmap_height: how high to show vmotion contours, default 300m
     """
+    hflag=(hours is None)
+    eflag=(extent is None)
     for i in range(2):
         if (i==0) and not first:
             continue
@@ -523,9 +525,9 @@ def zoomed_emberstorm_plots(mr='waroona_run3',
             continue
         key=['first','second'][i]
         
-        if hours is None:
+        if hflag:
             hours = _emberstorm_centres_[mr][key]['hours']
-        if extent is None:
+        if eflag:
             extent = _emberstorm_centres_[mr][key]['extent']
         
         dtimes=fio.model_outputs[mr]['filedates'][np.array(hours)]
@@ -575,9 +577,9 @@ def zoomed_emberstorm_plots(mr='waroona_run3',
                                         wmap_height=wmap_height)
                 
             ## Add dashed line to show where transect will be
-            start,end =transect
-            plt.plot([start[1],end[1]],[start[0],end[0], ], '--k', 
-                     linewidth=2, alpha=0.5)
+            #start,end =transect
+            #plt.plot([start[1],end[1]],[start[0],end[0], ], '--k', 
+            #         linewidth=2, alpha=0.5)
             
             ## Plot title
             plt.title(LT.strftime('%b %d, %H%M(local)'))
@@ -606,6 +608,7 @@ def zoomed_emberstorm_plots(mr='waroona_run3',
                        ff=ffd, sh=shd, u10=u10d, v10=v10d,
                        annotate=False, showlatlons=False)
             # add transect
+            start,end =transect
             ax1.plot([start[1],end[1]],[start[0],end[0], ], '--k', 
                      linewidth=2, alpha=0.6)
             # Add latlon labels to left and top
@@ -759,17 +762,13 @@ if __name__ == '__main__':
         # newer plots showing 1: fire + town + winds (based on top panel in make_plots_emberstorm)
         # First of two emberstorms
         zoomed_emberstorm_plots(
-                hours=np.arange(27,36), # first 12 hours
-                first=False,
-                second=True,
                 topography=True,
+                first=False,second=True,
                 )
     if True:
         # Show a couple hours from the uncoupled run
         zoomed_emberstorm_plots(
                 mr="waroona_run3uc",
-                hours=np.arange(28,34), # first 12 hours
-                first=False,
-                second=True,
                 topography=True,
+                first=False,second=True,
                 )

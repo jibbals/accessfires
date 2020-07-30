@@ -599,17 +599,21 @@ def compare_transects(run1, run2, hours=[12,], extent=None, ztop=1000,
 
 if __name__=='__main__':
     
+    ext_pcb=plotting._extents_['waroonaz']
+    ext_es1=emberstorm._emberstorm_centres_['waroona_run3']['first']['extent']
+    ext_es2=emberstorm._emberstorm_centres_['waroona_run3']['second']['extent']
+    hrs_pcb=range(9,19)
+    hrs_es1=range(16,24)
+    hrs_es2=range(26,35)
     ## Compare transects
     if True:
-        ext_pcb=plotting._extents_['waroonaz']
-        ext_es1=emberstorm._emberstorm_centres_['waroona_run3']['first']['extent']
-        ext_es2=emberstorm._emberstorm_centres_['waroona_run3']['second']['extent']
-        compare_transects('waroona_run3','waroona_run3uc', 
-                          extent=ext_es2,
-                          hours=range(17,24), 
-                          subsubdir='es2',
-                          columntitles=['coupled','uncoupled'],
-                )
+        for extent, hours, subsubdir in zip([ext_pcb,ext_es1,ext_es2],[hrs_pcb,hrs_es1,hrs_es2],['pcb','es1','es2']):
+            compare_transects('waroona_run3','waroona_run3uc', 
+                              extent=extent,
+                              hours=hours, 
+                              subsubdir=subsubdir,
+                              columntitles=['coupled','uncoupled'],
+                              )
         # look at emberstorm area
     
     ## Compare firefronts

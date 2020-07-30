@@ -240,6 +240,8 @@ model_outputs = {
             'path_firefront':'fire/firefront.CSIRO_MinT.20170211T2100Z.nc',
             'path_fireflux':'fire/sensible_heat.CSIRO_MinT.20170211T2100Z.nc',
             'path_firespeed':'fire/fire_speed.CSIRO_MinT.20170211T2100Z.nc',
+            'path_v10m':'fire/10m_vwind.CSIRO_MinT.20170211T2100Z.nc',
+            'path_u10m':'fire/10m_uwind.CSIRO_MinT.20170211T2100Z.nc',
             'origdir':'/short/en0/hxy548/cylc-run/au-aa860/share/cycle/20170211T2100Z/sirivan/0p3/ukv_os38/um',
             'origfiredir':'/short/en0/hxy548/cylc-run/au-aa860/work/20170211T2100Z/sirivan_0p3_ukv_os38_um_fcst_000/',
             },
