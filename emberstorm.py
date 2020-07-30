@@ -149,6 +149,7 @@ def transect_emberstorm(u,v,w,z,
                         sh=None,
                         theta=None,
                         theta_contourargs={},
+                        wind_contourargs={},
                         ):
     """
     Plot transect showing east-west-north-south streamplot
@@ -182,13 +183,19 @@ def transect_emberstorm(u,v,w,z,
     s = np.hypot(u,v)
     # contourf of horizontal wind speeds
     #print("DEBUG:", s.shape, z.shape, lats.shape, lons.shape, start, end)
+    wind_contourargs['ztop']=ztop
+    wind_contourargs['npoints']=npoints
+    wind_contourargs['topog']=topog
+    wind_contourargs['sh'] = sh
+    if 'title' not in wind_contourargs:
+        wind_contourargs['title']=""
+    if 'lines' not in wind_contourargs:
+        wind_contourargs['lines']=None
+    
     slices, slicex, slicez = plotting.transect_s(s,z, 
                                             lats,lons, 
                                             start, end,
-                                            ztop=ztop,
-                                            title="",
-                                            lines=None, npoints=npoints,
-                                            topog=topog, sh=sh)
+                                            **wind_contourargs)
     
     # save the max windspeed and location
     mlocs = utils.find_max_index_2d(slices)
@@ -244,7 +251,8 @@ def topdown_emberstorm(fig=None, subplot_row_col_n=None, ax=None,
                        u10=None, v10=None, 
                        wmap=None, wmap_height=None,
                        topog=None,
-                       annotate=True, showlatlons=True
+                       annotate=True, showlatlons=True,
+                       sh_kwargs={},
                        ):
     """
     Top down view of Waroona/Yarloop, adding fire front and heat flux and 10m winds
@@ -316,8 +324,12 @@ def topdown_emberstorm(fig=None, subplot_row_col_n=None, ax=None,
         cs_ff = plotting.map_fire(ff,lats,lons)
     if sh is not None:
         # add hot spots for heat flux
-        cs_sh, cb_sh = plotting.map_sensibleheat(sh,lats,lons,alpha=0.6,
-                                                 cbar_kwargs={'label':"Wm$^{-2}$"})
+        # default kwargs for sh plot
+        if 'alpha' not in sh_kwargs:
+            sh_kwargs['alpha']=0.6
+        if 'cbar_kwargs' not in sh_kwargs:
+            sh_kwargs['cbar_kwargs'] = {'label':"Wm$^{-2}$"}
+        cs_sh, cb_sh = plotting.map_sensibleheat(sh,lats,lons,**sh_kwargs)
         if annotate:
             plt.annotate(s="max heat flux = %6.1e W/m2"%np.max(sh),
                          xy=[0,1.06],

@@ -467,7 +467,8 @@ def compare_transects(run1, run2, hours=[12,], extent=None, ztop=1000,
         extent = plotting._extents_[run1.split('_')[0]]
     
     # transects = extent centre +- frac of extent width/height
-    y0,x0 = (extent[2]+extent[3])/3.0, (extent[0]+extent[1])/3.0
+    y0,x0 = (extent[2]+extent[3])/2.0, (extent[0]+extent[1])/2.0
+    # do middle point +- 1/3 of distance to extent edge
     dx = (extent[1]-extent[0]) / 3.0
     dy = (extent[3]-extent[2]) / 3.0
     # transects: [[[lat,lon],[lat,lon]],...]
@@ -480,34 +481,48 @@ def compare_transects(run1, run2, hours=[12,], extent=None, ztop=1000,
     
     ## for each hour
     for dti, dt in enumerate(dtimes):
-        # read sample cube to get times to loop over
-        samplecube = fio.read_model_run(run1,fdtime=[dt])
-        ctimes = utils.dates_from_iris(samplecube.extract("upward_air_velocity")[0])
+        ## read hour of data for both runs
+        cubes1 = fio.read_model_run(run1, fdtime=[dt], extent=extent, 
+                                   add_topog=True, add_winds=True,
+                                   add_z=True, add_theta=True)
+                
+        u1,v1,w1,z1 = cubes1.extract(["u","v","upward_air_velocity","z_th"])
+        ctimes=utils.dates_from_iris(w1)
+        zd1 = z1.data.data
+        theta1, = cubes1.extract("potential_temperature")
+        topog=cubes1.extract("surface_altitude")[0].data
+        
+        # read fire outputs
+        ff1,sh1,u101,v101 = fio.read_fire(model_run=run1,
+                                      dtimes=ctimes, 
+                                      extent=extent,
+                                      sensibleheat=True,
+                                      wind=True)
+        
+        cubes2 = fio.read_model_run(run2, fdtime=[dt], extent=extent, 
+                                   add_topog=True, add_winds=True,
+                                   add_z=True, add_theta=True)
+        u2,v2,w2,z2 = cubes2.extract(["u","v","upward_air_velocity","z_th"])
+        zd2 = z2.data.data
+        theta2, = cubes2.extract("potential_temperature")
+        # read fire outputs
+        ff2,sh2,u102,v102 = fio.read_fire(model_run=run2,
+                                      dtimes=ctimes, 
+                                      extent=extent,
+                                      sensibleheat=True,
+                                      wind=True)
+        
+        
+        lats = ff1.coord('latitude').points
+        lons = ff1.coord('longitude').points
+        
         for cti,ct in enumerate(ctimes):
         
             ## FIGURE BEGIN:
             fig = plt.figure(figsize=[13,14])
             ## looking at two separate runs
-            for runi, run in enumerate([run1,run2]):
+            for runi, [sh,ff,u10,v10,u,v,w,zd,theta] in enumerate(zip([sh1,sh2],[ff1,ff2],[u101,u102],[v101,v102],[u1,u2],[v1,v2],[w1,w2],[zd1,zd2],[theta1,theta2])):
                 # read datacubes
-                cubes = fio.read_model_run(run, fdtime=[dt], extent=extent, 
-                                           add_topog=True, add_winds=True,
-                                           add_z=True, add_theta=True)
-                
-                u,v,w,z = cubes.extract(["u","v","upward_air_velocity","z_th"])
-                zd = z.data.data
-                theta, = cubes.extract("potential_temperature")
-                topog=cubes.extract("surface_altitude")[0].data
-                
-                # read fire outputs
-                ff,sh,u10,v10 = fio.read_fire(model_run=run,
-                                              dtimes=ctimes, 
-                                              extent=extent,
-                                              sensibleheat=True,
-                                              wind=True)
-                
-                lats = ff.coord('latitude').points
-                lons = ff.coord('longitude').points
                     
                 shd = sh[cti].data.data
                 LT = ct + timedelta(hours=8)
@@ -524,7 +539,10 @@ def compare_transects(run1, run2, hours=[12,], extent=None, ztop=1000,
                     ff=ffd, sh=shd, u10=u10d, v10=v10d,
                     topog=topog,
                     annotate=False,
+                    sh_kwargs={'colorbar':False}
                     )
+                if runi==1:
+                    plt.yticks([],[])
                 plt.title(columntitles[runi])
                 for transect in transects:
                     ## Add dashed line to show where transect will be
@@ -548,20 +566,34 @@ def compare_transects(run1, run2, hours=[12,], extent=None, ztop=1000,
                         sh=shd,
                         theta=theta[cti].data.data,
                         ztop=ztop,
+                        theta_contourargs={'levels':[297,300,303,306,309]},
+                        wind_contourargs={'colorbar':False},
                         )
-                
+                    if runi==1:
+                        plt.yticks([],[])
                     # finally add desired annotations
                     plotting.annotate_max_winds(trets['s'])
                     
-                    #plt.scatter(maxwinds_x,maxwinds_y, 
-                    #            marker='o', s=70, 
-                    #            facecolors='none', edgecolors='r',
-                    #            )
+            
+            ## add wind speed colorbar
+            cbar_ax = fig.add_axes([0.92, 0.4, 0.02, 0.2]) # X Y Width Height
+            cmap = matplotlib.cm.get_cmap(name=plotting._cmaps_['windspeed'])
+            #cmap.set_over('1.0')
+            #norm = matplotlib.colors.Normalize(vmin=0, vmax=22.5)
+            norm = matplotlib.colors.BoundaryNorm(np.arange(0,22.51,2.5), cmap.N)
+            
+            cb1 = matplotlib.colorbar.ColorbarBase(cbar_ax, cmap=cmap,
+                                                   norm=norm,
+                                                   extend='max',
+                                                   orientation='vertical')
+            cb1.set_label('ms$^{-1}$')
+            
                 
             ## SAVE FIGURE
             subdir='transects'
             if subsubdir is not None:
                 subdir += '/'+subsubdir
+            plt.tight_layout(rect=[0,0.03,0.92,0.975]) #(left, bottom, right, top)
             fio.save_fig(run2,_sn_,ct,subdir=subdir,plt=plt)
     
 
@@ -569,10 +601,13 @@ if __name__=='__main__':
     
     ## Compare transects
     if True:
+        ext_pcb=plotting._extents_['waroonaz']
+        ext_es1=emberstorm._emberstorm_centres_['waroona_run3']['first']['extent']
+        ext_es2=emberstorm._emberstorm_centres_['waroona_run3']['second']['extent']
         compare_transects('waroona_run3','waroona_run3uc', 
-                          extent=plotting._extents_['waroonaz'],
-                          hours=range(12,20), 
-                          subsubdir='pcb',
+                          extent=ext_es2,
+                          hours=range(17,24), 
+                          subsubdir='es2',
                           columntitles=['coupled','uncoupled'],
                 )
         # look at emberstorm area
