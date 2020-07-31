@@ -11,7 +11,7 @@ Created on Fri Dec 20 15:45:40 2019
 import matplotlib
 matplotlib.use("Agg",warn=False)
 
-from matplotlib import colors, ticker
+from matplotlib import colors, ticker, patheffects
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -33,8 +33,6 @@ def compare_surface(mr1='waroona_run2', mr2='waroona_run2uc', hour=datetime(2016
         3 by 3 plot, ROWS: H winds, V winds, Theta, COLS: Run2, Run2UC, DIFF
     """
     fig, axes = plt.subplots(3,3)
-
-
 
 def compare_winds(mr1='waroona_run2', mr2='waroona_run2uc', 
                   hour=datetime(2016,1,5,15),
@@ -476,6 +474,7 @@ def compare_transects(run1, run2, hours=[12,], extent=None, ztop=1000,
                  [[y0,x0-dx], [y0, x0+dx]],
                  [[y0-dy,x0-dx], [y0-dy, x0+dx]],
                  ]
+    tcolors = ['teal','blue','magenta']
     
     dtimes=fio.model_outputs['waroona_run3']['filedates'][np.array(hours)]
     
@@ -544,11 +543,17 @@ def compare_transects(run1, run2, hours=[12,], extent=None, ztop=1000,
                 if runi==1:
                     plt.yticks([],[])
                 plt.title(columntitles[runi])
-                for transect in transects:
+                for transect, tcolor in zip(transects,tcolors):
                     ## Add dashed line to show where transect will be
                     start,end = transect
-                    ax.plot([start[1],end[1]],[start[0],end[0], ], '--k', 
-                             linewidth=2, alpha=0.9)
+                    # outline the dashed line
+                    line_effects=[patheffects.Stroke(linewidth=4, foreground='darkgrey'), patheffects.Normal()]
+                    plt.plot([start[1],end[1]],[start[0],end[0], ], 
+                            linestyle='--',
+                            color=tcolor,
+                            linewidth=2, 
+                            path_effects=line_effects,
+                            alpha=0.9)
                 
                 ## Plot title
                 plt.suptitle(LT.strftime('%b %d, %H%M (UTC+8)'))
@@ -571,6 +576,9 @@ def compare_transects(run1, run2, hours=[12,], extent=None, ztop=1000,
                         )
                     if runi==1:
                         plt.yticks([],[])
+                    
+                    # match splines to transect lines
+                    plotting.set_spine_color(ax,tcolors[trani])
                     # finally add desired annotations
                     plotting.annotate_max_winds(trets['s'])
                     

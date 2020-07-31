@@ -771,6 +771,16 @@ def make_patch_spines_invisible(ax):
     for sp in ax.spines.values():
         sp.set_visible(False)
 
+def set_spine_color(ax,color,spines=['bottom','top'], cap="butt", linewidth=2, linestyle="dashed"):
+    """
+        set spine color
+    """
+    for spine in [ax.spines[spinestr] for spinestr in spines]:
+        spine.set_linestyle(linestyle)
+        spine.set_capstyle(cap)
+        spine.set_color(color)
+        spine.set_linewidth(linewidth)
+
 def scale_bar(ax, proj, length, location=(0.5, 0.05), linewidth=3,
               units='km', m_per_unit=1000):
     """
