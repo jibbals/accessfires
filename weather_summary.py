@@ -169,7 +169,8 @@ def plot_weather_summary(U,V,W, height, lat, lon, extentname,
     # Add horizontal wind colourbar (if uniform)
     if hwind_limits is not None:
         cbar_ax2 = fig.add_axes([0.48, 0.4, 0.01, 0.2]) #XYWH
-        fig.colorbar(csh, cax=cbar_ax2, format=ticker.ScalarFormatter(), pad=0)
+        fig.colorbar(csh, cax=cbar_ax2, format=ticker.ScalarFormatter(),
+                pad=0, extend='max')
         
 
 def weather_summary_model(model_version='waroona_run1',
@@ -590,8 +591,8 @@ if __name__=='__main__':
     ## Run weather summary
     # waroona day2
     if True:
-        mr = 'sirivan_run1'
-        exname = 'sirivan' # extent to zoom in on
+        mr = 'waroona_run3'
+        exname = 'waroonaf' # extent to zoom in on
         fdt = fio.model_outputs[mr]['filedates']
 
         zoom_in = plotting._extents_[exname]
@@ -602,7 +603,7 @@ if __name__=='__main__':
             #subdir=,
             HSkip=None,
             fdtimes=fdt,
-            hwind_limits=[0,30],
+            hwind_limits=[0,22.5],
             )
     
     ## Plot tiff to show where summary is taking place
