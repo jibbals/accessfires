@@ -85,6 +85,10 @@ def f160(press,Temp,Tempd, latlon,
     skew.plot(p,T,tcolor, linewidth=2)
     skew.plot(p,Td,tdcolor, linewidth=2)
     
+    if np.any(Td > T):
+        print("WARNING: Td > T at some point!?")
+        print("     Td:",Td)
+        print("      T:",T)
     
     ## Add wind profile if desired
     if uwind is not None and vwind is not None and press_rho is not None:
@@ -106,6 +110,8 @@ def f160(press,Temp,Tempd, latlon,
         #print("DEBUG: f160 interp2", u.shape, v.shape, pro.shape)
         #print("DEBUG: f160 interp2", u,v,pro)
         nicer_z=np.union1d(np.union1d(np.arange(0,41,5), np.arange(43,81,3)), np.arange(81,140,1))
+        if latlon[1]>120: # sirivan has more low levels
+            nicer_z=np.union1d(np.union1d(np.arange(0,41,8), np.arange(43,81,5)), np.arange(81,140,2))
         #skip=(slice(None,None,None),nicer_z)
         skew.plot_barbs(pro[nicer_z],u[nicer_z],v[nicer_z])
         
@@ -170,6 +176,7 @@ def f160_hour(dtime=datetime(2016,1,6,7),
         ptitle="SkewT$_{ACCESS}$   (%s) %s"%(latlon_stamp,ffdtimes[i].strftime("%Y %b %d %H:%M (UTC)"))
         
         # create plot
+        print(ffdtimes[i].strftime("DEBUG: %d %h:%m"))
         f160(p[i],t[i],td[i], latlon,
              press_rho=p_rho[i], uwind=u[i], vwind=v[i])
         plt.title(ptitle)
