@@ -599,8 +599,8 @@ if __name__=='__main__':
 
         weather_summary_model(
             mr,
-            #zoom_in=zoom_in,
-            #subdir=,
+            zoom_in=zoom_in,
+            subdir=exname,
             HSkip=None,
             fdtimes=fdt,
             hwind_limits=[0,22.5],

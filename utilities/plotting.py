@@ -217,8 +217,10 @@ def map_add_locations_extent(extentname,
     '''
     
     locstrings = {'waroona':['waroona','yarloop'],
-                  'waroonaz':['waroona'],
+                  'waroonaz':['waroona','hamel'],
+                  'waroonaf':['waroona','yarloop'],
                   'sirivan':['dunedoo','cassillis','uarbry'],
+                  'sirivanz':['dunedoo','cassillis','uarbry'],
                   'sirivans':['dunedoo','cassillis','uarbry']}
     dx=.025
     dxfire = .025
@@ -388,7 +390,7 @@ def map_sensibleheat(sh, lat, lon,
     if 'vmin' not in contourfargs:
         contourfargs['vmin']=100
     if 'cmap' not in contourfargs:
-        contourfargs['cmap']='gnuplot2'
+        contourfargs['cmap']='cividis'# was 'gnuplot2'
     
     shlatlon=flux
     if (sh.shape[0] == len(lon)) and (sh.shape[0] != len(lat)):

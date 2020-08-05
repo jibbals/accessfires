@@ -414,7 +414,7 @@ def transects_hwinds(model_run, hour=18, transects=None, extent=None, ztop=4000,
 
 
 def vertical_vortex(mr='waroona_run3',
-                    zlevels=[15,30,45,60,75,90],
+                    zlevels=[5,10,15,25,35,45],
                     hours=[12,13,14],
                     extent=None,
                     HSkip=None,
@@ -528,7 +528,7 @@ def vertical_vortex(mr='waroona_run3',
                                           colorbar=False, cbar_kwargs={'label':"Wm$^{-2}$"})
                 plotting.map_fire(FF[cti].data,flats,flons)
                 S10 = np.hypot(u10[cti].data,v10[cti].data)
-                streamLW=utils.wind_speed_to_linewidth(S10,speedmax=speedmax,lwmax=6)
+                streamLW=utils.wind_speed_to_linewidth(S10,speedmax=speedmax,lwmax=5)
                 
                 plt.streamplot(flons,flats,u10[cti].data,v10[cti].data,
                                linewidth=streamLW,
@@ -538,7 +538,7 @@ def vertical_vortex(mr='waroona_run3',
                 plt.ylim(flats[0],flats[-1])
                 # add rectangle
                 plotting.map_add_rectangle(extent,edgecolor='darkgrey')
-                plotting.map_add_locations_extent(extentname,hide_text=True)
+                plotting.map_add_locations_extent(extentname,hide_text=False)
                 ax.yaxis.set_major_locator(ticker.LinearLocator(numticks=5))
                 ax.xaxis.set_major_locator(ticker.LinearLocator(numticks=5))
                 ax.xaxis.set_major_formatter(ticker.FormatStrFormatter('%.2f'))
@@ -595,4 +595,5 @@ if __name__ == '__main__':
     if True:
         vertical_vortex(
             mr='sirivan_run1',
+            extent=plotting._extents_['sirivanz'],
             hours=range(5,24))

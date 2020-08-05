@@ -615,7 +615,14 @@ if __name__=='__main__':
     hrs_es2=range(26,35)
     ## Compare transects
     if True:
-        for extent, hours, subsubdir in zip([ext_pcb,ext_es1,ext_es2],[hrs_pcb,hrs_es1,hrs_es2],['pcb','es1','es2']):
+        # Look at some different spots for es2
+        ext_es2s=[[115.7, 116.0, -33.02, -32.84], # nearly like std one
+                [115.72,115.95, -33.0, -32.87], # zoomed in
+                [115.72,115.91, -33.0, -32.9], # zoomed in further
+                ]
+        ssd_es2s=['test1','test2','test3']
+        #for extent, hours, subsubdir in zip([ext_pcb,ext_es1,ext_es2],[hrs_pcb,hrs_es1,hrs_es2],['pcb','es1','es2']):
+        for extent, hours, subsubdir in zip(ext_es2s,[hrs_es2,hrs_es2,hrs_es2],ssd_es2s):
             compare_transects('waroona_run3','waroona_run3uc', 
                               extent=extent,
                               hours=hours, 

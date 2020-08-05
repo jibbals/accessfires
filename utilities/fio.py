@@ -1158,41 +1158,13 @@ def read_waroona_old(dtime, constraints=None, extent=None):
                 ]
     cubes = read_nc_iris(path,constraints=constraints,keepvars=varnames)
 
-    # specific_humidity is sometimes read into multiple cubes!? occasionally is surface only
+    # specific_humidity is the name of two or three variables, we just want the good one
     sh_cubes = cubes.extract('specific_humidity')
-    sh_flag = False
-    if len(sh_cubes) > 1:
-        #print("DEBUG:", sh_cubes )
-        for sh_cube in sh_cubes:
-            if sh_flag or (len(sh_cube.shape) == 2):
-                cubes.remove(sh_cube)
-            else:
-                # keep first 3d instance of sh
-                sh_flag = True
-    
+    remove_duplicate_cubes(sh_cubes,cubes)
+    # same deal with air temp: seems to be issue with iris cubes package?
     ta_cubes = cubes.extract('air_temperature')
-    ta_flag = False
-    if len(ta_cubes) > 1:
-        #print("DEBUG:", ta_cubes )
-        for ta_cube in ta_cubes:
-            if ta_flag or (len(ta_cube.shape) == 2):
-                cubes.remove(ta_cube)
-            else:
-                # keep first 3d instance of ta
-                ta_flag = True
-    #sh0,sh = cubes.extract('specific_humidity')
-    #if len(sh.shape)==2:
-    #    cubes.remove(sh)
-    #else:
-    #    cubes.remove(sh0)
+    remove_duplicate_cubes(ta_cubes,cubes)
 
-    # air_temperature is the name of two variables, we just want the good one
-    #Ta0,Ta = cubes.extract('air_temperature')
-    #if len(Ta.shape)==2:
-    #    cubes.remove(Ta)
-    #else:
-    #    cubes.remove(Ta0)
-    
     return cubes
 
 def read_waroona_oldold(constraints=None, extent=None):
@@ -1323,42 +1295,23 @@ def read_sirivan_run1(dtime, constraints=None, extent=None, HSkip=None):
         )
 
     # specific_humidity is the name of two or three variables, we just want the good one
-    shcubes = cubes.extract('specific_humidity')
-    if len(shcubes)==2:
-        sh,sh0 = shcubes
-        if len(sh.shape)==2:
-            cubes.remove(sh)
-        else:
-            cubes.remove(sh0)
-    elif len(shcubes)==3:
-        sh,sh0,sh1 = shcubes
-        cubes.remove(sh1)
-        if len(sh.shape)==2:
-            cubes.remove(sh)
-        else:
-            cubes.remove(sh0)
-    
-
-    # air_temperature is the name of two variables, we just want the good one
-    Tacubes = cubes.extract('air_temperature')
-    if len(Tacubes)==2:
-        Ta0,Ta = Tacubes
-        if len(Ta.shape)==2:
-            cubes.remove(Ta)
-        else:
-            cubes.remove(Ta0)
-    if len(Tacubes)==3:
-        Ta0,Ta, Ta1 = Tacubes
-        for thing in [Ta0,Ta,Ta1]:
-            print("DEBUG:",thing.summary(shorten=True))
-        cubes.remove(Ta1)
-        if len(Ta.shape)==2:
-            cubes.remove(Ta)
-        else:
-            cubes.remove(Ta0)
+    sh_cubes = cubes.extract('specific_humidity')
+    remove_duplicate_cubes(sh_cubes,cubes)
+    # same deal with air temp: seems to be issue with iris cubes package?
+    ta_cubes = cubes.extract('air_temperature')
+    remove_duplicate_cubes(ta_cubes,cubes)
 
     return cubes
 
+def remove_duplicate_cubes(dupes, cubeslist):
+    flag = False
+    if len(dupes) > 1:
+        for dupe in dupes:
+            if flag or (len(dupe.shape) == 2):
+                cubes.remove(dupe)
+            else:
+                # keep first 3d instance of sh
+                flag = True
 
 def read_topog(model_version, extent=None, HSkip=None):
     '''

@@ -176,7 +176,7 @@ def f160_hour(dtime=datetime(2016,1,6,7),
         ptitle="SkewT$_{ACCESS}$   (%s) %s"%(latlon_stamp,ffdtimes[i].strftime("%Y %b %d %H:%M (UTC)"))
         
         # create plot
-        print(ffdtimes[i].strftime("DEBUG: %d %h:%m"))
+        print(ffdtimes[i].strftime("DEBUG: %d %H:%M"))
         f160(p[i],t[i],td[i], latlon,
              press_rho=p_rho[i], uwind=u[i], vwind=v[i])
         plt.title(ptitle)
