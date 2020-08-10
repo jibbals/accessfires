@@ -32,7 +32,18 @@ from scipy import interpolate
 
 import pandas
 
-def read_HC06D_path(path):
+HC06D_numlatlon={
+        #'COONABARABRAN':['064008',-31.2786,149.2786], # DAILY
+        'COONABARABRAN AIRPORT':['064017',-31.3330,149.2699],
+        #'DUNEDOO':['064009',-32.0165,149.3956], # DAILY!
+        #'GULGONG':['062013',-32.3634,149.5329], # DAILY!
+        'MERRIWA':['061287',-32.19,150.17],
+        'MUDGEE':['062101',-32.5628,149.6149],
+        'NULLO MOUNTAIN':['062100',-32.7244,150.2290],
+        #'WELLINGTON':['065034',-32.5635,148.9503], # DAILY!
+        }
+
+def HC06D_read_path(path):
     """
     Return Pandas table with Columns based on following 
         original names:table names
@@ -63,8 +74,9 @@ def read_HC06D_path(path):
         'Quality of total cloud amount':'Q_Cloud',
     }
     """
-    path='data/AWS/HC06D_Data_061287_48628999806477.txt'
+    
     ## Read data
+    print("INFO: reading ",path)
     data = pandas.read_csv(path) # skiprows=1 removes titles
 
     # read datetimes
@@ -108,47 +120,114 @@ def read_HC06D_path(path):
     
     # rename using dict
     data = data.rename(columns=HC06D_dict)
+    # Remove white space from station name:
+    data['Station Name'] = data['Station Name'].str.strip()
+    # only keep the columns we want
+    data = data.loc[:,HC06D_dict.values()]
+    
+    # Check all quality flags are "N"ormal (I'm assuming that's what N is for)
+    qkeys = []
+    for key in HC06D_dict.values():
+        if 'Q_' in key:
+            # indices of bad data
+            bads = data[key] != "N"
+            # if any are bad, reset to NaN
+            if np.sum(bads) > 0:
+                # Q_<index_name>, want to fix the index_name column
+                data.loc[bads,key[2:]] = np.NaN
+                print("Warning:", np.sum(bads), "entries removed from", key[2:], "at %s"%data["Station Name"][0] )
+            qkeys.append(key)
+    
+    # finally drop quality flag column
+    data = data.drop(columns=qkeys)
+    
+    # make sure data columns are numeric (not string)
+    for key in data.keys():
+        if key not in ['Station Name','LocalTime']:
+            data[key] = pandas.to_numeric(data[key], errors='coerce')
+    
     # set local time to be the index
     data = data.set_index('LocalTime')
-    return data.loc[:,HC06D_dict.values()]
     
-def read_HC06D(sites=[], extent=None):
+    return data
+    
+def HC06D_read(sites=[], extent=None, concat=False):
     """
     READ AVAILABLE HC06D sites
     ARGUMENTS:
         subset to sites list (optional)
         subset to extent [left,right,bot,top] in degrees (optional)
+        concat combines the sites into one dataframe
     """
-    site_numlatlon={
-        'COONABARABRAN':['064008',-31.2786,149.2786],
-        'COONABARABRAN AIRPORT':['064017',-31.3330,149.2699],
-        'DUNEDOO':['064009',-32.0165,149.3956],
-        'GULGONG':['062013',-32.3634,149.5329],
-        'MERRIWA':['061287',-32.19,150.17],
-        'MUDGEE':['062101',-32.5628,149.6149],
-        'NULLO MOUNTAIN':['062100',-32.7244,150.2290],
-        'WELLINGTON':['065034',-32.5635,148.9503],
-        }
-    #site_numlatlon['NULLO MOUNTAIN']=site_numlatlon['NULLO'] # alternate name
     
+    # path template
+    pbase = 'data/AWS/HC06D_Data_%s_48628999806477.txt' 
     
     ret_data={} # dataframes to be returned
     if len(sites) > 0:
         # subset by site names
         for site in sites:
-            path='HC06D_Data_%s_48628999806477.txt'%(site_numlatlon[site][0])
-            ret_data[site]=read_HC06D_path(path)
+            path=pbase%(HC06D_numlatlon[site][0])
+            ret_data[site]=HC06D_read_path(path)
     elif extent is not None:
         # subset by extent
-        for site in site_numlatlon.keys():
-            num,lat,lon = site_numlatlon[site]
+        for site in HC06D_numlatlon.keys():
+            num,lat,lon = HC06D_numlatlon[site]
             if (lat>extent[2]) and (lat<extent[3]) and (lon>extent[0]) and (lon<extent[1]):
-                path='HC06D_Data_%s_48628999806477.txt'%(num)
-                ret_data[site]=read_HC06D_path(path)
+                path=pbase%(num)
+                ret_data[site]=HC06D_read_path(path)
     else:
         # grab all
-        for site in site_numlatlon.keys():
-            path='HC06D_Data_%s_48628999806477.txt'%(site_numlatlon[site][0])
-            ret_data[site]=read_HC06D_path(path)
+        for site in HC06D_numlatlon.keys():
+            path=pbase%(HC06D_numlatlon[site][0])
+            ret_data[site]=HC06D_read_path(path)
+    
+    if concat:
+        return pandas.concat(ret_data.values(),axis=0)
     return ret_data
     #dates = [datetime.strptime(dstr, "%d/%m/%Y %H:%M") for dstr in data.loc[:,dind_str]]
+    
+    
+    
+#### Show site locations/temperatures/winds etc...
+
+# read site data
+data = HC06D_read()
+#sites=pandas.concat(data.values(),axis=0)
+sitecolors=['#a6cee3','#1f78b4','#b2df8a','#33a02c','#fb9a99','#e31a1c','#fdbf6f','#ff7f00','#cab2d6',]
+## Subset to datetime using these limits
+d0=fio.model_outputs['sirivan_run1']['filedates'][0]
+dN=fio.model_outputs['sirivan_run1']['filedates'][-1]
+            
+# create figure    
+fig=plt.figure(figsize=[13,16])
+# first subplot is map
+_,ax1 = plotting.map_tiff_qgis(fname='sirivans.tiff',fig=fig,subplot_row_col_n=[3,1,1])
+
+for itemi,itemname in enumerate(['Ta','ws']):
+    axi=plt.subplot(3,1,itemi+2)
+    latlons=[]
+    for sitei,site in enumerate(data.keys()):
+        #print("INFO: plotting",key)
+        df=data[site].loc[d0.strftime("%Y-%m-%d %H:%M"):dN.strftime("%Y-%m-%d %H:%M")]
+        df[itemname].plot(color=sitecolors[sitei])
+        latlons.append([data[site]['Latitude'][0],data[site]['Longitude'][0]])
+    plt.title(itemname)
+    
+# Add point to map in axis 1
+plotting.map_add_nice_text(ax1,latlons=latlons,texts=data.keys(),markercolors=sitecolors[:len(data.keys())])
+# add normal points to map
+plt.sca(ax1)
+plotting.map_add_locations_extent('sirivans',nice=True)
+
+plotting.add_legend(axi,colours=sitecolors[:len(data.keys())],labels=data.keys())
+
+
+#for i,sitename in enumerate(HC06D_numlatlon.keys()):
+#    # grab site, subset by datetime
+#    df = data[sitename].loc[d0.strftime("%Y-%m-%d %H:%M"):dN.strftime("%Y-%m-%d %H:%M")]
+#    dates=df.index.values
+#    plt.plot_date(dates,df['Ta'],color=sitecolors[i],label=sitename)
+#plt.legend()
+#
+

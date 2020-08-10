@@ -649,8 +649,8 @@ def pyrocb_model_run(model_run='waroona_run1', dtime=datetime(2016,1,5,15),
             ffi = ff[i].data.data
         
         ## First make the left to right figure
-        left_right_slice(qci, ui, wi, zi, topogi, lat, lon, X1)
-        fio.save_fig(model_run, _sn_, ffdtimes[i], plt, subdir='LR1')
+        #left_right_slice(qci, ui, wi, zi, topogi, lat, lon, X1)
+        #fio.save_fig(model_run, _sn_, ffdtimes[i], plt, subdir='LR1')
         
         ## second make the full pyrocb plot:
         
@@ -699,12 +699,12 @@ if __name__ == '__main__':
         for hour in sirivan_good_half:
             pyrocb_model_run('sirivan_run1', dtime=hour)
     
-    ### These are the first pyrocb plots I made (3 transects, not moving)
+    ### all plots for runs:
     if True:
-        model_runs = ['waroona_run3',]# 'waroona_run2','sirivan_run1']
+        model_runs = ['sirivan_run1',]# 'waroona_run2','sirivan_run1']
         for mr in model_runs :
             dtimes = fio.model_outputs[mr]['filedates']
-            if True: # Maybe just do a few hours for testing
-                dtimes = dtimes[14:18]
+            #if True: # Maybe just do a few hours for testing
+            #    dtimes = dtimes[0:2]
             for dtime in dtimes:
                 pyrocb_model_run(model_run=mr, dtime=dtime)

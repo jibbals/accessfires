@@ -12,6 +12,7 @@ Created on Mon Aug 12 14:06:49 2019
 import numpy as np
 import matplotlib
 from matplotlib import patheffects, patches
+from matplotlib.lines import Line2D # for custom legends
 import matplotlib.colors as col
 import matplotlib.pyplot as plt
 import matplotlib.ticker as tick
@@ -135,6 +136,23 @@ def init_plots():
     # rcParams["figure.dpi"] 
     #matplotlib.rcParams["figure.dpi"] = 200           # DEFAULT DPI for plot output
 
+
+def add_legend(ax,colours,labels,styles=None, **lineargs):
+    """
+    create custom legend using a list of colours as input
+    ARGS:
+        ax: matplotlib axis to add legend to
+        colours: ['red','green','cyan',...] whatever
+        labels: ['','','',...]
+        styles: ['--','-','.',...] whatever or None (assumes all normal lines)
+        further arguments sent to Line2D function
+    """
+    custom_lines=[]
+    for i,colour in enumerate(colours):
+        custom_lines.append(Line2D([0], [0], color=colour, **lineargs))
+    ax.legend(custom_lines, labels)
+
+
 def annotate_max_winds(winds, upto=None, **annotateargs):
     """
     annotate max wind speed within 2d winds field
@@ -211,7 +229,7 @@ def map_add_grid(ax, **gridargs):
 
 def map_add_locations_extent(extentname, 
                              hide_text=False,
-                             color='grey'):
+                             color='grey', nice=False):
     '''
     wrapper for map_add_locations that adds all the points for that extent
     '''
@@ -242,14 +260,18 @@ def map_add_locations_extent(extentname,
     if hide_text:
         text = ['']*len(locs)
     
-    map_add_locations(locs, text=text, color=color, textcolor='k', dx=dx,dy=dy)
-    # add fire ignition
-    map_add_locations([firename], text=[['Ignition',''][hide_text]], 
-                      color='r', marker='*', dx=dxfire, dy=dyfire, textcolor='k')
-    # add weather stations
-    if extentname=='waroona':
-        map_add_locations(['wagerup'],[['AWS',''][hide_text]],
-                          color='b', marker='*', dx=-.025,dy=.01)
+    if nice:
+        latlons=[ _latlons_[loc] for loc in locs ]
+        map_add_nice_text(plt.gca(),latlons=latlons,texts=text)
+    else:
+        map_add_locations(locs, text=text, color=color, textcolor='k', dx=dx,dy=dy)
+        # add fire ignition
+        map_add_locations([firename], text=[['Ignition',''][hide_text]], 
+                          color='r', marker='*', dx=dxfire, dy=dyfire, textcolor='k')
+        # add weather stations
+        if extentname=='waroona':
+            map_add_locations(['wagerup'],[['AWS',''][hide_text]],
+                              color='b', marker='*', dx=-.025,dy=.01)
 
 def map_add_locations(namelist, text=None, proj=None,
                       marker='o', color='grey', markersize=None, 
@@ -904,27 +926,28 @@ def transect(data, z, lat, lon, start, end, npoints=None,
     if topog is not None:
         slicetopog,_,_ = utils.transect(topog,latt,lont,start,end,nx=npoints)
         # Plot gray fill unless we have sensible heat
-        if (sh is not None) and (np.max(sh) < 1):
-            plt.fill_between(xbottom, slicetopog, zbottom, 
-                             interpolate=True, facecolor='darkgrey',
-                             zorder=2)
-        else:
-            # 0-50k W/m2 colormap on log scale
-            cmap=plt.cm.cmap_d['plasma']
-            normalize = col.SymLogNorm(vmin=0, vmax=10000, linthresh=100)
-            
-            shslice,_,_ = utils.transect(sh, lat, lon, start, end, nx=npoints)
-            # colour a sequence of polygons with the value coming from sh
-            for i in range(len(shslice) - 1):
-                if shslice[i]<100:
-                    color='darkgrey'
-                else:
-                    color=cmap(normalize(shslice[i]))
-                plt.fill_between([xbottom[i], xbottom[i+1]], 
-                                 [slicetopog[i],slicetopog[i+1]],
-                                 [zbottom[i], zbottom[i+1]], 
-                                 color=color,
-                                 zorder=2) # put on top of most things
+        if (sh is not None):
+            if (np.max(sh) < 1):
+                plt.fill_between(xbottom, slicetopog, zbottom, 
+                                 interpolate=True, facecolor='darkgrey',
+                                 zorder=2)
+            else:
+                # 0-50k W/m2 colormap on log scale
+                cmap=plt.cm.cmap_d['plasma']
+                normalize = col.SymLogNorm(vmin=0, vmax=10000, linthresh=100)
+                
+                shslice,_,_ = utils.transect(sh, lat, lon, start, end, nx=npoints)
+                # colour a sequence of polygons with the value coming from sh
+                for i in range(len(shslice) - 1):
+                    if shslice[i]<100:
+                        color='darkgrey'
+                    else:
+                        color=cmap(normalize(shslice[i]))
+                    plt.fill_between([xbottom[i], xbottom[i+1]], 
+                                     [slicetopog[i],slicetopog[i+1]],
+                                     [zbottom[i], zbottom[i+1]], 
+                                     color=color,
+                                     zorder=2) # put on top of most things
     
     if ztop is not None:
         plt.ylim(0,ztop)
@@ -1043,7 +1066,7 @@ def transect_qc(qc, z, lat, lon, start, end, npoints=100,
     if 'cmap' not in contourfargs:
         contourfargs['cmap'] = _cmaps_['qc']
     if 'norm' not in contourfargs:
-        contourfargs['norm'] = col.SymLogNorm(0.02,base=np.e)
+        contourfargs['norm'] = col.SymLogNorm(0.02)
     if 'format' not in cbar_args:
         cbar_args['format']=tick.ScalarFormatter()
     # call transect using some defaults for vertical velocity w

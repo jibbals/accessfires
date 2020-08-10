@@ -1308,7 +1308,7 @@ def remove_duplicate_cubes(dupes, cubeslist):
     if len(dupes) > 1:
         for dupe in dupes:
             if flag or (len(dupe.shape) == 2):
-                cubes.remove(dupe)
+                cubeslist.remove(dupe)
             else:
                 # keep first 3d instance of sh
                 flag = True
