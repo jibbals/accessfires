@@ -211,7 +211,7 @@ def weather_summary_model(model_version='waroona_run1',
             qc = clouds[0]
         lat = w.coord('latitude').points
         lon = w.coord('longitude').points
-        height = w.coord('level_height').points
+        height = utils.height_from_iris(w)
         dtimes = utils.dates_from_iris(u)
         # read fire front
         ff, = fio.read_fire(model_version, dtimes, extent=extent, HSkip=HSkip)
@@ -591,8 +591,8 @@ if __name__=='__main__':
     ## Run weather summary
     # waroona day2
     if True:
-        mr = 'waroona_run3'
-        exname = 'waroonaf' # extent to zoom in on
+        mr = 'sirivan_run4'
+        exname = 'sirivan' # extent to zoom in on
         fdt = fio.model_outputs[mr]['filedates']
 
         zoom_in = plotting._extents_[exname]
@@ -600,7 +600,7 @@ if __name__=='__main__':
         weather_summary_model(
             mr,
             zoom_in=zoom_in,
-            subdir=exname,
+            #subdir=exname,
             HSkip=None,
             fdtimes=fdt,
             hwind_limits=[0,22.5],

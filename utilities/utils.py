@@ -234,6 +234,27 @@ def date_from_gregorian(greg, d0=datetime(1970,1,1,0,0,0)):
         return np.array( [d0+timedelta(seconds=int(greg*3600)),])
     return np.array([d0+timedelta(seconds=int(hr*3600)) for hr in greg])
 
+def height_from_iris(cube,):
+    """
+    Return estimate of altitudes from cube: numpy array [levels]
+        looks for atmosphere_hybrid_height_coordinate, or level_height auxiliary coord
+    """
+    height=None
+    coord_names=[coord.name() for coord in cube.coords()]
+    if 'level_height' in coord_names:
+        height = cube.coord('level_height').points
+    elif 'atmosphere_hybrid_height_coordinate' in coord_names:
+        height = cube.coord('atmosphere_hybrid_height_coordinate').points
+    else:
+        print("ERROR: no height estimate in ", cube.name())
+        print("     : coord names: ",coord_names)
+        print("     : cube: ", cube)
+        assert False, "no height coords"
+    return height
+
+
+
+
 def dates_from_iris(timedim, remove_seconds=True):
     '''
     input is coord('time') and grain
