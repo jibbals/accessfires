@@ -18,14 +18,14 @@ matplotlib.use('Agg',warn=False)
 from metpy.units import units
 #distance = np.arange(1, 5) * units.meters # easy way to add units (Also units.metre works!)
 #g = 9.81 * units.meter / (units.second * units.second)
-from metpy.plots import SkewT
+from metpy.plots import SkewT,Hodograph
 
 # plotting stuff
 import matplotlib.pyplot as plt
 #import matplotlib.colors as col
 #import matplotlib.ticker as tick
 import numpy as np
-from datetime import datetime
+from datetime import datetime,timedelta
 import iris # file reading and constraints etc
 #import warnings
 
@@ -35,9 +35,54 @@ from utilities import plotting, utils, fio
 ###
 ## GLOBALS
 ###
-_sn_ = 'F160'
+_sn_ = 'metpy'
 
+def profile_interpolation(cube, latlon, average=False):
+    """
+    interpolate iris cube along vertical dimension at given [lat,lon] pair
+    optionally use average instead of bilinear interp
+    ARGS:
+        cube: iris cube [[time],lev,lat,lon]
+        latlon: [lat, lon]
+        average (optional): how many kilometers to use for average
+            TO BE IMPLEMENTED
+    """
+    
+    # Direct interpolation
+    data0 = np.squeeze(
+        cube.interpolate(
+            [('longitude',[latlon[1]]), ('latitude',[latlon[0]])],
+            iris.analysis.Linear()
+            ).data
+        )
+    #if average>0:
+        #do stuff
+    return data0
 
+def hodograph(u,v,latlon,average=0,**hodoargs):
+    """
+    hodograph plot
+    args:
+        u: iris cube [lev,lat,lon] east-west wind in m/s
+        v: south-north wind
+        latlon: [lat,lon] to be profiled
+        average (km): interpolate? or use area average? 
+        further arguments will be sent to Hodograph plot function 
+    """
+    
+    height = utils.height_from_iris(u) * units("metre")
+    u0 = profile_interpolation(u,latlon,average=average).data * units('m/s')
+    v0 = profile_interpolation(v,latlon,average=average).data * units('m/s')
+    
+    
+    ## Default hodograph args:
+    #if 'cmap' not in hodoargs:
+        
+    hodo=Hodograph()
+    cs=hodo.plot_colormapped(u0,v0,height,**hodoargs)
+    hodo.add_grid(increment=20)
+    return cs
+    
 def f160(press,Temp,Tempd, latlon, 
          press_rho=None,uwind=None,vwind=None, 
          nearby=2, alpha=0.3):
@@ -55,31 +100,32 @@ def f160(press,Temp,Tempd, latlon,
     ## first interpolate pressure and temperature to latlon
     lons=press.coord('longitude')
     lats=press.coord('latitude')
-    #press.convert_units('hPa') # convert to hPa
-    #Temp.convert_units('C') # convert to sir Kelvin
-    #Tempd.convert_units('C') # convert to kelvin
     
-    press0 = press.interpolate([('longitude',[latlon[1]]),
-                                ('latitude',[latlon[0]])],
-                               iris.analysis.Linear())
-    temp0  = Temp.interpolate([('longitude',[latlon[1]]),
-                            ('latitude',[latlon[0]])],
-                           iris.analysis.Linear())
-    tempd0 = Tempd.interpolate([('longitude',[latlon[1]]),
-                             ('latitude',[latlon[0]])],
-                            iris.analysis.Linear())
-    
-    # Plot T, and Td
-    # pull out data array (units don't work with masked arrays)
-    p = np.squeeze(press0.data.data) * units(str(press.units))
-    p = p.to(units.mbar)
-    T = np.squeeze(temp0.data.data) * units(str(Temp.units))
-    T = T.to(units.degC)
-    Td = np.squeeze(tempd0.data.data) * units(str(Tempd.units))
-    Td = Td.to(units.degC)
+    fromunits=[units(str(press.units)), units(str(Temp.units)), units(str(Tempd.units))]
+    tounits=[units.mbar, units.degC, units.degC]
+    [p,T,Td] = [ (profile_interpolation(cube,latlon).data*funit).to(tunit) for cube,funit,tunit in zip([press,Temp,Tempd],fromunits,tounits)]
+    #press0 = press.interpolate([('longitude',[latlon[1]]),
+    #                            ('latitude',[latlon[0]])],
+    #                           iris.analysis.Linear())
+    #temp0  = Temp.interpolate([('longitude',[latlon[1]]),
+    #                        ('latitude',[latlon[0]])],
+    #                       iris.analysis.Linear())
+    #tempd0 = Tempd.interpolate([('longitude',[latlon[1]]),
+    #                         ('latitude',[latlon[0]])],
+    #                        iris.analysis.Linear())
+    #
+    ## Plot T, and Td
+    ## pull out data array (units don't work with masked arrays)
+    #p = np.squeeze(press0.data.data) * units(str(press.units))
+    #p = p.to(units.mbar)
+    #T = np.squeeze(temp0.data.data) * units(str(Temp.units))
+    #T = T.to(units.degC)
+    #Td = np.squeeze(tempd0.data.data) * units(str(Tempd.units))
+    #Td = Td.to(units.degC)
     
     #print("DEBUG: f160 interp1", p.shape, T.shape, Td.shape)
     #print("DEBUG: f160 interp1", p, T, Td)
+    
     fig = plt.figure(figsize=(9,9))
     skew = SkewT(fig,rotation=45)
     skew.plot(p,T,tcolor, linewidth=2)
@@ -93,20 +139,15 @@ def f160(press,Temp,Tempd, latlon,
     ## Add wind profile if desired
     if uwind is not None and vwind is not None and press_rho is not None:
         # interpolate to desired lat/lon
-        u0 = uwind.interpolate([('longitude',[latlon[1]]),
-                            ('latitude',[latlon[0]])],
-                           iris.analysis.Linear())
-        v0 = vwind.interpolate([('longitude',[latlon[1]]),
-                            ('latitude',[latlon[0]])],
-                           iris.analysis.Linear())
-        p_rho0 = press_rho.interpolate([('longitude',[latlon[1]]),
-                            ('latitude',[latlon[0]])],
-                           iris.analysis.Linear())
-        u = np.squeeze(u0.data.data) * units('m/s')#units(str(uwind.units))
-        v = np.squeeze(v0.data.data) * units('m/s')#units(str(vwind.units))
+        u0 = profile_interpolation(uwind,latlon).data
+        v0 = profile_interpolation(vwind,latlon).data
+        p_rho0 = profile_interpolation(press_rho,latlon).data
+        
+        u = u0 * units('m/s')#units(str(uwind.units))
+        v = v0 * units('m/s')#units(str(vwind.units))
         u = u.to(units.knots)
         v = v.to(units.knots)
-        pro = (np.squeeze(p_rho0.data.data) * units(str(press_rho.units))).to(units.mbar)
+        pro = (p_rho0 * units(str(press_rho.units))).to(units.mbar)
         #print("DEBUG: f160 interp2", u.shape, v.shape, pro.shape)
         #print("DEBUG: f160 interp2", u,v,pro)
         nicer_z=np.union1d(np.union1d(np.arange(0,41,5), np.arange(43,81,3)), np.arange(81,140,1))
@@ -141,11 +182,12 @@ def f160(press,Temp,Tempd, latlon,
     skew.plot_mixing_lines()
     return skew
 
-def f160_hour(dtime=datetime(2016,1,6,7), 
-              latlon=plotting._latlons_['pyrocb_waroona1'],
-              latlon_stamp='pyrocb1',
-              model_version='waroona_run1',
-              nearby=2):
+def model_metpy_hour(dtime=datetime(2016,1,6,7), 
+                     latlon=plotting._latlons_['pyrocb_waroona1'],
+                     latlon_stamp='pyrocb1',
+                     model_version='waroona_run1',
+                     nearby=2,
+                     HSkip=None):
     '''
     Look at F160 plots over time for a particular location
     INPUTS: hour of interest, latlon, and label to describe latlon (for plotting folder)
@@ -162,7 +204,8 @@ def f160_hour(dtime=datetime(2016,1,6,7),
     # read pressure and temperature cubes
     cubes = fio.read_model_run(model_version, fdtime=dtime, extent=extent,
                                add_winds = True,
-                               add_dewpoint = True,)
+                               add_dewpoint = True,
+                               HSkip=HSkip)
     p, t, td, u, v = cubes.extract(['air_pressure','air_temperature',
                                     'dewpoint_temperature','u','v'])
     p_rho = p
@@ -170,19 +213,34 @@ def f160_hour(dtime=datetime(2016,1,6,7),
         p_rho, = cubes.extract('air_pressure_rho')
     
     ffdtimes = utils.dates_from_iris(p)
+    offset=timedelta(hours=8) if latlon[1] < 120 else timedelta(hours=10)
     
     for i in range(len(ffdtimes)):
-        # Plot name and title
-        ptitle="SkewT$_{ACCESS}$   (%s) %s"%(latlon_stamp,ffdtimes[i].strftime("%Y %b %d %H:%M (UTC)"))
+        utc=ffdtimes[i]
+        lt =utc+offset
+        ## Plot HODOR GRAPHIC
+        cs=hodograph(u[i],v[i],latlon,)
+        htitle="Hodograph at %s, %s"%(latlon_stamp,lt.strftime("%b %d %H:%M (local time)"))
+        plt.title(htitle)
         
-        # create plot
+        cbar_ax = plt.gcf().add_axes([0.85, 0.3, 0.03, 0.4])# X Y Width Height
+        cb = plt.colorbar(cs, cax=cbar_ax, orientation='vertical',
+                          format=matplotlib.ticker.ScalarFormatter(), 
+                          pad=0)
+        fio.save_fig(model_version,_sn_,utc,plt,subdir=latlon_stamp+"/hodograph")
+        
+        
+        
+        ## f160 plot
+        ptitle="SkewT$_{ACCESS}$   (%s) %s"%(latlon_stamp,utc.strftime("%Y %b %d %H:%M (UTC)"))
+        
         print(ffdtimes[i].strftime("DEBUG: %d %H:%M"))
         f160(p[i],t[i],td[i], latlon,
              press_rho=p_rho[i], uwind=u[i], vwind=v[i])
         plt.title(ptitle)
         
         # save plot
-        fio.save_fig(model_version,_sn_,ffdtimes[i],plt,subdir=latlon_stamp)
+        fio.save_fig(model_version,_sn_,utc,plt,subdir=latlon_stamp+"/f160")
 
 if __name__ == '__main__':
     
@@ -191,20 +249,21 @@ if __name__ == '__main__':
     waroona_0630_pcb_stamp = "32.90S, 116.05E"
     if False:
         # show waroona f160 at PCB
-        f160_hour(dtime=datetime(2016,1,6,6),
-                  latlon=waroona_0630_pcb,
-                  latlon_stamp=waroona_0630_pcb_stamp,
-                  model_version='waroona_run3', 
-                  nearby=1)
+        model_metpy_hour(dtime=datetime(2016,1,6,6),
+                         latlon=waroona_0630_pcb,
+                         latlon_stamp=waroona_0630_pcb_stamp,
+                         model_version='waroona_run3', 
+                         nearby=1)
     
     if True: # lets look at sirivan f160
         sirivan_middle = -32, 149.8
         for hour in fio.model_outputs['sirivan_run1']['filedates']:
-            f160_hour(dtime=hour,
-                      latlon=sirivan_middle,
-                      latlon_stamp="32.9S,116.05E",
-                      model_version='sirivan_run1', 
-                      nearby=0)
+            model_metpy_hour(dtime=hour,
+                             latlon=sirivan_middle,
+                             latlon_stamp="32.9S,116.05E",
+                             model_version='sirivan_run1', 
+                             nearby=0,
+                             HSkip=5)
     
     if False: # old stuff
         topleft = [-32.75, 115.8] # random point away from the fire influence

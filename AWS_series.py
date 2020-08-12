@@ -362,6 +362,41 @@ def plot_model_vs_data(df, colours=['maroon','k'], labels=['model','AWS']):
     ## extract wd and ws arrays for comparison
     ## subplot for each site (argument list)
 
+def HC06D_summary(mr='sirivan_run1'):
+    """
+    """
+    # read site data
+    data = fio.HC06D_read()
+    #sites=pandas.concat(data.values(),axis=0)
+    sitecolors=['#a6cee3','#1f78b4','#b2df8a','#33a02c','#fb9a99','#e31a1c','#fdbf6f','#ff7f00','#cab2d6',]
+    ## Subset to datetime using these limits
+    d0=fio.model_outputs[mr]['filedates'][0]
+    dN=fio.model_outputs[mr]['filedates'][-1]
+                
+    # create figure    
+    fig=plt.figure(figsize=[13,16])
+    # first subplot is map
+    _,ax1 = plotting.map_tiff_qgis(fname='sirivans.tiff',fig=fig,subplot_row_col_n=[3,1,1])
+    
+    for itemi,itemname in enumerate(['Ta','ws']):
+        axi=plt.subplot(3,1,itemi+2)
+        latlons=[]
+        for sitei,site in enumerate(data.keys()):
+            #print("INFO: plotting",key)
+            df=data[site].loc[d0.strftime("%Y-%m-%d %H:%M"):dN.strftime("%Y-%m-%d %H:%M")]
+            df[itemname].plot(color=sitecolors[sitei])
+            latlons.append([data[site]['Latitude'][0],data[site]['Longitude'][0]])
+        plt.title(itemname)
+        
+    # Add point to map in axis 1
+    plotting.map_add_nice_text(ax1,latlons=latlons,texts=data.keys(),markercolors=sitecolors[:len(data.keys())])
+    # add normal points to map
+    plt.sca(ax1)
+    plotting.map_add_locations_extent('sirivans',nice=True)
+    
+    plotting.add_legend(axi,colours=sitecolors[:len(data.keys())],labels=data.keys())
+    
+    fio.save_fig(mr,_sn_,"sirivan_AWS",plt)
 
 if __name__=='__main__':
     d0,dN = datetime(2016,1,4,10), datetime(2016,1,7,10)
