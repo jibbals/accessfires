@@ -31,11 +31,25 @@ from scipy import interpolate
 
 import pandas
 
-
+# Dict to hold all the AWS metadata
+_AWS_={
+    "moree_airport":{
+        "path_AIFS":"data/AWS/MoreeAirport.csv",
+        "latlon":[-29.4946, 149.8505], # degrees
+        "altitude":214, # metres ASL
+        },
+    "coonabarabran_airport":{
+        "path_AIFS":"data/AWS/CoonabarabranAirport.csv",
+        "latlon":[-31.3330,149.2699],
+        "altitude":645,
+        },
+    }
 ## Read AIFS based csv files
 def AIFS_read_path(path):
     """
-    Return Pandas table
+    Return path into Pandas table:
+        Station	DF	Cur %	Grass t/ha	EST HH:MM dd/mm/yy	T	Td	RH	Wd	Ws km/h	Wg km/h	FFDR/FFDI	GFDR/GFDI
+
     """
     
     ## Read data
@@ -45,16 +59,6 @@ def AIFS_read_path(path):
     # read datetimes
     dind_str='EST HH:MM dd/mm/yy' # local time column
     data[dind_str] = pandas.to_datetime(data[dind_str], dayfirst=True)
-    
-    #keep_list = [
-    #    'Station', 
-    #    'Grass t/ha',
-    #    'EST HH:MM dd/mm/yy',
-    #    'T','Td','RH','Wd','Ws km/h',
-    #    'Wg km/h', # Wind something?
-    #    'FFDR/FFDI', # danger index
-    #    'GFDR/GFDI'
-    #    ]
     
     # Wind direction from string to degrees clockwise from due North
     wind_dir_map = {"N":0,"NNE":22.5,"NE":45,"ENE":67.5,"E":90,
@@ -79,9 +83,6 @@ def AIFS_read_path(path):
     data = data.sort_values(by=dind_str)
     return data
 
-moree=AIFS_read_path('data/AWS/MoreeAirport.csv')
-print(moree.head())
-
 def AWS_plot_timeseries(df,key,d0=None,dN=None,**plotargs):
     """
     ARGS:
@@ -95,11 +96,28 @@ def AWS_plot_timeseries(df,key,d0=None,dN=None,**plotargs):
     
     subdf[key].plot(**plotargs)
 
-mr='sirivan_run1'
-offset=timedelta(hours=10)
-d0=fio.model_outputs[mr]['filedates'][0] + offset
-dN=fio.model_outputs[mr]['filedates'][-1] + offset
+## READ MOREE
+sname='moree_airport'
+path = _AWS_[sname]['path_AIFS']
+latlon = _AWS_[sname]['latlon']
 
-AWS_plot_timeseries(moree,'FFDR/FFDI',d0=d0,dN=dN,color='r')
-AWS_plot_timeseries(moree,'GFDR/GFDI',d0=d0,dN=dN,color='m')
-plotting.add_legend(plt.gca(),colours=['r','m'],labels=['FFDR/FFDI','GFDR/GFDI'])
+aws=AIFS_read_path('data/AWS/MoreeAirport.csv')
+print(aws.head())
+
+mr='sirivan_run4'
+umhours=fio.model_outputs[mr]['filedates']
+offset=timedelta(hours=10)
+d0=umhours[0] + offset
+dN=umhours[-1] + offset
+
+AWS_plot_timeseries(aws,'FFDR/FFDI',d0=d0,dN=dN,color='r')
+AWS_plot_timeseries(aws,'GFDR/GFDI',d0=d0,dN=dN,color='m')
+ax=plt.gca()
+plt.ylabel('Index')
+ax2=ax.twinx()
+AWS_plot_timeseries(aws,'T', d0=d0,dN=dN,color='k')
+plt.ylabel("Degrees C")
+plotting.add_legend(ax,colours=['r','m','k'],labels=['FFDI','GFDI','Temperature'])
+
+cubes=fio.read_model_timeseries(mr,latlon,dN=umhours[1])
+print(cubes)

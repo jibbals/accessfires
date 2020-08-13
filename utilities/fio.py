@@ -719,8 +719,8 @@ def read_model_run(model_version, fdtime=None, subdtimes=None, extent=None,
     1: air_pressure_at_sea_level / (Pa)    (time: 6; latitude: 14; longitude: 14)
     2: air_pressure_rho / (Pa)             (time: 6; model_level_number: 140; latitude: 14; longitude: 14)
     3: air_temperature / (K)               (time: 6; model_level_number: 140; latitude: 14; longitude: 14)
-    4: mass_fraction_of_cloud_ice_in_air / (kg kg-1) (time: 6; model_level_number: 140; latitude: 14; longitude: 14)
-    5: mass_fraction_of_cloud_liquid_water_in_air / (kg kg-1) (time: 6; model_level_number: 140; latitude: 14; longitude: 14)
+    4: cld_ice / (kg kg-1)                 (time: 6; model_level_number: 140; latitude: 14; longitude: 14)
+    5: cld_water / (kg kg-1)               (time: 6; model_level_number: 140; latitude: 14; longitude: 14)
     6: specific_humidity / (kg kg-1)       (time: 6; model_level_number: 140; latitude: 14; longitude: 14)
     7: surface_air_pressure / (Pa)         (time: 6; latitude: 14; longitude: 14)
     8: surface_temperature / (K)           (time: 6; latitude: 14; longitude: 14)
@@ -924,14 +924,20 @@ def read_model_run(model_version, fdtime=None, subdtimes=None, extent=None,
 
     ## extras
     # Add cloud parameter at g/kg scale
-    water_and_ice = allcubes.extract(['mass_fraction_of_cloud_liquid_water_in_air',
-                                      'mass_fraction_of_cloud_ice_in_air'])
-    if len(water_and_ice) == 2:
-        water,ice=water_and_ice
-        qc = (water+ice) * 1000
-        qc.units = 'g kg-1'
-        qc.rename('qc')
-        allcubes.append(qc)
+    if model_version not in ["sirivan_run1",]:
+        # Rename ice and water cubes
+        if int(model_version[-1]) < 4:
+            allcubes.extract('mass_fraction_of_cloud_liquid_water_in_air')[0].rename('cld_water')
+            allcubes.extract('mass_fraction_of_cloud_ice_in_air')[0].rename('cld_ice')
+        print("DEBUG:",allcubes)
+        water_and_ice = allcubes.extract(['cld_water',
+                                          'cld_ice'])
+        if len(water_and_ice) == 2:
+            water,ice=water_and_ice
+            qc = (water+ice) * 1000
+            qc.units = 'g kg-1'
+            qc.rename('qc')
+            allcubes.append(qc)
 
     if add_z:
         # This is down here so that it only happens AFTER subsetting
@@ -1589,3 +1595,61 @@ def HC06D_read(sites=[], extent=None, concat=False):
     if concat:
         return pandas.concat(ret_data.values(),axis=0)
     return ret_data
+
+def read_model_timeseries(model_run,latlon,
+                          radial_avg_degrees=None,
+                          d0=None,dN=None,
+                          ):
+    """
+    ARGUMENTS:
+        radial_avg_degrees: instead of interpolating to a lat/lon, average horizontally up to this many degrees away
+            currently this is a square not a circle averaged
+        d0,dN: start and end date (optional)
+    """
+    lat,lon = latlon
+    extent = [lon-.02, lon+.02, lat-.02, lat+.02] # just grab real close to latlon
+    if radial_avg_degrees is not None:
+        #assert radial_avg_degrees>0.01, "radial average too small!"
+        extent = [lon-radial_avg_degrees, 
+                  lon+radial_avg_degrees,
+                  lat-radial_avg_degrees, 
+                  lat+radial_avg_degrees]
+    
+    umhours = model_outputs[model_run]['filedates']
+    # limit hours desired to d0-dN
+    if d0 is not None:
+        di=min(utils.date_index(d0,umhours)-1, 0)[0]
+        umhours=umhours[di:]
+    if dN is not None:
+        di=utils.date_index(dN,umhours)[0]
+        umhours=umhours[:di+1]
+    ## Read Model output:
+    cubes = read_model_run(model_run, fdtime=umhours, extent=extent, 
+                                 add_topog=True, add_winds=True, 
+                                 add_RH=True, add_z=True, 
+                                 add_dewpoint=True, add_theta=True)
+    print("DEBUG:")
+    print(cubes)
+    ctimes=utils.dates_from_iris(cubes.extract('w')[0])
+    # remove unwanted times
+    if d0 is not None:
+        di=utils.date_index(d0,ctimes)
+        for ci,cube in enumerate(cubes):
+           if 'time' in cube.coords():
+               cubes[ci] = cube[di:]
+        ctimes=ctimes[di:]
+    if dN is not None:
+        di=utils.date_index(dN,ctimes)
+        for ci,cube in enumerate(cubes):
+           if 'time' in cube.coords():
+               cubes[ci] = cube[:(di+1)]
+        ctimes=ctimes[:di]
+    # Interpolate or average the horizontal component
+    for ci,cube in enumerate(cubes):
+        if 'latitude' in cube.coords():
+            if radial_avg_degrees:
+                # dimensions to collapse will be 'latitude' and 'longitude'
+                cubes[ci] = cube.collapsed(['latitude','longitude'], iris.analysis.MEAN)
+            else:
+                cubes[ci] = utils.profile_interpolation(cube,latlon,)
+    return cubes

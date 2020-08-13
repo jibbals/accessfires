@@ -37,28 +37,6 @@ from utilities import plotting, utils, fio
 ###
 _sn_ = 'metpy'
 
-def profile_interpolation(cube, latlon, average=False):
-    """
-    interpolate iris cube along vertical dimension at given [lat,lon] pair
-    optionally use average instead of bilinear interp
-    ARGS:
-        cube: iris cube [[time],lev,lat,lon]
-        latlon: [lat, lon]
-        average (optional): how many kilometers to use for average
-            TO BE IMPLEMENTED
-    """
-    
-    # Direct interpolation
-    data0 = np.squeeze(
-        cube.interpolate(
-            [('longitude',[latlon[1]]), ('latitude',[latlon[0]])],
-            iris.analysis.Linear()
-            ).data
-        )
-    #if average>0:
-        #do stuff
-    return data0
-
 def hodograph(u,v,latlon,average=0,**hodoargs):
     """
     hodograph plot
@@ -71,8 +49,8 @@ def hodograph(u,v,latlon,average=0,**hodoargs):
     """
     
     height = utils.height_from_iris(u) * units("metre")
-    u0 = profile_interpolation(u,latlon,average=average).data * units('m/s')
-    v0 = profile_interpolation(v,latlon,average=average).data * units('m/s')
+    u0 = utils.profile_interpolation(u,latlon,average=average).data * units('m/s')
+    v0 = utils.profile_interpolation(v,latlon,average=average).data * units('m/s')
     
     
     ## Default hodograph args:
@@ -103,7 +81,7 @@ def f160(press,Temp,Tempd, latlon,
     
     fromunits=[units(str(press.units)), units(str(Temp.units)), units(str(Tempd.units))]
     tounits=[units.mbar, units.degC, units.degC]
-    [p,T,Td] = [ (profile_interpolation(cube,latlon).data*funit).to(tunit) for cube,funit,tunit in zip([press,Temp,Tempd],fromunits,tounits)]
+    [p,T,Td] = [ (utils.profile_interpolation(cube,latlon).data.data*funit).to(tunit) for cube,funit,tunit in zip([press,Temp,Tempd],fromunits,tounits)]
     #press0 = press.interpolate([('longitude',[latlon[1]]),
     #                            ('latitude',[latlon[0]])],
     #                           iris.analysis.Linear())
@@ -139,9 +117,9 @@ def f160(press,Temp,Tempd, latlon,
     ## Add wind profile if desired
     if uwind is not None and vwind is not None and press_rho is not None:
         # interpolate to desired lat/lon
-        u0 = profile_interpolation(uwind,latlon).data
-        v0 = profile_interpolation(vwind,latlon).data
-        p_rho0 = profile_interpolation(press_rho,latlon).data
+        u0 = utils.profile_interpolation(uwind,latlon).data.data
+        v0 = utils.profile_interpolation(vwind,latlon).data.data
+        p_rho0 = utils.profile_interpolation(press_rho,latlon).data
         
         u = u0 * units('m/s')#units(str(uwind.units))
         v = v0 * units('m/s')#units(str(vwind.units))

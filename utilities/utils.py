@@ -36,6 +36,49 @@ def distance_between_points(latlon0,latlon1):
     c = 2*np.arctan2(np.sqrt(a),np.sqrt(1-a))
     return R*c
 
+def FFDI(DF,RH,T,v):
+    """
+    The FFDI is a key tool for assessing fire danger in Australia. 
+    The formulation of the FFDI (e.g. Noble et al. 1980) is based on the 
+    temperature (C), T, wind speed (km h-1), v, relative humidity (%), RH,
+    and  a  component  representing  fuel  availability  called  the  
+    Drought  Factor,  DF.
+    The  Drought  Factor  is  given  as  a  number  between  0  and  10  and  
+    represents  the  influence  of  recent temperatures and rainfall events on 
+    fuel availability (see Griffiths 1998 for details).
+    # From https://www.bushfirecrc.com/sites/default/files/managed/resource/ctr_010_0.pdf
+    ARGUMENTS:
+        DF: Drought factor (0 to 10)
+        RH: rel humidity as a %
+        T: Temperature (Celcius)
+        v: wind speed (km/h)
+    """
+    # https://www.bushfirecrc.com/sites/default/files/managed/resource/ctr_010_0.pdf
+    ffdi=2*np.exp(-0.45 + 0.987*np.ln(DF) - .0345*RH+.0338*T+.0234*v)
+    return ffdi
+
+def profile_interpolation(cube, latlon, average=False):
+    """
+    interpolate iris cube along vertical dimension at given [lat,lon] pair
+    optionally use average instead of bilinear interp
+    ARGS:
+        cube: iris cube [[time],lev,lat,lon]
+        latlon: [lat, lon]
+        average (optional): how many kilometers to use for average
+            TO BE IMPLEMENTED
+    """
+    
+    # Direct interpolation
+    data0 = iris.util.squeeze(
+        cube.interpolate(
+            [('longitude',[latlon[1]]), ('latitude',[latlon[0]])],
+            iris.analysis.Linear()
+            )
+        )
+    #if average>0:
+        #do stuff
+    return data0
+
 def number_of_interp_points(lats,lons,start,end):
     """
     Returns how many points should be interpolated to between start and end on latlon grid
@@ -205,6 +248,11 @@ def cube_to_xyz(cube,
     return xyz
 
 def date_index(date,dates, dn=None, ignore_hours=False):
+    """
+    ARGUMENTS: date,dates,dn=None,ignore_hours=False
+        closest index available within dates that matches date
+        if dn is passed in, indices will list from date up to dn
+    """
     new_date=date
     new_dn=dn
     new_dates=dates
