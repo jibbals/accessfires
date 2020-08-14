@@ -119,5 +119,5 @@ AWS_plot_timeseries(aws,'T', d0=d0,dN=dN,color='k')
 plt.ylabel("Degrees C")
 plotting.add_legend(ax,colours=['r','m','k'],labels=['FFDI','GFDI','Temperature'])
 
-cubes=fio.read_model_timeseries(mr,latlon,dN=umhours[1])
-print(cubes)
+cubes=fio.read_model_timeseries(mr,latlon=plotting._latlons_['uarbry'],dN=umhours[1])
+#print(cubes)

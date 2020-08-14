@@ -923,13 +923,18 @@ def read_model_run(model_version, fdtime=None, subdtimes=None, extent=None,
             allcubes[i] = allcubes[i].extract(constraints)
 
     ## extras
+    # Rename some stuff in model versions 4 and above (new netcdf)
+    print("DEBUG:",allcubes)
+    #if int(model_version[-1]) > 3:
+    #    allcubes.extract('vertical_wnd')[0].rename('upward_air_velocity')
+    
     # Add cloud parameter at g/kg scale
     if model_version not in ["sirivan_run1",]:
         # Rename ice and water cubes
         if int(model_version[-1]) < 4:
             allcubes.extract('mass_fraction_of_cloud_liquid_water_in_air')[0].rename('cld_water')
             allcubes.extract('mass_fraction_of_cloud_ice_in_air')[0].rename('cld_ice')
-        print("DEBUG:",allcubes)
+        
         water_and_ice = allcubes.extract(['cld_water',
                                           'cld_ice'])
         if len(water_and_ice) == 2:
@@ -1128,10 +1133,13 @@ def read_standard_run(dtime, constraints=None, extent=None, mv='waroona_run1', H
             'air_temperature', # K [t,z,y,x]
             'specific_humidity', # kg/kg [tzyx]
             'upward_air_velocity', # m/s [tzyx]
+            'vertical_wnd', # m/s [tzyx]
             ],
         'mdl_th2':[
             'mass_fraction_of_cloud_ice_in_air', # kg/kg [tzyx]
             'mass_fraction_of_cloud_liquid_water_in_air',
+            'cld_water',
+            'cld_ice',
             ],
         }
     cubelists = []
@@ -1628,9 +1636,8 @@ def read_model_timeseries(model_run,latlon,
                                  add_topog=True, add_winds=True, 
                                  add_RH=True, add_z=True, 
                                  add_dewpoint=True, add_theta=True)
-    print("DEBUG:")
-    print(cubes)
-    ctimes=utils.dates_from_iris(cubes.extract('w')[0])
+    
+    ctimes=utils.dates_from_iris(cubes.extract('upward_air_velocity')[0])
     # remove unwanted times
     if d0 is not None:
         di=utils.date_index(d0,ctimes)
@@ -1646,10 +1653,12 @@ def read_model_timeseries(model_run,latlon,
         ctimes=ctimes[:di]
     # Interpolate or average the horizontal component
     for ci,cube in enumerate(cubes):
-        if 'latitude' in cube.coords():
+        if 'latitude' in [coord.name() for coord in cube.coords()]:
+            print("DEBUG: interp step:",ci,cube.name(), cube.shape)
             if radial_avg_degrees:
                 # dimensions to collapse will be 'latitude' and 'longitude'
                 cubes[ci] = cube.collapsed(['latitude','longitude'], iris.analysis.MEAN)
             else:
                 cubes[ci] = utils.profile_interpolation(cube,latlon,)
+        print("     :",ci,cubes[ci].name,cubes[ci].shape)
     return cubes
