@@ -938,7 +938,11 @@ def read_model_run(model_version, fdtime=None, subdtimes=None, extent=None,
 
     ## extras
     # Rename some stuff in model versions 4 and above (new netcdf)
+    # also remove dupes here
     print("DEBUG:",allcubes)
+    for dupecubes in ["mass_fraction_of_cloud_ice_in_air","upward_air_velocity","mass_fraction_of_cloud_liquid_water_in_air"]:
+        dupes = cubes.extract(dupecubes)
+        remove_duplicate_cubes(dupes,cubes,ndims_expected=4)
     #if int(model_version[-1]) > 3:
     #    allcubes.extract('vertical_wnd')[0].rename('upward_air_velocity')
     
@@ -1338,18 +1342,18 @@ def read_sirivan_run1(dtime, constraints=None, extent=None, HSkip=None):
 
     # specific_humidity is the name of two or three variables, we just want the good one
     sh_cubes = cubes.extract('specific_humidity')
-    remove_duplicate_cubes(sh_cubes,cubes)
+    remove_duplicate_cubes(sh_cubes,cubes,ndims_expected=3)
     # same deal with air temp: seems to be issue with iris cubes package?
     ta_cubes = cubes.extract('air_temperature')
-    remove_duplicate_cubes(ta_cubes,cubes)
+    remove_duplicate_cubes(ta_cubes,cubes,ndims_expected=3)
 
     return cubes
 
-def remove_duplicate_cubes(dupes, cubeslist):
+def remove_duplicate_cubes(dupes, cubeslist, ndims_expected=3):
     flag = False
     if len(dupes) > 1:
         for dupe in dupes:
-            if flag or (len(dupe.shape) == 2):
+            if flag or (len(dupe.shape) != ndims_expected):
                 cubeslist.remove(dupe)
             else:
                 # keep first 3d instance of sh

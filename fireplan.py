@@ -223,7 +223,7 @@ def fireplan_comparison(model_runs=['waroona_old','waroona_run1','waroona_run2',
                             extent=extent,
                             firefront=True,)
         lon,lat=FF.coord('longitude').points,FF.coord('latitude').points
-        print("DEBUG:",FF.summary(shorten=True))
+        #print("DEBUG:",FF.summary(shorten=True))
         # last firefront
         FFlast = FF[-1].data
         # first:
@@ -247,6 +247,8 @@ def fireplan_comparison(model_runs=['waroona_old','waroona_run1','waroona_run2',
         plotting.map_add_nice_text(ax,
                                    [plotting._latlons_['waroona'],plotting._latlons_['yarloop']],
                                    texts=['Waroona','Yarloop'], fontsizes=14)
+    else:
+        plotting.map_add_locations_extent('sirivan',nice=True)
     
     # Make/Add legend
     ax.legend(legend, model_runs)
@@ -295,41 +297,39 @@ def fireplan_vs_isochrones():
     
 if __name__=='__main__':
     ### Run the stuff
-    
+    ext_sirivan=plotting._extents_['sirivan']
     ##fireplan comparison
-    if False:
-        fireplan_comparison()
-    
     if True:
+        fireplan_comparison(model_runs=["sirivan_run1","sirivan_run4","sirivan_run5"],
+                colors=['k','orange','teal'],
+                extent=ext_sirivan,
+                mapname='sirivan.tiff',
+                figname='sirivan_fireplan_comparison',
+                #mapname='sirivan_linescan_osm.tiff',
+                #figname="sirivan_fireplan_comparison_osm",
+                )
+
+    
+    ## Compare waroona isochrones to fireplan
+    if False:
         fireplan_vs_isochrones()
     
     ## Just create a fireplan figure:
     if False:
         fireplanruns = ['sirivan_run2_hr','waroona_old','waroona_run1','sirivan_run1','waroona_run3','waroona_run2']
-        
-        si_r2_hr = 'sirivan_run2_hr'
-        si_r1 = 'sirivan_run1'
-        
-        extent = plotting._extents_['sirivans'] # synoptic extent
+        fireplanruns = ["sirivan_run1","sirivan_run4","sirivan_run5"]
+        for mr in fireplanruns:
+            extent = plotting._extents_[mr.split('_')[0]]
     
-        ## Plot fireplan for high res run
-        # read all the fire data
-        ff, = fio.read_fire(model_run=si_r2_hr, dtimes=None,
+            ## Plot fireplan for high res run
+            # read all the fire data
+            ff, = fio.read_fire(model_run=mr, dtimes=None,
                             extent=extent, firefront=True,
-                            HSkip=5)
+                            HSkip=None)
         
-        fig,ax = fireplan(ff, show_cbar=True, cbar_XYWH=[.18,.3,.2,.02])
-        fio.save_fig(si_r2_hr, _sn_, 'fireplan_hr.png', plt)
+            fig,ax = fireplan(ff, show_cbar=True, cbar_XYWH=[.18,.3,.2,.02])
+            fio.save_fig(mr, _sn_, 'fireplan.png', plt)
         
-        ## Plot fireplan for sirivan original run
-        # read all the fire data
-        ff, = fio.read_fire(model_run=si_r1, dtimes=None,
-                            extent=extent, firefront=True,
-                            HSkip=5)
-        
-        # first plot just the fireplan on it's own
-        fig,ax = fireplan(ff, show_cbar=True, cbar_XYWH=[.18,.3,.2,.02])
-        fio.save_fig(si_r1, _sn_, 'fireplan_hr.png', plt)
 
     if False:
         mr = "waroona_run3"

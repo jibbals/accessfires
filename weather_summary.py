@@ -204,7 +204,7 @@ def weather_summary_model(model_version='waroona_run1',
                                    add_winds=True,
                                    HSkip=HSkip)
         u,v,topog = cubes.extract(['u','v','surface_altitude'])
-        w, = cubes.extract('upward_air_velocity')
+        w = cubes.extract('upward_air_velocity')[0]
         clouds = cubes.extract('qc')
         qc = None
         if len(clouds) == 1:
