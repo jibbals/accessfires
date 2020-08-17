@@ -102,13 +102,16 @@ path = _AWS_[sname]['path_AIFS']
 latlon = _AWS_[sname]['latlon']
 
 aws=AIFS_read_path('data/AWS/MoreeAirport.csv')
-print(aws.head())
+#print(aws.head())
+cubes=fio.read_model_timeseries(mr,latlon=plotting._latlons_['uarbry'],dN=umhours[1])
+#print(cubes)
 
 mr='sirivan_run4'
 umhours=fio.model_outputs[mr]['filedates']
 offset=timedelta(hours=10)
 d0=umhours[0] + offset
 dN=umhours[-1] + offset
+
 
 AWS_plot_timeseries(aws,'FFDR/FFDI',d0=d0,dN=dN,color='r')
 AWS_plot_timeseries(aws,'GFDR/GFDI',d0=d0,dN=dN,color='m')
@@ -117,7 +120,11 @@ plt.ylabel('Index')
 ax2=ax.twinx()
 AWS_plot_timeseries(aws,'T', d0=d0,dN=dN,color='k')
 plt.ylabel("Degrees C")
-plotting.add_legend(ax,colours=['r','m','k'],labels=['FFDI','GFDI','Temperature'])
 
-cubes=fio.read_model_timeseries(mr,latlon=plotting._latlons_['uarbry'],dN=umhours[1])
-#print(cubes)
+# Pull out surface air temp and RH arrays
+T,RH=cubes.extract(['air_temperature','relative_humidity'])
+ctimes = utils.dates_from_iris(T) + offset
+Ti, RHi = T[:,0].data.data -273.15, RH[:,0].data
+
+plt.plot_date(ctimes,Ti,':k')
+plotting.add_legend(ax,colours=['r','m','k','k'],labels=['FFDI','GFDI','T site','T model'],styles=['-','-','-',':'])

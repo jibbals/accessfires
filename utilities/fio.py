@@ -38,6 +38,20 @@ _files_sirivan_ = sorted(glob('data/sirivan/umnsaa_pc*.nc'))
 ## Where are model outputs located
 ## 10m windspeeds are destaggered compared to netcdf, and output at higher res
 model_outputs = {
+        ## run with new fire speed/fuel parameters
+        'sirivan_run5':{
+            'path':'data/sirivan_run5/',
+            'topog':'umnsaa_2017021121_slv.nc',
+            'filedates':np.array([datetime(2017,2,11,21) + timedelta(hours=x) for x in range(24)]),
+            'hasfire':True,
+            'path_firefront':'../sirivan_run5_fire/firefront.20170211T2100Z.nc',
+            'path_fireflux':'../sirivan_run5_fire/sensible_heat.20170211T2100Z.nc',
+            'path_firespeed':'../sirivan_run5_fire/fire_speed.20170211T2100Z.nc',
+            'path_v10m':'../sirivan_run5_fire/10m_vwind.20170211T2100Z.nc',
+            'path_u10m':'../sirivan_run5_fire/10m_uwind.20170211T2100Z.nc',
+            'run':'Run on 4 Aug 2020',
+            'origdir':'/g/data/en0/hxy548/ACCESS-fire/sirivan/2020-08-14/20170211T2100Z/0p3/atmos/',
+            'origfiredir':'/g/data/en0/hxy548/ACCESS-fire/sirivan/2020-08-14/20170211T2100Z/0p3/fire/'},
         ## run with netcdf output (aug 4 2020)
         'sirivan_run4':{
             'path':'data/sirivan_run4/',

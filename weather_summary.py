@@ -591,7 +591,7 @@ if __name__=='__main__':
     ## Run weather summary
     # waroona day2
     if True:
-        mr = 'sirivan_run4'
+        mr = 'sirivan_run5'
         exname = 'sirivan' # extent to zoom in on
         fdt = fio.model_outputs[mr]['filedates']
 
@@ -600,10 +600,10 @@ if __name__=='__main__':
         weather_summary_model(
             mr,
             zoom_in=zoom_in,
-            #subdir=exname,
+            subdir=exname,
             HSkip=None,
             fdtimes=fdt,
-            hwind_limits=[0,22.5],
+            hwind_limits=[0,25],
             )
     
     ## Plot tiff to show where summary is taking place
