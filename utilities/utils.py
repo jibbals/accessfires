@@ -79,10 +79,10 @@ def profile_interpolation(cube, latlon, average=False):
         #do stuff
     return data0
 
-def number_of_interp_points(lats,lons,start,end):
+def number_of_interp_points(lats,lons,start,end, factor=1.2):
     """
     Returns how many points should be interpolated to between start and end on latlon grid
-    Based on min grid size and length of start to end line
+    Based on min grid size, multiplied by factor
     """
     lat0,lon0 = start
     lat1,lon1 = end
@@ -92,7 +92,7 @@ def number_of_interp_points(lats,lons,start,end):
     min_dx = np.min(np.abs(np.diff(lons)))
     
     # minimum resolvable lateral distance
-    dgrid = np.hypot(min_dx,min_dy) 
+    dgrid = np.hypot(min_dx,min_dy) * factor
     
     # line length (start to end)
     dline = np.sqrt((lon1-lon0)**2 + (lat1-lat0)**2)
@@ -282,7 +282,7 @@ def date_from_gregorian(greg, d0=datetime(1970,1,1,0,0,0)):
         return np.array( [d0+timedelta(seconds=int(greg*3600)),])
     return np.array([d0+timedelta(seconds=int(hr*3600)) for hr in greg])
 
-def height_from_iris(cube,):
+def height_from_iris(cube,bounds=False):
     """
     Return estimate of altitudes from cube: numpy array [levels]
         looks for atmosphere_hybrid_height_coordinate, or level_height auxiliary coord
@@ -291,13 +291,18 @@ def height_from_iris(cube,):
     coord_names=[coord.name() for coord in cube.coords()]
     if 'level_height' in coord_names:
         height = cube.coord('level_height').points
+        zbounds = cube.coord('level_height').bounds
     elif 'atmosphere_hybrid_height_coordinate' in coord_names:
         height = cube.coord('atmosphere_hybrid_height_coordinate').points
+        zbounds = cube.coord('atmosphere_hybrid_height_coordinate').bounds
     else:
         print("ERROR: no height estimate in ", cube.name())
         print("     : coord names: ",coord_names)
         print("     : cube: ", cube)
         assert False, "no height coords"
+    if bounds:
+        height = zbounds
+        print(allcubes)
     return height
 
 

@@ -1114,6 +1114,9 @@ def streamplot_regridded(x,y,u,v,**kwargs):
         u = 2darray [y,x] (m/s)
         v = 2darray [y,x] (m/s)
     """
+    if 'minlength' not in kwargs:
+        # increase minimum line length (default is 0.1)
+        kwargs['minlength']=0.5 
     # figure out xn,yn based on smallest grid space in that direction
     if len(x.shape) > 1:
         nx = int(np.ceil((x.max()-x.min())/np.min(np.diff(x,axis=1))))

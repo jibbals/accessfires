@@ -65,9 +65,12 @@ def compare_winds(mr1='waroona_run2', mr2='waroona_run2uc',
     u,v,s,wd = cubes1.extract(['u','v','s','wind_direction'])
     cu,cv,cs,cwd = cubes2.extract(['u','v','s','wind_direction'])
     dates = utils.dates_from_iris(u)
-    height = s.coord('level_height').points
+    height = utils.height_from_iris(s)#.coord('level_height').points
     lats = s.coord('latitude').points
     lons = s.coord('longitude').points
+    clats = cs.coords('latitude').points
+    clons = cs.coords('longitude').points
+
     ff1,ff2=None,None
     if fio.model_outputs[mr1]['hasfire']:
         ff1, = fio.read_fire(mr1,dtimes=dates,extent=extent,firefront=True)
@@ -122,7 +125,7 @@ def compare_winds(mr1='waroona_run2', mr2='waroona_run2uc',
             plt.sca(axes[0,i])
             
             # first determine colourmap contours so that they are the same between plots (and useful)
-            hmax_index=np.sum(np.max([si,csi])>hmaxthresh)
+            hmax_index=np.sum(np.max(np.max(si),np.max(csi))>hmaxthresh)
             hcontours=np.linspace(0,hmaxthresh[hmax_index],20)
             
             # plot the filled contour for h-wind speeds
@@ -132,7 +135,7 @@ def compare_winds(mr1='waroona_run2', mr2='waroona_run2uc',
                                   levels=hcontours)
             # overlaid with quiver of wind dir
             #plotting.map_quiver(ui,vi,lats,lons,nquivers=7)
-            plt.streamplot(lons,lats,ui,vi,color='grey')
+            plt.streamplot(lons,lats,ui,vi,color='grey',minlength=0.5)
             # set limits back to latlon limits
             plt.ylim(lats[0],lats[-1])
             plt.xlim(lons[0],lons[-1])
@@ -150,7 +153,7 @@ def compare_winds(mr1='waroona_run2', mr2='waroona_run2uc',
             
             ## for comparison model also
             plt.sca(axes[1,i])
-            img,_ = plotting.map_contourf(extent, csi, lats, lons, cmap=hcmap, 
+            img,_ = plotting.map_contourf(extent, csi, clats, clons, cmap=hcmap, 
                                           clabel="",  
                                           cbar=False, cbarform=None,
                                           levels=hcontours,)
@@ -158,7 +161,7 @@ def compare_winds(mr1='waroona_run2', mr2='waroona_run2uc',
             # overlaid with quiver of wind dir
             #plotting.map_quiver(cui,cvi,lats,lons,nquivers=7)
             
-            plt.streamplot(lons,lats,cui,cvi,color='grey')
+            plt.streamplot(clons,clats,cui,cvi,color='grey',minlength=0.5)
             # set limits back to latlon limits
             plt.ylim(lats[0],lats[-1])
             plt.xlim(lons[0],lons[-1])
@@ -168,7 +171,7 @@ def compare_winds(mr1='waroona_run2', mr2='waroona_run2uc',
                                               color='k')
             # add fire
             if ff2 is not None:
-                plotting.map_fire(ff2[di].data,lats,lons)
+                plotting.map_fire(ff2[di].data,clats,clons)
             # add label on leftmost
             if i==0: plt.ylabel(mr2)
             
@@ -232,12 +235,12 @@ def compare_winds(mr1='waroona_run2', mr2='waroona_run2uc',
             
             ## for comparison model also
             plt.sca(axes[1,i])
-            img,_=plotting.map_contourf(extent, cwi, lats,lons,cmap=wcmap,clabel="",levels=wcontours,norm=wnorm,cbar=False,cbarform=None)
+            img,_=plotting.map_contourf(extent, cwi, clats,clons,cmap=wcmap,clabel="",levels=wcontours,norm=wnorm,cbar=False,cbarform=None)
             plotting.map_add_locations_extent(extentname, 
                                               hide_text=True,
                                               color='k')
             if ff2 is not None:
-                plotting.map_fire(ff2[di].data,lats,lons)
+                plotting.map_fire(ff2[di].data,clats,clons)
             if i==0: plt.ylabel(mr2)
             
             ## add density plot for wind speed
@@ -301,9 +304,11 @@ def compare_clouds(mr1='waroona_run2', mr2='waroona_run2uc',
     qc, = cubes1.extract(['qc'])
     cqc, = cubes2.extract(['qc'])
     dates = utils.dates_from_iris(qc)
-    height = qc.coord('level_height').points
+    height = utils.height_from_iris(qc)
     lats = qc.coord('latitude').points
     lons = qc.coord('longitude').points
+    clats = cqc.coord('latitude').points
+    clons = cqc.coord('longitude').points
     ff1, = fio.read_fire(mr1,dtimes=dates,extent=extent,firefront=True)
     ff2, = fio.read_fire(mr2,dtimes=dates,extent=extent,firefront=True)
     
@@ -352,7 +357,7 @@ def compare_clouds(mr1='waroona_run2', mr2='waroona_run2uc',
             
             ## for comparison model also
             plt.sca(axes[1,i])
-            img,_ = plotting.map_contourf(extent, cqci, lats, lons, cmap=cmap, 
+            img,_ = plotting.map_contourf(extent, cqci, clats, clons, cmap=cmap, 
                                           norm=norm, clabel="", levels=clevs, 
                                           cbar=False, cbarform=None, extend='max')
             
@@ -360,11 +365,11 @@ def compare_clouds(mr1='waroona_run2', mr2='waroona_run2uc',
             if np.max(cqci)>cloud_threshold:
                 with warnings.catch_warnings():
                     warnings.simplefilter('ignore')
-                    plt.contour(lons, lats, cqci, np.array([cloud_threshold]),
+                    plt.contour(clons, clats, cqci, np.array([cloud_threshold]),
                                 colors='teal', linewidths=2)
             # add fire
             if ff2 is not None:
-                plotting.map_fire(ff2[di].data,lats,lons)
+                plotting.map_fire(ff2[di].data,clats,clons)
             # add label on leftmost
             if i==0: plt.ylabel(mr2)
             
@@ -476,7 +481,7 @@ def compare_transects(run1, run2, hours=[12,], extent=None, ztop=1000,
                  ]
     tcolors = ['teal','blue','magenta']
     
-    dtimes=fio.model_outputs['waroona_run3']['filedates'][np.array(hours)]
+    dtimes=fio.model_outputs[run1]['filedates'][np.array(hours)]
     
     ## for each hour
     for dti, dt in enumerate(dtimes):
@@ -489,7 +494,7 @@ def compare_transects(run1, run2, hours=[12,], extent=None, ztop=1000,
         ctimes=utils.dates_from_iris(w1)
         zd1 = z1.data.data
         theta1, = cubes1.extract("potential_temperature")
-        topog=cubes1.extract("surface_altitude")[0].data
+        topog1=cubes1.extract("surface_altitude")[0].data
         
         # read fire outputs
         ff1,sh1,u101,v101 = fio.read_fire(model_run=run1,
@@ -504,6 +509,7 @@ def compare_transects(run1, run2, hours=[12,], extent=None, ztop=1000,
         u2,v2,w2,z2 = cubes2.extract(["u","v","upward_air_velocity","z_th"])
         zd2 = z2.data.data
         theta2, = cubes2.extract("potential_temperature")
+        topog2=cubes2.extract("surface_altitude")[0].data
         # read fire outputs
         ff2,sh2,u102,v102 = fio.read_fire(model_run=run2,
                                       dtimes=ctimes, 
@@ -512,16 +518,17 @@ def compare_transects(run1, run2, hours=[12,], extent=None, ztop=1000,
                                       wind=True)
         
         
-        lats = ff1.coord('latitude').points
-        lons = ff1.coord('longitude').points
         
         for cti,ct in enumerate(ctimes):
         
             ## FIGURE BEGIN:
             fig = plt.figure(figsize=[13,14])
             ## looking at two separate runs
-            for runi, [sh,ff,u10,v10,u,v,w,zd,theta] in enumerate(zip([sh1,sh2],[ff1,ff2],[u101,u102],[v101,v102],[u1,u2],[v1,v2],[w1,w2],[zd1,zd2],[theta1,theta2])):
+            for runi, [sh,ff,u10,v10,u,v,w,zd,theta,topog] in enumerate(zip([sh1,sh2],[ff1,ff2],[u101,u102],[v101,v102],[u1,u2],[v1,v2],[w1,w2],[zd1,zd2],[theta1,theta2],[topog1,topog2])):
                 # read datacubes
+
+                lats = ff.coord('latitude').points
+                lons = ff.coord('longitude').points
                     
                 shd = sh[cti].data.data
                 LT = ct + timedelta(hours=8)
@@ -614,7 +621,7 @@ if __name__=='__main__':
     hrs_es1=range(16,24)
     hrs_es2=range(26,35)
     ## Compare transects
-    if True:
+    if False:
         # Look at some different spots for es2
         ext_es2s=[[115.7, 116.0, -33.02, -32.84], # nearly like std one
                 [115.72,115.95, -33.0, -32.87], # zoomed in
@@ -638,9 +645,7 @@ if __name__=='__main__':
         compare_fire_spread(['waroona_run3','waroona_run3e'], HSkip=7)
     
     ## Compare topdown views of winds and clouds
-    ## focus on emberstorm area:
     if False:
-        print("INFO: running comparison plots for emberstorm area")
         mr1,mr2 = ['waroona_run3','waroona_run3uc']
         extent=emberstorm._emberstorm_centres_[mr1]['second']['extent']
         #hours = emberstorm._emberstorm_centres_[mr1]['first']['hours']
@@ -656,13 +661,17 @@ if __name__=='__main__':
         
     ## look at overall burn area
     # Lets loop over and compare run3 with it's uncoupled brother
-    if False:
-        mr1,mr2 = ['waroona_run3','waroona_run3uc']
-        for fdate in fio.model_outputs[mr1]['filedates']:
+    if True:
+        mr1,mr2 = ['sirivan_run5_hr','sirivan_run1']
+        extent=None # default extent applied
+        extent=[149.6,150,-32.1,-31.9]
+        hrs = range(8,23)
+        compare_transects(mr1,mr2, hours=hrs, columntitles=[mr1,mr2],extent=extent)
+        for di,fdate in enumerate(fio.model_outputs[mr1]['filedates']):
             if fdate not in fio.model_outputs[mr2]['filedates']:
                 print("INFO: skipping %s: it is in %s but not in %s"%(fdate.strftime("%Y%m%d"),mr1,mr2))
                 continue
-            compare_winds(mr1=mr1,mr2=mr2, hour=fdate)
-            compare_clouds(mr1=mr1,mr2=mr2, hour=fdate)
+            compare_winds(mr1=mr1,mr2=mr2, hour=fdate,extent=extent)
+            compare_clouds(mr1=mr1,mr2=mr2, hour=fdate,extent=extent)
     
     print("INFO: run_comparison.py done")

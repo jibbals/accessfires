@@ -113,6 +113,7 @@ def plot_weather_summary(U,V,W, height, lat, lon, extentname,
         lax.streamplot(lon,lat,Ur,Vr, 
                        color='k',
                        linewidth=streamLW,
+                       minlength=0.5,
                        density=(0.5, 0.4))
         # set limits back to latlon limits
         lax.set_ylim(lat[0],lat[-1])  # outliers only
@@ -325,7 +326,9 @@ def weather_series(model_run='waroona_run3',
     #print(cubes)
     q,T,qc = cubes.extract(['specific_humidity','air_temperature','qc'])
     
-    index_500m = np.argmin(np.abs(q.coord('level_height').points - 500))
+    #index_500m = np.argmin(np.abs(q.coord('level_height').points - 500))
+
+    index_500m = np.argmin(np.abs(utils.height_from_iris(q)-500))
     assert index_500m > 0, "Index500 didn't work = %d"%index_500m
     
     clats, clons = q.coord('latitude').points, q.coord('longitude').points
@@ -589,22 +592,20 @@ if __name__=='__main__':
         
     
     ## Run weather summary
-    # waroona day2
     if True:
-        mr = 'sirivan_run5'
-        exname = 'sirivan' # extent to zoom in on
-        fdt = fio.model_outputs[mr]['filedates']
+        for mr,exname in zip(['sirivan_run5_hr',],['sirivanz',]):
+            fdt = fio.model_outputs[mr]['filedates']
 
-        zoom_in = plotting._extents_[exname]
+            zoom_in = plotting._extents_[exname]
 
-        weather_summary_model(
-            mr,
-            zoom_in=zoom_in,
-            subdir=exname,
-            HSkip=None,
-            fdtimes=fdt,
-            hwind_limits=[0,25],
-            )
+            weather_summary_model(
+                mr,
+                zoom_in=zoom_in,
+                subdir=exname,
+                HSkip=None,
+                fdtimes=fdt,
+                hwind_limits=[0,30],
+                )
     
     ## Plot tiff to show where summary is taking place
     if False:

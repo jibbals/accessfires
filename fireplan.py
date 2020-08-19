@@ -300,8 +300,8 @@ if __name__=='__main__':
     ext_sirivan=plotting._extents_['sirivan']
     ##fireplan comparison
     if True:
-        fireplan_comparison(model_runs=["sirivan_run1","sirivan_run4","sirivan_run5"],
-                colors=['k','orange','teal'],
+        fireplan_comparison(model_runs=["sirivan_run1","sirivan_run4","sirivan_run5","sirivan_run5_hr"],
+                colors=['k','orange','teal','magenta'],
                 extent=ext_sirivan,
                 mapname='sirivan.tiff',
                 figname='sirivan_fireplan_comparison',
@@ -315,9 +315,10 @@ if __name__=='__main__':
         fireplan_vs_isochrones()
     
     ## Just create a fireplan figure:
-    if False:
+    if True:
         fireplanruns = ['sirivan_run2_hr','waroona_old','waroona_run1','sirivan_run1','waroona_run3','waroona_run2']
         fireplanruns = ["sirivan_run1","sirivan_run4","sirivan_run5"]
+        fireplanruns = ['sirivan_run5_hr']
         for mr in fireplanruns:
             extent = plotting._extents_[mr.split('_')[0]]
     

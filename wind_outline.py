@@ -233,7 +233,7 @@ def vorticity_layers(model_run="waroona_run2", hour=16, levels=[3,5,10,20,30,40]
     w, = cubes.extract('upward_air_velocity')
     lat = w.coord('latitude').points
     lon = w.coord('longitude').points
-    height = w.coord('level_height').points
+    height = utils.level_from_height(w)
         
     dtimes = utils.dates_from_iris(u)
         
@@ -454,7 +454,7 @@ def vertical_vortex(mr='waroona_run3',
         u,v,s,z,topog,w = cubes.extract(['u','v','s','z_th','surface_altitude','upward_air_velocity'])
         ctimes = utils.dates_from_iris(u)
         lats, lons = u.coord('latitude').points, u.coord('longitude').points
-        height = w.coord('level_height').points
+        height = utils.level_from_height(w)
         
         # maybe want minimap with fire etc.
         if minimap:

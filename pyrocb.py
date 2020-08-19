@@ -302,7 +302,7 @@ def sample_showing_grid(model_run='waroona_run3', extentname=None, HSkip=None):
         
         W, = cubes.extract('upward_air_velocity')
         Q, = cubes.extract('qc')
-        height = W.coord('level_height').points
+        height = utils.height_from_iris(W)
         lat = W.coord('latitude').points
         lon = W.coord('longitude').points
         
@@ -518,7 +518,9 @@ def moving_pyrocb(model_run='waroona_run3', dtimes = None,
                 # ignore warning from collapsing non-contiguous dimension:
                 warnings.simplefilter('ignore')
                 wmean = w[i,25:48,:,:].collapsed('model_level_number', iris.analysis.MEAN)
-            h0,h1 = wmean.coord('level_height').bounds[0]
+            
+            h0,h1 = utils.height_from_iris(wmean,bounds=True)[0]
+
             fire=None
             if ff is not None:
                 fire=ff[i].data.data
@@ -633,7 +635,8 @@ def pyrocb_model_run(model_run='waroona_run1', dtime=datetime(2016,1,5,15),
         # ignore warning from collapsing non-contiguous dimension:
         warnings.simplefilter('ignore')
         wmean = w[:,25:48,:,:].collapsed('model_level_number', iris.analysis.MEAN)
-    h0,h1 = wmean.coord('level_height').bounds[0]
+
+    h0,h1 = utils.height_from_iris(wmean,bounds=True)[0]
     
     # pull data from masked arrays from cubes
     zi = z.data.data

@@ -424,7 +424,7 @@ def explore_emberstorm(model_run='waroona_run3',
         uvw = cubelist.extract(['u','v','upward_air_velocity'])
         # extra vert map at ~ 300m altitude
         
-        levh  = uvw[2].coord('level_height').points
+        levh = utils.height_from_iris(uvw[2])
         levhind = np.sum(levh<wmap_height)
         
         z, = cubelist.extract(['z_th']) # z has no time dim
@@ -545,7 +545,7 @@ def zoomed_emberstorm_plots(mr='waroona_run3',
         transects=emberstorm_centres(mr,key,ctimes)
         
         # extra vert map at ~ 300m altitude
-        levh  = w.coord('level_height').points
+        levh = utils.height_from_iris(w)
         levhind = np.sum(levh<wmap_height)
         wmap = w[:,levhind]
         # read fire

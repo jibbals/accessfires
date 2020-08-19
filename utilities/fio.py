@@ -49,9 +49,23 @@ model_outputs = {
             'path_firespeed':'../sirivan_run5_fire/fire_speed.20170211T2100Z.nc',
             'path_v10m':'../sirivan_run5_fire/10m_vwind.20170211T2100Z.nc',
             'path_u10m':'../sirivan_run5_fire/10m_uwind.20170211T2100Z.nc',
-            'run':'Run on 4 Aug 2020',
+            'run':'Run on 14 Aug 2020',
             'origdir':'/g/data/en0/hxy548/ACCESS-fire/sirivan/2020-08-14/20170211T2100Z/0p3/atmos/',
-            'origfiredir':'/g/data/en0/hxy548/ACCESS-fire/sirivan/2020-08-14/20170211T2100Z/0p3/fire/'},
+            'origfiredir':'/g/data/en0/hxy548/ACCESS-fire/sirivan/2020-08-14/20170211T2100Z/0p3/fire/'
+            },
+        ## run with new fire speed/fuel parameters
+        'sirivan_run5_hr':{
+            'path':'data/sirivan_run5_hr/',
+            'topog':'umnsaa_2017021121_slv.nc',
+            'filedates':np.array([datetime(2017,2,11,21) + timedelta(hours=x) for x in range(24)]),
+            'hasfire':True,
+            'path_firefront':'../sirivan_run5_hr_fire/firefront.20170211T2100Z.nc',
+            'path_fireflux':'../sirivan_run5_hr_fire/sensible_heat.20170211T2100Z.nc',
+            'path_firespeed':'../sirivan_run5_hr_fire/fire_speed.20170211T2100Z.nc',
+            'path_v10m':'../sirivan_run5_hr_fire/10m_vwind.20170211T2100Z.nc',
+            'path_u10m':'../sirivan_run5_hr_fire/10m_uwind.20170211T2100Z.nc',
+            'run':'Run on 14 Aug 2020',
+            },
         ## run with netcdf output (aug 4 2020)
         'sirivan_run4':{
             'path':'data/sirivan_run4/',
@@ -65,7 +79,8 @@ model_outputs = {
             'path_u10m':'../sirivan_run4_fire/10m_uwind.20170211T2100Z.nc',
             'run':'Run on 4 Aug 2020',
             'origdir':'/g/data/en0/hxy548/ACCESS-fire/sirivan/2020-08-04/20170211T2100Z/0p3/atmos/',
-            'origfiredir':'/g/data/en0/hxy548/ACCESS-fire/sirivan/2020-08-04/20170211T2100Z/0p3/fire/'},
+            'origfiredir':'/g/data/en0/hxy548/ACCESS-fire/sirivan/2020-08-04/20170211T2100Z/0p3/fire/'
+            },
         ## New high res gadi run with fuelmap applied (April 2020)
         'sirivan_run3_hr':{
             'path':'data/sirivan_run3_hr/',
@@ -79,7 +94,8 @@ model_outputs = {
             'path_u10m':'fire/10m_uwind.CSIRO_gadi_fuelmap.20170211T2100Z.nc',
             'run':'Run April 2020',
             'origdir':'/scratch/en0/hxy548/cylc-run/au-aa860/share/cycle/20170211T2100Z/sirivan/0p1/ukv_os38/um/',
-            'origfiredir':'/g/data/en0/hxy548/fire_vars/sirivan/0p1/'},
+            'origfiredir':'/g/data/en0/hxy548/fire_vars/sirivan/0p1/'
+            },
         ## New sirivan run (on GADI) by harvey in Feb 2020
         ## there is also a high res version of this
         'sirivan_run2':{
@@ -92,7 +108,8 @@ model_outputs = {
             'path_firespeed':'fire/fire_speed.CSIRO_gadi.20170211T2100Z.nc',
             'run':'Run 26 Feb 2020',
             'origdir':'/scratch/en0/hxy548/cylc-run/au-aa860/share/cycle/20170211T2100Z/sirivan/0p3/ukv_os38/um/',
-            'origfiredir':'/g/data/en0/hxy548/fire_vars/sirivan/0p3/'},
+            'origfiredir':'/g/data/en0/hxy548/fire_vars/sirivan/0p3/'
+            },
         ## high res version of sirivan run2 (100m x 100m)
         'sirivan_run2_hr':{
             'path':'data/sirivan_run2_hr/',
@@ -697,9 +714,11 @@ def read_fire(model_run='waroona_run1',
 
 def _set_hskip_for_hr_(model_version,HSkip):
     """ set HSkip to 3 if model_version is high res and HSkip has not been set manually """
-    if ('_hr' in model_version):
-        if HSkip is None:
-            HSkip = 3
+    #if ('_hr' in model_version):
+    #    if HSkip is None:
+    #        HSkip = 3
+    ## no longer doing this...
+
     return HSkip
 
 def read_model_run(model_version, fdtime=None, subdtimes=None, extent=None,
@@ -940,18 +959,18 @@ def read_model_run(model_version, fdtime=None, subdtimes=None, extent=None,
     # Rename some stuff in model versions 4 and above (new netcdf)
     # also remove dupes here
     print("DEBUG:",allcubes)
-    for dupecubes in ["mass_fraction_of_cloud_ice_in_air","upward_air_velocity","mass_fraction_of_cloud_liquid_water_in_air"]:
-        dupes = cubes.extract(dupecubes)
-        remove_duplicate_cubes(dupes,cubes,ndims_expected=4)
+    for dupecubes in ["mass_fraction_of_cloud_ice_in_air","upward_air_velocity","mass_fraction_of_cloud_liquid_water_in_air","air_temperature","air_pressure",]:
+        dupes = allcubes.extract(dupecubes)
+        remove_duplicate_cubes(dupes,allcubes,ndims_expected=4)
     #if int(model_version[-1]) > 3:
     #    allcubes.extract('vertical_wnd')[0].rename('upward_air_velocity')
     
     # Add cloud parameter at g/kg scale
     if model_version not in ["sirivan_run1",]:
         # Rename ice and water cubes
-        if int(model_version[-1]) < 4:
-            allcubes.extract('mass_fraction_of_cloud_liquid_water_in_air')[0].rename('cld_water')
-            allcubes.extract('mass_fraction_of_cloud_ice_in_air')[0].rename('cld_ice')
+        #if int(model_version[-1]) < 4:
+        allcubes.extract('mass_fraction_of_cloud_liquid_water_in_air')[0].rename('cld_water')
+        allcubes.extract('mass_fraction_of_cloud_ice_in_air')[0].rename('cld_ice')
         
         water_and_ice = allcubes.extract(['cld_water',
                                           'cld_ice'])
@@ -1061,6 +1080,8 @@ def read_model_run(model_version, fdtime=None, subdtimes=None, extent=None,
 
     if add_theta:
         # Estimate potential temp
+        print("DEBUG FIO:")
+        print(allcubes)
         test_theta = allcubes.extract(['air_pressure','air_temperature'])
         
         p, Ta = allcubes.extract(['air_pressure','air_temperature'])
@@ -1135,6 +1156,7 @@ def read_standard_run(dtime, constraints=None, extent=None, mv='waroona_run1', H
     _standard_run_vars_ = {
         'slv':[
             'specific_humidity',  # kg/kg [t,lat,lon]
+            'spec_hum', # kg/kg [t,lat,lon] # new runs
             'surface_air_pressure', # Pa
             'air_pressure_at_sea_level', # Pa [t,lat,lon]
             'surface_temperature', # [t,y,x]
@@ -1148,7 +1170,9 @@ def read_standard_run(dtime, constraints=None, extent=None, mv='waroona_run1', H
             ],
         'mdl_th1':[
             'air_pressure', # Pa [t,z,y,x]
+            'pressure', # Pa [tzyx] # new runs
             'air_temperature', # K [t,z,y,x]
+            'air_temp', # K [tzyx] # this one is comes from new runs
             'specific_humidity', # kg/kg [tzyx]
             'upward_air_velocity', # m/s [tzyx]
             'vertical_wnd', # m/s [tzyx]
@@ -1342,10 +1366,10 @@ def read_sirivan_run1(dtime, constraints=None, extent=None, HSkip=None):
 
     # specific_humidity is the name of two or three variables, we just want the good one
     sh_cubes = cubes.extract('specific_humidity')
-    remove_duplicate_cubes(sh_cubes,cubes,ndims_expected=3)
+    remove_duplicate_cubes(sh_cubes,cubes,ndims_expected=4)
     # same deal with air temp: seems to be issue with iris cubes package?
     ta_cubes = cubes.extract('air_temperature')
-    remove_duplicate_cubes(ta_cubes,cubes,ndims_expected=3)
+    remove_duplicate_cubes(ta_cubes,cubes,ndims_expected=4)
 
     return cubes
 

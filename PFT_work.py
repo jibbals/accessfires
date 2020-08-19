@@ -254,7 +254,7 @@ def model_run_PFT_summary(model_run='waroona_run1', hour=datetime(2016,1,5,15)):
     dtimes = utils.dates_from_iris(u0,remove_seconds=True)
     lats = u0.coord('latitude').points
     lons = u0.coord('longitude').points
-    heights = u0.coord('level_height').points
+    heights = utils.height_from_iris(u0)
     surface = heights < 500
     u=np.mean(u0[:,surface,:,:].data, axis=1)
     v=np.mean(v0[:,surface,:,:].data, axis=1)

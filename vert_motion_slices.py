@@ -121,7 +121,7 @@ def vert_motion_hour(dtime=datetime(2016,1,6,7),
                         firefront=True,
                         HSkip=HSkip)
     
-    lh  = w.coord('level_height').points
+    lh = utils.height_from_iris(w)
     lat = w.coord('latitude').points
     lon = w.coord('longitude').points
     offset=8 if extent[0]<120 else 10
