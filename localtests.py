@@ -31,6 +31,9 @@ from scipy import interpolate
 
 import pandas
 
+_sn_='localtests'
+
+
 # Dict to hold all the AWS metadata
 # Normal resolution run bounds:
 #lat_min = -32.8064 ;
@@ -179,6 +182,7 @@ def AIFS_Summary(mr='sirivan_run5',d0=None,dN=None):
             #                                latlon=plotting._latlons_['uarbry'], 
             #                                dN=h0_model+timedelta(hours=2),
             #                                wind_10m=False)
+            print("INFO: reading", latlon_model)
             cubes=fio.read_model_timeseries(mr,
                                             latlon=latlon_model,
                                             dN=hN_model,
@@ -265,9 +269,9 @@ def AIFS_Summary(mr='sirivan_run5',d0=None,dN=None):
                         styles=['-','--'],
                         )
                         
-    fio.save_fig('test','localtests',"sirivan_AWS",plt)
+    fio.save_fig(mr,_sn_,"sirivan_AWS",plt)
 
-AIFS_Summary('sirivan_run4')
+AIFS_Summary('sirivan_run5')
 ### READ MOREE
 #sname='moree_airport'
 #path = _AWS_[sname]['path_AIFS']
