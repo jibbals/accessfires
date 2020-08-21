@@ -137,7 +137,7 @@ def init_plots():
     #matplotlib.rcParams["figure.dpi"] = 200           # DEFAULT DPI for plot output
 
 
-def add_legend(ax,colours,labels,styles=None, **lineargs):
+def add_legend(ax,colours,labels,styles=None,markers=None, **lineargs):
     """
     create custom legend using a list of colours as input
     ARGS:
@@ -149,6 +149,10 @@ def add_legend(ax,colours,labels,styles=None, **lineargs):
     """
     custom_lines=[]
     for i,colour in enumerate(colours):
+        if styles is not None:
+            lineargs['linestyle'] = styles[i]
+        if markers is not None:
+            lineargs['marker'] = markers[i]
         custom_lines.append(Line2D([0], [0], color=colour, **lineargs))
     ax.legend(custom_lines, labels)
 

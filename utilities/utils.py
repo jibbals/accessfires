@@ -54,7 +54,7 @@ def FFDI(DF,RH,T,v):
         v: wind speed (km/h)
     """
     # https://www.bushfirecrc.com/sites/default/files/managed/resource/ctr_010_0.pdf
-    ffdi=2*np.exp(-0.45 + 0.987*np.ln(DF) - .0345*RH+.0338*T+.0234*v)
+    ffdi=2*np.exp(-0.45 + 0.987*np.log(DF) - .0345*RH+.0338*T+.0234*v)
     return ffdi
 
 def profile_interpolation(cube, latlon, average=False):
@@ -79,7 +79,7 @@ def profile_interpolation(cube, latlon, average=False):
         #do stuff
     return data0
 
-def number_of_interp_points(lats,lons,start,end, factor=1.2):
+def number_of_interp_points(lats,lons,start,end, factor=1.3):
     """
     Returns how many points should be interpolated to between start and end on latlon grid
     Based on min grid size, multiplied by factor

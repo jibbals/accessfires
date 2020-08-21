@@ -958,7 +958,7 @@ def read_model_run(model_version, fdtime=None, subdtimes=None, extent=None,
     ## extras
     # Rename some stuff in model versions 4 and above (new netcdf)
     # also remove dupes here
-    print("DEBUG:",allcubes)
+    #print("DEBUG:",allcubes)
     for dupecubes in ["mass_fraction_of_cloud_ice_in_air","upward_air_velocity","mass_fraction_of_cloud_liquid_water_in_air","air_temperature","air_pressure",]:
         dupes = allcubes.extract(dupecubes)
         remove_duplicate_cubes(dupes,allcubes,ndims_expected=4)
@@ -1080,10 +1080,6 @@ def read_model_run(model_version, fdtime=None, subdtimes=None, extent=None,
 
     if add_theta:
         # Estimate potential temp
-        print("DEBUG FIO:")
-        print(allcubes)
-        test_theta = allcubes.extract(['air_pressure','air_temperature'])
-        
         p, Ta = allcubes.extract(['air_pressure','air_temperature'])
         theta = utils.potential_temperature(p.data,Ta.data)
         # create cube
@@ -1649,12 +1645,14 @@ def HC06D_read(sites=[], extent=None, concat=False):
 def read_model_timeseries(model_run,latlon,
                           radial_avg_degrees=None,
                           d0=None,dN=None,
+                          wind_10m=True,
                           ):
     """
     ARGUMENTS:
         radial_avg_degrees: instead of interpolating to a lat/lon, average horizontally up to this many degrees away
             currently this is a square not a circle averaged
         d0,dN: start and end date (optional)
+        wind_10m flag tells method to add 10m winds from fire output files
     """
     lat,lon = latlon
     extent = [lon-.02, lon+.02, lat-.02, lat+.02] # just grab real close to latlon
@@ -1679,7 +1677,14 @@ def read_model_timeseries(model_run,latlon,
                                  add_RH=True, add_z=True, 
                                  add_dewpoint=True, add_theta=True)
     
-    ctimes=utils.dates_from_iris(cubes.extract('upward_air_velocity')[0])
+    ctimes = utils.dates_from_iris(cubes.extract('upward_air_velocity')[0])
+    
+    if wind_10m:
+        u10,v10=read_fire(model_run, extent=extent, dtimes=ctimes,
+                          firefront=False, wind=True)
+        cubes.append(u10)
+        cubes.append(v10)
+    
     # remove unwanted times
     if d0 is not None:
         di=utils.date_index(d0,ctimes)
@@ -1695,12 +1700,12 @@ def read_model_timeseries(model_run,latlon,
         ctimes=ctimes[:di]
     # Interpolate or average the horizontal component
     for ci,cube in enumerate(cubes):
+        #print("DEBUG: interp step:",ci,cube.name(), cube.shape)
         if 'latitude' in [coord.name() for coord in cube.coords()]:
-            print("DEBUG: interp step:",ci,cube.name(), cube.shape)
             if radial_avg_degrees:
                 # dimensions to collapse will be 'latitude' and 'longitude'
                 cubes[ci] = cube.collapsed(['latitude','longitude'], iris.analysis.MEAN)
             else:
                 cubes[ci] = utils.profile_interpolation(cube,latlon,)
-        print("     :",ci,cubes[ci].name,cubes[ci].shape)
+        #print("     :",ci,cubes[ci].name(),cubes[ci].shape)
     return cubes

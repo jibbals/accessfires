@@ -124,19 +124,19 @@ def pcb_occurrences(model_run, times):
     return full_latlons
 
 def transect_plus_stream(w,u,qc,topog,zth,lat,lon,start,end,ztop,contours,
-                         ff=None, 
+                         sh=None,
                          npoints=None,
                          showcolorbar=True):
     '''
     Show latitude following transect with horizontal and vertical winds
-    must follow one latitude to allow vertical wind to be accounted for in quivers
+    must follow one latitude to allow vertical wind to be accounted for in stream
     '''
     if npoints is None:
         npoints = utils.number_of_interp_points(lat,lon,start,end)
     
     wslice, slicex, slicez = plotting.transect_w(w, zth,
                                                  lat, lon, start, end,
-                                                 ff=ff,
+                                                 sh=sh,
                                                  npoints=npoints, title='',
                                                  topog=topog, ztop=ztop,
                                                  contours=contours,

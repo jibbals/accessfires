@@ -399,14 +399,21 @@ def HC06D_summary(mr='sirivan_run1'):
     fio.save_fig(mr,_sn_,"sirivan_AWS",plt)
 
 if __name__=='__main__':
-    d0,dN = datetime(2016,1,4,10), datetime(2016,1,7,10)
-    summary_wagerup(d0,dN,UTC=False)
     
-    for mr in ['waroona_run2','waroona_run1','waroona_old']:
-        for UTC in [False]:
-            compare_site_to_model(AWS='wagerup',
-                                  model_run=mr,
-                                  showrange=[datetime(2016,1,5,6),datetime(2016,1,7,6)],
-                                  UTC=UTC)
+    ## Examine AIFS time series vs model weather/ffdi
+    
+    
+    
+    ## Summary of wagerup waroona stuff
+    if False: 
+        d0,dN = datetime(2016,1,4,10), datetime(2016,1,7,10)
+        summary_wagerup(d0,dN,UTC=False)
+        
+        for mr in ['waroona_run2','waroona_run1','waroona_old']:
+            for UTC in [False]:
+                compare_site_to_model(AWS='wagerup',
+                                      model_run=mr,
+                                      showrange=[datetime(2016,1,5,6),datetime(2016,1,7,6)],
+                                      UTC=UTC)
 
 
