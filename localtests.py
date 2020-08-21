@@ -41,6 +41,7 @@ _AWS_={
     "moree_airport":{
         "path_AIFS":"data/AWS/MoreeAirport.csv",
         "latlon":[-29.4946, 149.8505], # degrees
+        "latlon_model":None , # near spot within model bounds
         "altitude":214, # metres ASL
         },
     "coonabarabran_airport":{
@@ -51,11 +52,13 @@ _AWS_={
     "dubbo_airport":{
         "path_AIFS":"data/AWS/DubboAirport.csv",
         "latlon":[-32.2189,148.5696],
+        "latlon_model":[-32.22,149.1], 
         "altitude":285,
         },
     "murrurundi_gap":{
         "path_AIFS":"data/AWS/MurrurundiGap.csv",
         "latlon":[-31.74,150.79],
+        "latlon_model":[-31.74,150.5],
         "altitude":729.4,
         },
     }
@@ -151,6 +154,7 @@ def AIFS_Summary(mr='sirivan_run5',d0=None,dN=None):
     for sitei,site in enumerate(sites):
         path = _AWS_[site]['path_AIFS']
         latlon = _AWS_[site]['latlon']
+        
         color=sitecolors[sitei]
         
         pdargs = {'color':color,
@@ -164,66 +168,81 @@ def AIFS_Summary(mr='sirivan_run5',d0=None,dN=None):
                   }
         
         df = AIFS_read_path(path)
-        print("WARNING: using uarbry instead of site latlon until on NCI")
-        #cubes=fio.read_model_timeseries(mr,latlon=latlon,dN=hN_model)
-        cubes=fio.read_model_timeseries(mr, 
-                                        latlon=plotting._latlons_['uarbry'], 
-                                        dN=h0_model+timedelta(hours=2),
-                                        wind_10m=False)
-        print(cubes)
-        # utils.wind_speed_from_uv(u10,v10) # get wind speed at 10m
-        # get model T, FDI, Winds
-        model_T,model_RH = cubes.extract(['air_temperature','relative_humidity'])
-        model_ws,model_u,model_v = cubes.extract(['s','u','v'])
-        ctimes = utils.dates_from_iris(model_T) + offset
-        model_T0 = model_T[:,0].data.data - 273.15
-        model_RH0 = model_RH[:,0].data*100 # %
-        model_ws0 = model_ws[:,0].data # m/s
-        model_u0 = model_u[:,0].data # m/s
-        model_v0 = model_v[:,0].data # m/s
-        Drought = np.repeat(10,len(model_T0))
-        model_FFDI = utils.FFDI(Drought,model_RH0,model_T0,model_ws0*3.6)
+        
+        cubes=None
+        latlon_model = _AWS_[site]['latlon']
+        if 'latlon_model' in _AWS_[site]:
+            latlon_model = _AWS_[site]['latlon_model']
+        if latlon_model is not None:
+            #print("WARNING: using uarbry instead of site latlon until on NCI")
+            #cubes=fio.read_model_timeseries(mr, 
+            #                                latlon=plotting._latlons_['uarbry'], 
+            #                                dN=h0_model+timedelta(hours=2),
+            #                                wind_10m=False)
+            cubes=fio.read_model_timeseries(mr,
+                                            latlon=latlon_model,
+                                            dN=hN_model,
+                                            wind_10m=False)
+            #print(cubes)
+            # utils.wind_speed_from_uv(u10,v10) # get wind speed at 10m
+            # get model T, FDI, Winds
+            model_T,model_RH = cubes.extract(['air_temperature','relative_humidity'])
+            model_ws,model_u,model_v = cubes.extract(['s','u','v'])
+            ctimes = utils.dates_from_iris(model_T) + offset
+            model_T0 = model_T[:,0].data.data - 273.15
+            model_RH0 = model_RH[:,0].data*100 # %
+            model_ws0 = model_ws[:,0].data # m/s
+            model_u0 = model_u[:,0].data # m/s
+            model_v0 = model_v[:,0].data # m/s
+            Drought = np.repeat(10,len(model_T0))
+            model_FFDI = utils.FFDI(Drought,model_RH0,model_T0,model_ws0*3.6)
+        
         ## Timeseries
         # Add time series for temperature
         plt.sca(ax_T)
         AWS_plot_timeseries(df,'T', **awsargs)
-        plt.plot_date(ctimes, model_T0, **pdargs)
+        if cubes is not None:
+            plt.plot_date(ctimes, model_T0, **pdargs)
         #plt.title('T')
         plt.ylabel('T [Celcius]')
         
         plt.sca(ax_RH)
         AWS_plot_timeseries(df,'RH', **awsargs)
-        plt.plot_date(ctimes,model_RH0, **pdargs)
+        if cubes is not None:
+            plt.plot_date(ctimes,model_RH0, **pdargs)
         plt.ylabel('RH [%]')
         
         # Add time series for indices
         plt.sca(ax_I)
         AWS_plot_timeseries(df,'FFDR/FFDI', **awsargs)
-        # model FFDI
-        plt.plot_date(ctimes,model_FFDI, **pdargs)
+        if cubes is not None:
+            # model FFDI
+            plt.plot_date(ctimes,model_FFDI, **pdargs)
         #AWS_plot_timeseries(df,'GFDR/GFDI',d0=d0,dN=dN,color='m')
         plt.ylabel('FFDI')
         
         # add ts for winds
         plt.sca(ax_W)
         AWS_plot_timeseries(df,'Ws m/s', **awsargs)
-        plt.plot_date(ctimes, model_ws0, **pdargs)
+        if cubes is not None:
+            plt.plot_date(ctimes, model_ws0, **pdargs)
         plt.ylabel('Winds [m/s]')
     
-        # normalize windspeed for unit length quivers
-        wdnorm = np.sqrt(model_u0**2 + model_v0**2)
-        # dont show quiver at every single point
-        n_arrows=6
-        qskip = max(int(np.floor(len(wdnorm)/n_arrows)),1)
-        # Add quiver
-        plt.quiver(ctimes[::qskip], model_ws0[::qskip], 
-                   model_u0[::qskip]/wdnorm[::qskip], 
-                   model_v0[::qskip]/wdnorm[::qskip], 
-                   pivot='mid',
-                   alpha=.5, 
-                   color=color,
-                   headwidth=3, headlength=2, headaxislength=2,
-                   width=.004)
+        if cubes is not None:
+            # normalize windspeed for unit length quivers
+            wdnorm = np.sqrt(model_u0**2 + model_v0**2)
+            # dont show quiver at every single point
+            n_arrows=6
+            qskip = max(int(np.floor(len(wdnorm)/n_arrows)),1)
+            # Add quiver
+            plt.quiver(ctimes[::qskip], model_ws0[::qskip], 
+                       model_u0[::qskip]/wdnorm[::qskip], 
+                       model_v0[::qskip]/wdnorm[::qskip], 
+                       pivot='mid',
+                       alpha=.5, 
+                       color=color,
+                       headwidth=3, headlength=2, headaxislength=2,
+                       width=.004)
         
         ## MAP ADDITIONS
         # Add point to map in axis 1
@@ -231,6 +250,8 @@ def AIFS_Summary(mr='sirivan_run5',d0=None,dN=None):
         plotting.map_add_nice_text(ax1,latlons=[latlon],texts=[site],markercolors=sitecolors[sitei])
         # add normal points to map
         plotting.map_add_locations_extent('sirivans',nice=True)
+        if (cubes is not None) and (not np.all(np.array(latlon)==np.array(latlon_model))):
+            plotting.map_add_nice_text(ax1,latlons=[latlon_model],texts=[''],markercolors=sitecolors[sitei], markers=['X'])
     
     # legend for sites
     plotting.add_legend(ax_T,
