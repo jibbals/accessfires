@@ -151,9 +151,9 @@ if __name__ == '__main__':
     # set font sizes etc.
     plotting.init_plots()
     
-    mr = 'waroona_run3'
-    extentname='waroona' # None
-    hours = fio.model_outputs[mr]['filedates']
+    mr = 'sirivan_run5_hr'
+    extentname='sirivanz' # None
+    hours = fio.model_outputs[mr]['filedates'][6:10]
     HSkip = None
     for hour in hours:
         vert_motion_hour(dtime=hour, 

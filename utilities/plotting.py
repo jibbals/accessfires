@@ -252,7 +252,7 @@ def map_add_locations_extent(extentname,
 
     # Where is fire ignition
     firename = "fire_"+extentname
-    if extentname[-1] =="s":
+    if extentname[-1] in ["s","z"]:
         firename = "fire_"+extentname[:-1]
 
     locs = locstrings[extentname]

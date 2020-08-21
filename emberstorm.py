@@ -214,6 +214,7 @@ def transect_emberstorm(u,v,w,z,
                                   color='darkslategrey',
                                   zorder=1,
                                   #linewidth=np.hypot(sliceu,slicew), # too hard to see what's going on
+                                  minlength=0.8, # longer minimum stream length
                                   )
     plt.xlim(np.min(slicex),np.max(slicex))
     plt.ylim(np.min(slicez),ztop)

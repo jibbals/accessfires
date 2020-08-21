@@ -66,6 +66,10 @@ __PCB_occurrences__ = {
         'time':[datetime(2016,1,5,21), datetime(2016,1,6,0), 
                 datetime(2016,1,6,8),]
         },
+    'sirivan_run5_hr':{
+        'latlon':[(-31.96,149.84),(-32, 149.9)],
+        'time':[datetime(2017,2,12,7), datetime(2017,2,12,9),]
+        },
     'sirivan_run2_hr':{
         'latlon':[(-32.1,149.8),(-32.13,149.95),
                   (-32.07,149.95),(-32.03,149.95),
@@ -97,6 +101,7 @@ __PCB_occurrences__ = {
                 datetime(2017,2,12,18)]
         },
     }
+
 
 def pcb_occurrences(model_run, times):
     """
@@ -562,7 +567,7 @@ def moving_pyrocb(model_run='waroona_run3', dtimes = None,
             plt.xlabel('')
             plt.title('vertical motion transect')
             
-            ## plot potential temp
+
             plt.subplot(3,1,3)
             theta = utils.potential_temperature(p[i].data,Ta[i].data)
             plotting.transect_theta(theta,zth,lat,lon,start,end,
@@ -680,11 +685,16 @@ def pyrocb_model_run(model_run='waroona_run1', dtime=datetime(2016,1,5,15),
 if __name__ == '__main__':
     
     waroona_second_half = np.array([datetime(2016,1,5,15)+ timedelta(hours=12+x) for x in range(12)])
-    sirivan_good_half = np.array([datetime(2017,2,11,21)+ timedelta(hours=5+x) for x in range(19)])
+    sirivan_good_half = np.array([datetime(2017,2,12,4)+ timedelta(hours=x) for x in range(6)])
     
     ## check to see where pcb are occurring
-    if False:
-        sample_showing_grid(model_run="sirivan_run2_hr", extentname='sirivans', HSkip=8)
+    if True:
+        ## gridded Sample already done
+        #sample_showing_grid(model_run="sirivan_run5_hr", extentname='sirivan', HSkip=5)
+        for hour in sirivan_good_half:
+            pyrocb_model_run('sirivan_run5_hr', dtime=hour)
+            moving_pyrocb('sirivan_run5_hr', dtimes=[hour], xlen=0.25)
+
 
     ## New zoomed, moving pyrocb plotting
     if False:
@@ -697,13 +707,8 @@ if __name__ == '__main__':
                       dtimes=hours,
                       xlen=xlen)
     
-    ## Run sample for waroona_run2
-    if False:
-        for hour in sirivan_good_half:
-            pyrocb_model_run('sirivan_run1', dtime=hour)
-    
     ### all plots for runs:
-    if True:
+    if False:
         model_runs = ['sirivan_run1',]# 'waroona_run2','sirivan_run1']
         for mr in model_runs :
             dtimes = fio.model_outputs[mr]['filedates']
