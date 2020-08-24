@@ -566,7 +566,9 @@ def read_nc_iris(fpath, constraints=None, keepvars=None, HSkip=None):
                     assert False, "shouldn't miss any cubes"
                 small_cubes.append(mini)
             cubes = small_cubes
-    
+    if len(cubes) < 1:
+        print("ERROR: NO CUBES RETURNED IN fio.read_nc_iris()")
+        print("     :",constraints)
     return cubes
 
 def read_fire(model_run='waroona_run1',
@@ -958,10 +960,11 @@ def read_model_run(model_version, fdtime=None, subdtimes=None, extent=None,
     ## extras
     # Rename some stuff in model versions 4 and above (new netcdf)
     # also remove dupes here
-    #print("DEBUG:",allcubes)
+    print("DEBUG:",allcubes)
     for dupecubes in ["mass_fraction_of_cloud_ice_in_air","upward_air_velocity","mass_fraction_of_cloud_liquid_water_in_air","air_temperature","air_pressure",]:
         dupes = allcubes.extract(dupecubes)
-        remove_duplicate_cubes(dupes,allcubes,ndims_expected=4)
+        if len(dupes) > 1:
+            remove_duplicate_cubes(dupes,allcubes,ndims_expected=4)
     #if int(model_version[-1]) > 3:
     #    allcubes.extract('vertical_wnd')[0].rename('upward_air_velocity')
     
@@ -1666,10 +1669,10 @@ def read_model_timeseries(model_run,latlon,
     umhours = model_outputs[model_run]['filedates']
     # limit hours desired to d0-dN
     if d0 is not None:
-        di=min(utils.date_index(d0,umhours)-1, 0)[0]
+        di=min(utils.date_index(d0,umhours)-1, 0)
         umhours=umhours[di:]
     if dN is not None:
-        di=utils.date_index(dN,umhours)[0]
+        di=utils.date_index(dN,umhours)
         umhours=umhours[:di+1]
     ## Read Model output:
     cubes = read_model_run(model_run, fdtime=umhours, extent=extent, 

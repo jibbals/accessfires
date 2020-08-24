@@ -265,7 +265,7 @@ def date_index(date,dates, dn=None, ignore_hours=False):
     if len(whr[0])==0:
         print ("ERROR: ",date, 'not in', new_dates[0], '...', new_dates[-1])
     elif dn is None:
-        return np.array([whr[0][0]]) # We just want the match
+        return whr[0][0] # We just want the match
     else:
         whrn=np.where(np.array(new_dates) == new_dn) # returns last date match
         if len(whrn[0])==0: # last date not in dataset

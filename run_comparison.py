@@ -529,7 +529,10 @@ def compare_transects(run1, run2, hours=[12,], extent=None, ztop=1000,
 
                 lats = ff.coord('latitude').points
                 lons = ff.coord('longitude').points
-                    
+                
+                print("DEBUG:",cti, ct)
+                print("     :",sh)
+                print("     :",w)
                 shd = sh[cti].data.data
                 LT = ct + timedelta(hours=8)
                 
@@ -662,7 +665,7 @@ if __name__=='__main__':
     ## look at overall burn area
     # Lets loop over and compare run3 with it's uncoupled brother
     if True:
-        mr1,mr2 = ['sirivan_run5_hr','sirivan_run1']
+        mr1,mr2 = ['sirivan_run4','sirivan_run5_hr']
         extent=None # default extent applied
         extent=[149.6,150,-32.1,-31.9]
         hrs = range(8,23)
