@@ -442,6 +442,19 @@ def destagger_winds(u1,v1):
     
     return u,v
 
+def uv_from_wind_degrees(wd,met_convention=True):
+    """
+    return u,v vectors from wind direction argument (degrees)
+    Assume wd in degrees clockwise from north, pointing to where the wind is coming from, 
+    unless met_convention is set to False. 
+    If false, wd is just math convention: 
+        pointing direction of wind flow in degrees anticlockwise from due east
+    """
+    wd_math = 270-wd if met_convention else wd
+    u=np.cos(wd_math)
+    v=np.sin(wd_math)
+    return u,v
+
 def wind_speed(u,v, fix=True):
     '''
     horizontal wind speed from u,v vectors
