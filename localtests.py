@@ -169,24 +169,38 @@ def AIFS_Summary(mr='sirivan_run5',d0=None,dN=None):
                   'linestyle':ls,
                   'linewidth':lw
                   }
+        quiverargs={'color':color, 
+                    'alpha':0.5,
+                    'pivot':'mid', # put arrow on centre of ws line
+                    #'scale':0.05, # scale down the auto size??
+                    'headwidth':3,
+                    'headlength':2,
+                    'headaxislength':2,
+                    'width':.004
+                    }
         
         df = AIFS_read_path(path)
+        site_u,site_v = utils.uv_from_wind_degrees(df['Wd'].to_numpy())
+        site_lt = df.index.to_numpy()
+        site_ws=df['Ws km/h'].to_numpy() / 3.6 # km/h -> m/s
+        
         
         cubes=None
         latlon_model = _AWS_[site]['latlon']
         if 'latlon_model' in _AWS_[site]:
             latlon_model = _AWS_[site]['latlon_model']
         if latlon_model is not None:
-            #print("WARNING: using uarbry instead of site latlon until on NCI")
-            #cubes=fio.read_model_timeseries(mr, 
-            #                                latlon=plotting._latlons_['uarbry'], 
-            #                                dN=h0_model+timedelta(hours=2),
-            #                                wind_10m=False)
-            print("INFO: reading", latlon_model)
-            cubes=fio.read_model_timeseries(mr,
-                                            latlon=latlon_model,
-                                            dN=hN_model,
-                                            wind_10m=False)
+            print("WARNING: using uarbry instead of site latlon until on NCI")
+            cubes=fio.read_model_timeseries(mr, 
+                                            latlon=plotting._latlons_['uarbry'], 
+                                            dN=h0_model+timedelta(hours=2),
+                                            wind_10m=True)
+            print("DEBUG: ",cubes)
+            #print("INFO: reading", latlon_model)
+            #cubes=fio.read_model_timeseries(mr,
+            #                                latlon=latlon_model,
+            #                                dN=hN_model,
+            #                                wind_10m=True)
             #print(cubes)
             # utils.wind_speed_from_uv(u10,v10) # get wind speed at 10m
             # get model T, FDI, Winds
@@ -228,6 +242,14 @@ def AIFS_Summary(mr='sirivan_run5',d0=None,dN=None):
         # add ts for winds
         plt.sca(ax_W)
         AWS_plot_timeseries(df,'Ws m/s', **awsargs)
+        # now add quiver for sites
+        n_arrows=12
+        qskip = max(int(np.floor(len(site_u)/n_arrows)),1)
+        plt.quiver(site_lt[::qskip], site_ws[::qskip], 
+                   site_u[::qskip], site_v[::qskip], 
+                   **quiverargs,
+                   )
+        
         if cubes is not None:
             plt.plot_date(ctimes, model_ws0, **pdargs)
         plt.ylabel('Winds [m/s]')
@@ -236,17 +258,13 @@ def AIFS_Summary(mr='sirivan_run5',d0=None,dN=None):
             # normalize windspeed for unit length quivers
             wdnorm = np.sqrt(model_u0**2 + model_v0**2)
             # dont show quiver at every single point
-            n_arrows=6
             qskip = max(int(np.floor(len(wdnorm)/n_arrows)),1)
             # Add quiver
             plt.quiver(ctimes[::qskip], model_ws0[::qskip], 
                        model_u0[::qskip]/wdnorm[::qskip], 
                        model_v0[::qskip]/wdnorm[::qskip], 
-                       pivot='mid',
-                       alpha=.5, 
-                       color=color,
-                       headwidth=3, headlength=2, headaxislength=2,
-                       width=.004)
+                       **quiverargs,
+                       )
         
         ## MAP ADDITIONS
         # Add point to map in axis 1
@@ -271,14 +289,19 @@ def AIFS_Summary(mr='sirivan_run5',d0=None,dN=None):
                         
     fio.save_fig(mr,_sn_,"sirivan_AWS",plt)
 
-AIFS_Summary('sirivan_run5')
+AIFS_Summary('sirivan_run4')
+
 ### READ MOREE
-#sname='moree_airport'
-#path = _AWS_[sname]['path_AIFS']
-#latlon = _AWS_[sname]['latlon']
+sname='moree_airport'
+path = _AWS_[sname]['path_AIFS']
+latlon = _AWS_[sname]['latlon']
 #
-#aws=AIFS_read_path('data/AWS/MoreeAirport.csv')
-##print(aws.head())
+aws=AIFS_read_path(path)
+print(aws.head())
+site_u,site_v = utils.uv_from_wind_degrees(aws['Wd'].to_numpy())
+site_lt = aws.index.to_numpy()
+ws=aws['Ws km/h'].to_numpy()
+plt.quiver(site_lt, ws , site_u, site_v)
 #
 #
 #mr='sirivan_run4'

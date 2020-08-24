@@ -450,9 +450,13 @@ def uv_from_wind_degrees(wd,met_convention=True):
     If false, wd is just math convention: 
         pointing direction of wind flow in degrees anticlockwise from due east
     """
+    # change to math degrees
     wd_math = 270-wd if met_convention else wd
-    u=np.cos(wd_math)
-    v=np.sin(wd_math)
+    # x vector is cos (angle)
+    # numpy uses radians as input so degrees need to be converted
+    u=np.cos(np.deg2rad(wd_math))
+    # y vector is sin (angle)
+    v=np.sin(np.deg2rad(wd_math))
     return u,v
 
 def wind_speed(u,v, fix=True):
