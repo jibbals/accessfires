@@ -24,6 +24,8 @@ from metpy.plots import SkewT,Hodograph
 import matplotlib.pyplot as plt
 #import matplotlib.colors as col
 #import matplotlib.ticker as tick
+import matplotlib.gridspec as gridspec
+
 import numpy as np
 from datetime import datetime,timedelta
 import iris # file reading and constraints etc
@@ -35,9 +37,9 @@ from utilities import plotting, utils, fio
 ###
 ## GLOBALS
 ###
-_sn_ = 'metpy'
+_sn_ = 'met_profiles'
 
-def hodograph(u,v,latlon,average=0,**hodoargs):
+def hodograph(u,v,latlon,average=0,ax=None,ztop=18000,**hodoargs):
     """
     hodograph plot
     args:
@@ -45,23 +47,31 @@ def hodograph(u,v,latlon,average=0,**hodoargs):
         v: south-north wind
         latlon: [lat,lon] to be profiled
         average (km): interpolate? or use area average? 
+        ax: plot axis for hodograph creation
+        ztop: only look up to this height (m)
         further arguments will be sent to Hodograph plot function 
     """
     
-    height = utils.height_from_iris(u) * units("metre")
+    height = utils.height_from_iris(u)
+    zinds=height > -999
+    if ztop is not None:
+        zinds=height<ztop
+    height=height * units("metre") # add units for metpy
     u0 = utils.profile_interpolation(u,latlon,average=average).data * units('m/s')
     v0 = utils.profile_interpolation(v,latlon,average=average).data * units('m/s')
     
-    
     ## Default hodograph args:
     #if 'cmap' not in hodoargs:
-        
-    hodo=Hodograph()
-    cs=hodo.plot_colormapped(u0,v0,height,**hodoargs)
+    if ax is None:
+        hodo=Hodograph()
+    else:
+        hodo=Hodograph(ax)
+    cs=hodo.plot_colormapped(u0[zinds],v0[zinds],height[zinds],**hodoargs)
     hodo.add_grid(increment=20)
     return cs
     
-def f160(press,Temp,Tempd, latlon, 
+def f160(press,Temp,Tempd, latlon,
+         fig=None, subplot=None,
          press_rho=None,uwind=None,vwind=None, 
          nearby=2, alpha=0.3):
     '''
@@ -103,9 +113,14 @@ def f160(press,Temp,Tempd, latlon,
     
     #print("DEBUG: f160 interp1", p.shape, T.shape, Td.shape)
     #print("DEBUG: f160 interp1", p, T, Td)
-    
-    fig = plt.figure(figsize=(9,9))
-    skew = SkewT(fig,rotation=45)
+    if fig is None:
+        fig = plt.figure(figsize=(9,9))
+    skewtargs={'fig':fig,
+               'rotation':45,
+               }
+    if subplot is not None:
+        skewtargs['subplot'] = subplot
+    skew = SkewT(**skewtargs)
     skew.plot(p,T,tcolor, linewidth=2)
     skew.plot(p,Td,tdcolor, linewidth=2)
     
@@ -119,7 +134,7 @@ def f160(press,Temp,Tempd, latlon,
         # interpolate to desired lat/lon
         u0 = utils.profile_interpolation(uwind,latlon).data.data
         v0 = utils.profile_interpolation(vwind,latlon).data.data
-        p_rho0 = utils.profile_interpolation(press_rho,latlon).data
+        p_rho0 = utils.profile_interpolation(press_rho,latlon).data.data
         
         u = u0 * units('m/s')#units(str(uwind.units))
         v = v0 * units('m/s')#units(str(vwind.units))
@@ -152,7 +167,7 @@ def f160(press,Temp,Tempd, latlon,
                     skew.plot(p,Td,tdcolor, linewidth=1, alpha=alpha)
 
     # set limits
-    skew.ax.set_ylim(1000,100)
+    skew.ax.set_ylim(1000,300)
     skew.ax.set_xlim(-30,60)
     # Add the relevant special lines
     skew.plot_dry_adiabats()
@@ -162,7 +177,7 @@ def f160(press,Temp,Tempd, latlon,
 
 def model_metpy_hour(dtime=datetime(2016,1,6,7), 
                      latlon=plotting._latlons_['pyrocb_waroona1'],
-                     latlon_stamp='pyrocb1',
+                     latlon_stamp=None,
                      model_version='waroona_run1',
                      nearby=2,
                      HSkip=None):
@@ -171,13 +186,19 @@ def model_metpy_hour(dtime=datetime(2016,1,6,7),
     INPUTS: hour of interest, latlon, and label to describe latlon (for plotting folder)
         nearby: how many gridpoints around the desired latlon to plot (can be 0)
     '''
-
+    
     # Use datetime and latlon to determine what data to read
     extentname=model_version.split('_')[0]
-    extent = plotting._extents_[extentname]
+    extent = [latlon[1]-0.05, latlon[1]+0.05, latlon[0]-0.05, latlon[0]+0.05]
     
     if latlon_stamp is None:
         latlon_stamp="%.3fS_%.3fE"%(-latlon[0],latlon[1])
+    
+    # Show marker to make sense of profile latlon
+    f,ax = plotting.map_tiff_qgis(extentname+".tiff",)
+    plotting.map_add_locations_extent(extentname,nice=True)
+    plotting.map_add_nice_text(ax,[latlon],texts=[latlon_stamp],markercolors=['red'])
+    fio.save_fig(model_version,_sn_,"map",plt,subdir=latlon_stamp)
     
     # read pressure and temperature cubes
     cubes = fio.read_model_run(model_version, fdtime=dtime, extent=extent,
@@ -196,29 +217,35 @@ def model_metpy_hour(dtime=datetime(2016,1,6,7),
     for i in range(len(ffdtimes)):
         utc=ffdtimes[i]
         lt =utc+offset
-        ## Plot HODOR GRAPHIC
-        cs=hodograph(u[i],v[i],latlon,)
-        htitle="Hodograph at %s, %s"%(latlon_stamp,lt.strftime("%b %d %H:%M (local time)"))
-        plt.title(htitle)
         
-        cbar_ax = plt.gcf().add_axes([0.85, 0.3, 0.03, 0.4])# X Y Width Height
+        ## Plot side by side: FAILS for no reason... axes get messed up
+        
+        ## f160 plot
+        suptitle="%s (%s) %s"%(model_version,latlon_stamp,lt.strftime("%d %H:%M (LT)"))
+        
+        
+        #print(ffdtimes[i].strftime("DEBUG: %d %H:%M"))
+        f160(p[i],t[i],td[i], latlon,
+             #fig=fig,subplot=ax_f160,
+             press_rho=p_rho[i], uwind=u[i], vwind=v[i],
+             )
+        
+        # Save figure
+        plt.title(suptitle)
+        fio.save_fig(model_version,_sn_,utc,plt,subdir=latlon_stamp+'/f160')
+        
+        ## Plot HODOR GRAPHIC
+        cs=hodograph(u[i],v[i],latlon)
+        plt.title(suptitle)
+        
+        cbar_ax = plt.gcf().add_axes([0.86, 0.3, 0.03, 0.4])# X Y Width Height
         cb = plt.colorbar(cs, cax=cbar_ax, orientation='vertical',
                           format=matplotlib.ticker.ScalarFormatter(), 
                           pad=0)
-        fio.save_fig(model_version,_sn_,utc,plt,subdir=latlon_stamp+"/hodograph")
         
+        # Save figure
+        fio.save_fig(model_version,_sn_,utc,plt,subdir=latlon_stamp+'/hodo')
         
-        
-        ## f160 plot
-        ptitle="SkewT$_{ACCESS}$   (%s) %s"%(latlon_stamp,utc.strftime("%Y %b %d %H:%M (UTC)"))
-        
-        print(ffdtimes[i].strftime("DEBUG: %d %H:%M"))
-        f160(p[i],t[i],td[i], latlon,
-             press_rho=p_rho[i], uwind=u[i], vwind=v[i])
-        plt.title(ptitle)
-        
-        # save plot
-        fio.save_fig(model_version,_sn_,utc,plt,subdir=latlon_stamp+"/f160")
 
 if __name__ == '__main__':
     
@@ -234,12 +261,13 @@ if __name__ == '__main__':
                          nearby=1)
     
     if True: # lets look at sirivan f160
-        sirivan_middle = -32, 149.8
-        for hour in fio.model_outputs['sirivan_run1']['filedates']:
+        latlon = -32, 149.8 # sirivan middle of burn area
+        mr='sirivan_run4'
+        for hour in fio.model_outputs[mr]['filedates']:
             model_metpy_hour(dtime=hour,
-                             latlon=sirivan_middle,
-                             latlon_stamp="32.9S,116.05E",
-                             model_version='sirivan_run1', 
+                             latlon=latlon,
+                             #latlon_stamp="32.9S,116.05E",
+                             model_version=mr, 
                              nearby=0,
                              HSkip=5)
     
