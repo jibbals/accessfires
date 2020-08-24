@@ -960,7 +960,7 @@ def read_model_run(model_version, fdtime=None, subdtimes=None, extent=None,
     ## extras
     # Rename some stuff in model versions 4 and above (new netcdf)
     # also remove dupes here
-    print("DEBUG:",allcubes)
+    #print("DEBUG:",allcubes)
     for dupecubes in ["mass_fraction_of_cloud_ice_in_air","upward_air_velocity","mass_fraction_of_cloud_liquid_water_in_air","air_temperature","air_pressure",]:
         dupes = allcubes.extract(dupecubes)
         if len(dupes) > 1:
@@ -1685,8 +1685,14 @@ def read_model_timeseries(model_run,latlon,
     if wind_10m:
         u10,v10=read_fire(model_run, extent=extent, dtimes=ctimes,
                           firefront=False, wind=True)
+        u10.rename('u_10m')
+        v10.rename('v_10m')
+        s10=utils.wind_speed_from_uv_cubes(u10,v10)
+        s10.units='m s-1'
+        s10.var_name='s_10m'
         cubes.append(u10)
         cubes.append(v10)
+        cubes.append(s10)
     
     # remove unwanted times
     if d0 is not None:
