@@ -200,7 +200,8 @@ def map_with_transect(data,lat,lon, transect,
     
     # Add fire outline
     if ff is not None:
-        plotting.map_fire(ff,lat,lon, transform=False)
+        print("DEBUG: mapfire:",ff.shape,lat.shape,lon.shape)
+        plotting.map_fire(ff,lat,lon)
     
     return cs,cb
 
@@ -525,6 +526,8 @@ def moving_pyrocb(model_run='waroona_run3', dtimes = None,
                 wmean = w[i,25:48,:,:].collapsed('model_level_number', iris.analysis.MEAN)
             
             h0,h1 = utils.height_from_iris(wmean,bounds=True)[0]
+            #print("DEBUG: h0, h1:",h0,h1)
+
 
             fire=None
             if ff is not None:

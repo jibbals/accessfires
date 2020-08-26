@@ -261,15 +261,16 @@ if __name__ == '__main__':
                          nearby=1)
     
     if True: # lets look at sirivan f160
-        latlon = -32, 149.8 # sirivan middle of burn area
-        mr='sirivan_run4'
-        for hour in fio.model_outputs[mr]['filedates']:
-            model_metpy_hour(dtime=hour,
-                             latlon=latlon,
-                             #latlon_stamp="32.9S,116.05E",
-                             model_version=mr, 
-                             nearby=0,
-                             HSkip=5)
+        simid = -32, 149.8 # sirivan middle of burn area
+        wmid = -32.9,116 # waroona middle
+        for run,latlon in zip(['sirivan_run5_hr','waroona_run3'],[simid,wmid]):
+            for hour in fio.model_outputs[run]['filedates']:
+                model_metpy_hour(dtime=hour,
+                                 latlon=latlon,
+                                 #latlon_stamp="32.9S,116.05E",
+                                 model_version=run, 
+                                 nearby=0,
+                                 HSkip=None)
     
     if False: # old stuff
         topleft = [-32.75, 115.8] # random point away from the fire influence

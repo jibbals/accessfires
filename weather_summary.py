@@ -593,7 +593,7 @@ if __name__=='__main__':
     
     ## Run weather summary
     if True:
-        for mr,exname in zip(['sirivan_run5_hr',],['sirivanz',]):
+        for mr,exname in zip(['sirivan_run6_hr',],['sirivanz',]):
             fdt = fio.model_outputs[mr]['filedates']
 
             zoom_in = plotting._extents_[exname]

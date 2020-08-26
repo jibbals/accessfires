@@ -302,7 +302,7 @@ def height_from_iris(cube,bounds=False):
         assert False, "no height coords"
     if bounds:
         height = zbounds
-        print(allcubes)
+        print(type(height),np.shape(height))
     return height
 
 

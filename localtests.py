@@ -45,6 +45,12 @@ _sn_='localtests'
 #lat_max = -31.4825 ;
 #lon_min = 149.2816 ;
 #lon_max = 150.3175 ;
+# high res run after run6
+#lat_min = -32.3024 ;
+#lat_max = -31.6985 ;
+#lon_min = 149.4412 ;
+#lon_max = 150.2179 ;
+
 
 _AWS_={
     "moree_airport":{
@@ -302,43 +308,30 @@ def AIFS_Summary(mr='sirivan_run5',d0=None,dN=None):
     plt.xlabel("local time (UTC+10)")
     fio.save_fig(mr,_sn_,"sirivan_AWS",plt)
 
-AIFS_Summary('sirivan_run5_hr')
+#AIFS_Summary('sirivan_run5_hr')
 
 ### READ MOREE
-sname='moree_airport'
-path = _AWS_[sname]['path_AIFS']
-latlon = _AWS_[sname]['latlon']
+#sname='moree_airport'
+#path = _AWS_[sname]['path_AIFS']
+#latlon = _AWS_[sname]['latlon']
 #
-aws=AIFS_read_path(path)
-print(aws.head())
-site_u,site_v = utils.uv_from_wind_degrees(aws['Wd'].to_numpy())
-site_lt = aws.index.to_numpy()
-ws=aws['Ws km/h'].to_numpy()
-plt.quiver(site_lt, ws , site_u, site_v)
-#
-#
-#mr='sirivan_run4'
-#umhours=fio.model_outputs[mr]['filedates']
-#cubes=fio.read_model_timeseries(mr,latlon=plotting._latlons_['uarbry'],dN=umhours[1])
-##print(cubes)
-#
-#offset=timedelta(hours=10)
-#d0=umhours[0] + offset
-#dN=umhours[-1] + offset
+#aws=AIFS_read_path(path)
+#print(aws.head())
+#site_u,site_v = utils.uv_from_wind_degrees(aws['Wd'].to_numpy())
+#site_lt = aws.index.to_numpy()
+#ws=aws['Ws km/h'].to_numpy()
+#plt.quiver(site_lt, ws , site_u, site_v)
 #
 #
-#AWS_plot_timeseries(aws,'FFDR/FFDI',d0=d0,dN=dN,color='r')
-#AWS_plot_timeseries(aws,'GFDR/GFDI',d0=d0,dN=dN,color='m')
-#ax=plt.gca()
-#plt.ylabel('Index')
-#ax2=ax.twinx()
-#AWS_plot_timeseries(aws,'T', d0=d0,dN=dN,color='k')
-#plt.ylabel("Degrees C")
-#
-## Pull out surface air temp and RH arrays
-#T,RH=cubes.extract(['air_temperature','relative_humidity'])
-#ctimes = utils.dates_from_iris(T) + offset
-#Ti, RHi = T[:,0].data.data -273.15, RH[:,0].data
-#
-#plt.plot_date(ctimes,Ti,':k')
-#plotting.add_legend(ax,colours=['r','m','k','k'],labels=['FFDI','GFDI','T site','T model'],styles=['-','-','-',':'])
+mr='sirivan_run5_hr'
+umhours=fio.model_outputs[mr]['filedates'][:2]
+cubes=fio.read_model_run(mr,extent=[150.0,150.2,-31.99,-31.9],fdtime=umhours)
+print(cubes)
+
+T=cubes.extract('air_pressure')[0]
+h0,h1 = utils.height_from_iris(T,bounds=True)[0]
+print("DEBUG: h0, h1:",h0,h1)
+tmean=T[0,25:48,:,:].collapsed('model_level_number',iris.analysis.MEAN)
+h0,h1 = utils.height_from_iris(tmean,bounds=True)[0]
+print("DEBUG: meaned h0, h1:",h0,h1)
+
