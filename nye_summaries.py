@@ -46,7 +46,7 @@ def weather_summary_model(model_version='NYE_run1',
         extentname=None
         extent = zoom_in
     if fdtimes is None:
-        fdtimes = fio.model_outputs[model_version]['filedates']
+        fdtimes = fio.run_info[model_version]['filedates']
     FF = None
     
     # read one hour at a time, plot each available time slice
@@ -102,7 +102,7 @@ def weather_summary_model(model_version='NYE_run1',
 
 if __name__=='__main__':
     mr = 'NYE_run1'
-    NYE_hours = fio.model_outputs[mr]['filedates']
+    NYE_hours = fio.run_info[mr]['filedates']
     NYE_zoom = [149.2,150.05, -37.5, -36.85]
     
     CanPlotTiff = True # set to True if not on NCI

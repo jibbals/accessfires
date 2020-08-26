@@ -72,9 +72,9 @@ def compare_winds(mr1='waroona_run2', mr2='waroona_run2uc',
     clons = cs.coords('longitude').points
 
     ff1,ff2=None,None
-    if fio.model_outputs[mr1]['hasfire']:
+    if fio.run_info[mr1]['hasfire']:
         ff1, = fio.read_fire(mr1,dtimes=dates,extent=extent,firefront=True)
-    if fio.model_outputs[mr2]['hasfire']:
+    if fio.run_info[mr2]['hasfire']:
         ff2, = fio.read_fire(mr2,dtimes=dates,extent=extent,firefront=True)
     
     # density plot arguments
@@ -481,7 +481,7 @@ def compare_transects(run1, run2, hours=[12,], extent=None, ztop=1000,
                  ]
     tcolors = ['teal','blue','magenta']
     
-    dtimes=fio.model_outputs[run1]['filedates'][np.array(hours)]
+    dtimes=fio.run_info[run1]['filedates'][np.array(hours)]
     
     ## for each hour
     for dti, dt in enumerate(dtimes):
@@ -654,7 +654,7 @@ if __name__=='__main__':
         #hours = emberstorm._emberstorm_centres_[mr1]['first']['hours']
         hours = range(40,48)
         subsubdir='emberstorm2'
-        for fdate in fio.model_outputs[mr1]['filedates'][hours]:
+        for fdate in fio.run_info[mr1]['filedates'][hours]:
             compare_winds(mr1=mr1,mr2=mr2, hour=fdate,
                           extent=extent,
                           subsubdir=subsubdir)
@@ -670,8 +670,8 @@ if __name__=='__main__':
         extent=[149.6,150,-32.1,-31.9]
         hrs = range(8,23)
         compare_transects(mr1,mr2, hours=hrs, columntitles=[mr1,mr2],extent=extent)
-        for di,fdate in enumerate(fio.model_outputs[mr1]['filedates']):
-            if fdate not in fio.model_outputs[mr2]['filedates']:
+        for di,fdate in enumerate(fio.run_info[mr1]['filedates']):
+            if fdate not in fio.run_info[mr2]['filedates']:
                 print("INFO: skipping %s: it is in %s but not in %s"%(fdate.strftime("%Y%m%d"),mr1,mr2))
                 continue
             compare_winds(mr1=mr1,mr2=mr2, hour=fdate,extent=extent)

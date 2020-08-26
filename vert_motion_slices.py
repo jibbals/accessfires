@@ -153,7 +153,7 @@ if __name__ == '__main__':
     
     mr = 'sirivan_run5_hr'
     extentname='sirivanz' # None
-    hours = fio.model_outputs[mr]['filedates'][6:10]
+    hours = fio.run_info[mr]['filedates'][6:10]
     HSkip = None
     for hour in hours:
         vert_motion_hour(dtime=hour, 
@@ -163,7 +163,7 @@ if __name__ == '__main__':
     print("INFO: vert_motion_slices done")
     
     #for mr in ['waroona_old','waroona_run1']: #['sirivan_run1','waroona_old', 'waroona_run1']:
-    #    hours = fio.model_outputs[mr]['filedates']
+    #    hours = fio.run_info[mr]['filedates']
     #    if testing:
     #        hours = hours[:3] 
     #    for dtime in hours:

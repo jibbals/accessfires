@@ -266,7 +266,7 @@ if __name__ == '__main__':
         simid = -32, 149.8 # sirivan middle of burn area
         wmid = -32.9,116 # waroona middle
         for run,latlon in zip(['sirivan_run5_hr','waroona_run3'],[simid,wmid]):
-            for hour in fio.model_outputs[run]['filedates']:
+            for hour in fio.run_info[run]['filedates']:
                 model_metpy_hour(dtime=hour,
                                  latlon=latlon,
                                  #latlon_stamp="32.9S,116.05E",
@@ -282,8 +282,8 @@ if __name__ == '__main__':
         #loc_and_stamp = ([upwind],['upwind'])
         #checktimes = [ datetime(2016,1,6,5) + timedelta(hours=x) for x in range(2) ]
         #checktimes = [ datetime(2016,1,5,15) ]
-        old_times = fio.model_outputs['waroona_old']['filedates']
-        run_times = fio.model_outputs['waroona_run1']['filedates']
+        old_times = fio.run_info['waroona_old']['filedates']
+        run_times = fio.run_info['waroona_run1']['filedates']
         
         # 'waroona_run1','waroona_old'],[run_times,run_times,run_times,old_times]):
         for mv, dtimes in zip(['waroona_run2','waroona_run2uc'],[run_times,run_times]):

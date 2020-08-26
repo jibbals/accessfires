@@ -289,7 +289,7 @@ def sample_showing_grid(model_run='waroona_run3', extentname=None, HSkip=None):
     """
     Show each hour the latlon grid and vertical motion at 4000,5000,6000 metres
     """
-    all_hours = fio.model_outputs[model_run]['filedates']
+    all_hours = fio.run_info[model_run]['filedates']
     
     if extentname is None:
         extentname=model_run.split('_')[0]
@@ -482,7 +482,7 @@ def moving_pyrocb(model_run='waroona_run3', dtimes = None,
                                 np.array([0]))
     
     if dtimes is None:
-        dtimes = fio.model_outputs[model_run]['filedates']
+        dtimes = fio.run_info[model_run]['filedates']
 
     ## read um output over extent [t, lev, lat, lon]
     for hour in dtimes:
@@ -714,7 +714,7 @@ if __name__ == '__main__':
     if False:
         model_runs = ['sirivan_run1',]# 'waroona_run2','sirivan_run1']
         for mr in model_runs :
-            dtimes = fio.model_outputs[mr]['filedates']
+            dtimes = fio.run_info[mr]['filedates']
             #if True: # Maybe just do a few hours for testing
             #    dtimes = dtimes[0:2]
             for dtime in dtimes:

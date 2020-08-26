@@ -189,7 +189,7 @@ if __name__ == '__main__':
     testing=False
     
     for mv in ['sirivan_run1', 'waroona_old', 'waroona_run1']:
-        datetimes = fio.model_outputs[mv]['filedates']
+        datetimes = fio.run_info[mv]['filedates']
         if testing:
             datetimes = datetimes[0:2]
         

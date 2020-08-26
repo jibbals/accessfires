@@ -72,9 +72,11 @@ PFT = {'waroona_run2':{'data':None, # manually calculated PFT
                        'color':'k',
                        },
       }
-for mr in fio.model_outputs.keys():
-    if mr not in PFT.keys():
-        PFT[mr] = PFT['waroona_run2']
+       
+if False:
+    for mr in fio.run_info.keys():
+        if mr not in PFT.keys():
+            PFT[mr] = PFT['waroona_run2']
         if 'waroona' in mr:
             PFT[mr]['latlon'] = plotting._latlons_['fire_waroona_upwind']
         else:
@@ -304,7 +306,7 @@ if __name__ == '__main__':
     if False:
         for mr in ['sirivan_run1','sirivan_run1_hr']:
             #['waroona_run3', 'waroona_run1']:
-            dtimes = fio.model_outputs[mr]['filedates']
+            dtimes = fio.run_info[mr]['filedates']
             for hour in np.arange(5,20):
                 model_run_PFT_summary(model_run=mr, hour=dtimes[hour])
     

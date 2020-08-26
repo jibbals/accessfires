@@ -52,7 +52,7 @@ def show_transects():
         topog = fio.read_topog(mr,extent=extent)
         lat,lon = topog.coord('latitude').points, topog.coord('longitude').points
         ff, = fio.read_fire(mr,extent=extent,
-                            dtimes=[fio.model_outputs[mr]['filedates'][-1]])
+                            dtimes=[fio.run_info[mr]['filedates'][-1]])
 
         plotting.map_topography(extent,topog.data,lat,lon)
         plt.title("Transects")
@@ -223,7 +223,7 @@ def vorticity_layers(model_run="waroona_run2", hour=16, levels=[3,5,10,20,30,40]
         extentname=model_run.split('_')[0]
         extent = plotting._extents_[extentname]
         
-    fdtime = fio.model_outputs[model_run]['filedates'][hour]
+    fdtime = fio.run_info[model_run]['filedates'][hour]
     
     # read cubes
     cubes = fio.read_model_run(model_run, fdtime=[fdtime], extent=extent, 
@@ -347,7 +347,7 @@ def transects_hwinds(model_run, hour=18, transects=None, extent=None, ztop=4000,
     if extent is None:
         extent=plotting._extents_[extentname]
     nrows=len(transects)+1
-    model_hours = fio.model_outputs[model_run]['filedates']
+    model_hours = fio.run_info[model_run]['filedates']
     dt = model_hours[hour]
     # First read data
     cubes = fio.read_model_run(model_run, fdtime=dt,
@@ -434,7 +434,7 @@ def vertical_vortex(mr='waroona_run3',
     extentname=mr.split('_')[0]
     if extent is None:
         extent = plotting._extents_[extentname]
-    dtimes = fio.model_outputs[mr]['filedates'][hours]
+    dtimes = fio.run_info[mr]['filedates'][hours]
     # vertical wind colourbar is constant
     wcmap=plotting._cmaps_['verticalvelocity']
     wnorm=colors.SymLogNorm(0.25) # linear to +- 0.25, then log scale
@@ -584,10 +584,10 @@ if __name__ == '__main__':
                              extent=Waroona,)
     
     if False:
-        allmr = fio.model_outputs.keys()
+        allmr = fio.run_info.keys()
         allmr = ['waroona_run1']
         for mr in allmr:
-            hours = fio.model_outputs[mr]['filedates'][14:16]
+            hours = fio.run_info[mr]['filedates'][14:16]
             for hour in hours:
                 print("info: wind_outline", mr, hour)
                 outline_model_winds(mr, hours=[hour])

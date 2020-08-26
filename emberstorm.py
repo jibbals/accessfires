@@ -403,7 +403,7 @@ def explore_emberstorm(model_run='waroona_run3',
     lat = topog.coord('latitude').points
     lon = topog.coord('longitude').points
     # Read model run
-    umdtimes = fio.model_outputs[model_run]['filedates']
+    umdtimes = fio.run_info[model_run]['filedates']
     if hours is not None:
         umdtimes=hours
     # read one model file at a time
@@ -531,7 +531,7 @@ def zoomed_emberstorm_plots(mr='waroona_run3',
         if eflag:
             extent = _emberstorm_centres_[mr][key]['extent']
         
-        dtimes=fio.model_outputs[mr]['filedates'][np.array(hours)]
+        dtimes=fio.run_info[mr]['filedates'][np.array(hours)]
         
         cubes = fio.read_model_run(mr, fdtime=dtimes, extent=extent, 
                                    add_topog=True, add_winds=True,
@@ -694,7 +694,7 @@ def flux_plot_hour(mr='waroona_run3', extent=None, hour=12,
     Default tiff to use is the waroonaf_osm.tiff
     """
     
-    modelhours = fio.model_outputs[mr]['filedates']
+    modelhours = fio.run_info[mr]['filedates']
     dtime=modelhours[hour]
     which = "first" if hour < 24 else "second"
     # if not defined, pull first or second tiff for backdrop
@@ -737,7 +737,7 @@ if __name__ == '__main__':
     extent2 = _emberstorm_centres_['waroona_run3']['second']['extent']
     #transect1 = _transects_[0]
     
-    hours=fio.model_outputs[mr]['filedates']
+    hours=fio.run_info[mr]['filedates']
     testhours = [datetime(2016,1,6,7)]
     interesting_hours=hours[12:24]
 

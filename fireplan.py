@@ -147,7 +147,8 @@ def fireplan_summary(model_run='waroona_run1',
     extentname = extentname1+'f' # area affected by fire
     extent = plotting._extents_[extentname]
     
-    if 'path_firefront2' not in fio.model_outputs[model_run].keys():
+    fpathlists=fio.fire_paths(model_run)
+    if len(fpathlists[0])<2:
         day2 = False
     FFront, SHeat, FSpeed = fio.read_fire(model_run=model_run ,dtimes=None, 
                                           extent=extent, firefront=True, 

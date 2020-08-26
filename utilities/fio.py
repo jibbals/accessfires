@@ -31,302 +31,187 @@ from utilities import utils
 ###
 __VERBOSE__=True
 
-## Sir ivan pc fire files
-_topog_sirivan_ = 'data/sirivan/umnsaa_pa2017021121.nc'
-_files_sirivan_ = sorted(glob('data/sirivan/umnsaa_pc*.nc'))
-
-## Where are model outputs located
-## 10m windspeeds are destaggered compared to netcdf, and output at higher res
-model_outputs = {
-        ## run with new fire speed/fuel parameters
-        'sirivan_run6_hr':{
-            'path':'data/sirivan_run6_hr/',
-            'topog':'umnsaa_2017021121_slv.nc',
-            'filedates':np.array([datetime(2017,2,11,21) + timedelta(hours=x) for x in range(24)]),
-            'hasfire':True,
-            'path_firefront':'../sirivan_run6_hr_fire/firefront.20170211T2100Z.nc',
-            'path_fireflux':'../sirivan_run6_hr_fire/sensible_heat.20170211T2100Z.nc',
-            'path_firespeed':'../sirivan_run6_hr_fire/fire_speed.20170211T2100Z.nc',
-            'path_v10m':'../sirivan_run6_hr_fire/10m_vwind.20170211T2100Z.nc',
-            'path_u10m':'../sirivan_run6_hr_fire/10m_uwind.20170211T2100Z.nc',
-            'run':'Run on 19 Aug 2020',
-            'origdir':'/g/data/en0/hxy548/ACCESS-fire/sirivan/2020-08-19/20170211T2100Z/0p1/atmos/',
-            'origfiredir':'/g/data/en0/hxy548/ACCESS-fire/sirivan/2020-08-19/20170211T2100Z/0p1/fire/'
-            },
-        ## run with new fire speed/fuel parameters
-        'sirivan_run5':{
-            'path':'data/sirivan_run5/',
-            'topog':'umnsaa_2017021121_slv.nc',
-            'filedates':np.array([datetime(2017,2,11,21) + timedelta(hours=x) for x in range(24)]),
-            'hasfire':True,
-            'path_firefront':'../sirivan_run5_fire/firefront.20170211T2100Z.nc',
-            'path_fireflux':'../sirivan_run5_fire/sensible_heat.20170211T2100Z.nc',
-            'path_firespeed':'../sirivan_run5_fire/fire_speed.20170211T2100Z.nc',
-            'path_v10m':'../sirivan_run5_fire/10m_vwind.20170211T2100Z.nc',
-            'path_u10m':'../sirivan_run5_fire/10m_uwind.20170211T2100Z.nc',
-            'run':'Run on 14 Aug 2020',
-            'origdir':'/g/data/en0/hxy548/ACCESS-fire/sirivan/2020-08-14/20170211T2100Z/0p3/atmos/',
-            'origfiredir':'/g/data/en0/hxy548/ACCESS-fire/sirivan/2020-08-14/20170211T2100Z/0p3/fire/'
-            },
-        ## run with new fire speed/fuel parameters
-        'sirivan_run5_hr':{
-            'path':'data/sirivan_run5_hr/',
-            'topog':'umnsaa_2017021121_slv.nc',
-            'filedates':np.array([datetime(2017,2,11,21) + timedelta(hours=x) for x in range(24)]),
-            'hasfire':True,
-            'path_firefront':'../sirivan_run5_hr_fire/firefront.20170211T2100Z.nc',
-            'path_fireflux':'../sirivan_run5_hr_fire/sensible_heat.20170211T2100Z.nc',
-            'path_firespeed':'../sirivan_run5_hr_fire/fire_speed.20170211T2100Z.nc',
-            'path_v10m':'../sirivan_run5_hr_fire/10m_vwind.20170211T2100Z.nc',
-            'path_u10m':'../sirivan_run5_hr_fire/10m_uwind.20170211T2100Z.nc',
-            'run':'Run on 14 Aug 2020',
-            },
-        ## run with netcdf output (aug 4 2020)
-        'sirivan_run4':{
-            'path':'data/sirivan_run4/',
-            'topog':'umnsaa_2017021121_slv.nc',
-            'filedates':np.array([datetime(2017,2,11,21) + timedelta(hours=x) for x in range(24)]),
-            'hasfire':True,
-            'path_firefront':'../sirivan_run4_fire/firefront.20170211T2100Z.nc',
-            'path_fireflux':'../sirivan_run4_fire/sensible_heat.20170211T2100Z.nc',
-            'path_firespeed':'../sirivan_run4_fire/fire_speed.20170211T2100Z.nc',
-            'path_v10m':'../sirivan_run4_fire/10m_vwind.20170211T2100Z.nc',
-            'path_u10m':'../sirivan_run4_fire/10m_uwind.20170211T2100Z.nc',
-            'run':'Run on 4 Aug 2020',
-            'origdir':'/g/data/en0/hxy548/ACCESS-fire/sirivan/2020-08-04/20170211T2100Z/0p3/atmos/',
-            'origfiredir':'/g/data/en0/hxy548/ACCESS-fire/sirivan/2020-08-04/20170211T2100Z/0p3/fire/'
-            },
-        ## New high res gadi run with fuelmap applied (April 2020)
-        'sirivan_run3_hr':{
-            'path':'data/sirivan_run3_hr/',
-            'topog':'umnsaa_2017021121_slv.nc',
-            'filedates':np.array([datetime(2017,2,11,21) + timedelta(hours=x) for x in range(24)]),
-            'hasfire':True,
-            'path_firefront':'fire/firefront.CSIRO_gadi_fuelmap.20170211T2100Z.nc',
-            'path_fireflux':'fire/sensible_heat.CSIRO_gadi_fuelmap.20170211T2100Z.nc',
-            'path_firespeed':'fire/fire_speed.CSIRO_gadi_fuelmap.20170211T2100Z.nc',
-            'path_v10m':'fire/10m_vwind.CSIRO_gadi_fuelmap.20170211T2100Z.nc',
-            'path_u10m':'fire/10m_uwind.CSIRO_gadi_fuelmap.20170211T2100Z.nc',
-            'run':'Run April 2020',
-            'origdir':'/scratch/en0/hxy548/cylc-run/au-aa860/share/cycle/20170211T2100Z/sirivan/0p1/ukv_os38/um/',
-            'origfiredir':'/g/data/en0/hxy548/fire_vars/sirivan/0p1/'
-            },
-        ## New sirivan run (on GADI) by harvey in Feb 2020
-        ## there is also a high res version of this
-        'sirivan_run2':{
-            'path':'data/sirivan_run2/',
-            'topog':'umnsaa_2017021121_slv.nc',
-            'filedates':np.array([datetime(2017,2,11,21) + timedelta(hours=x) for x in range(24)]),
-            'hasfire':True,
-            'path_firefront':'fire/firefront.CSIRO_gadi.20170211T2100Z.nc',
-            'path_fireflux':'fire/sensible_heat.CSIRO_gadi.20170211T2100Z.nc',
-            'path_firespeed':'fire/fire_speed.CSIRO_gadi.20170211T2100Z.nc',
-            'run':'Run 26 Feb 2020',
-            'origdir':'/scratch/en0/hxy548/cylc-run/au-aa860/share/cycle/20170211T2100Z/sirivan/0p3/ukv_os38/um/',
-            'origfiredir':'/g/data/en0/hxy548/fire_vars/sirivan/0p3/'
-            },
-        ## high res version of sirivan run2 (100m x 100m)
-        'sirivan_run2_hr':{
-            'path':'data/sirivan_run2_hr/',
-            'topog':'umnsaa_2017021121_slv.nc',
-            'filedates':np.array([datetime(2017,2,11,21) + timedelta(hours=x) for x in range(24)]),
-            'hasfire':True,
-            'path_firefront':'fire/firefront.CSIRO_gadi.20170211T2100Z.nc',
-            'path_fireflux':'fire/sensible_heat.CSIRO_gadi.20170211T2100Z.nc',
-            'path_firespeed':'fire/fire_speed.CSIRO_gadi.20170211T2100Z.nc',
-            'run':'Run 26 Feb 2020',
-            'origdir':'/scratch/en0/hxy548/cylc-run/au-aa860/share/cycle/20170211T2100Z/sirivan/0p1/ukv_os38/um/',
-            'origfiredir':'/g/data/en0/hxy548/fire_vars/sirivan/0p1/'},
-        ## New waroona run (on GADI) by harvey in Feb 2020
-        ## Day 2 run on July 17th, 12 hour gap exists after the end of day 1,
-        ## heat flux ramps up over 30 minutes, initial fuel load zero within fire ignition area
-        'waroona_run3':{
-            'path':'data/waroona_run3/',
-            'topog':'umnsaa_2016010515_slv.nc',
-            'filedates':np.array([datetime(2016,1,5,15) + timedelta(hours=x) for x in list(range(24))+list(range(36,60))]),
-            'hasfire':True,
-            'path_firefront':'fire/firefront.CSIRO_new_gadi.20160105T1500Z.nc',
-            'path_fireflux':'fire/sensible_heat.CSIRO_new_gadi.20160105T1500Z.nc',
-            'path_firespeed':'fire/fire_speed.CSIRO_new_gadi.20160105T1500Z.nc',
-            'path_v10m':'fire/10m_vwind.CSIRO_new_gadi.20160105T1500Z.nc',
-            'path_u10m':'fire/10m_uwind.CSIRO_new_gadi.20160105T1500Z.nc',
-            'path_firefront2':'fire/firefront.CSIRO_gadi_ramp_start.20160107T0300Z.nc',
-            'path_fireflux2':'fire/sensible_heat.CSIRO_gadi_ramp_start.20160107T0300Z.nc',
-            'path_firespeed2':'fire/fire_speed.CSIRO_gadi_ramp_start.20160107T0300Z.nc',
-            'path_v10m2':'fire/10m_vwind.CSIRO_gadi_ramp_start.20160107T0300Z.nc',
-            'path_u10m2':'fire/10m_uwind.CSIRO_gadi_ramp_start.20160107T0300Z.nc',
-            'run':'Run 6 Feb 2020',
-            'origdir':'/scratch/en0/hxy548/cylc-run/au-aa799/share/cycle/20160105T1500Z/waroona/0p3/ukv_os38/um/',
-            'origdir2':'/scratch/en0/hxy548/cylc-run/au-aa876/share/cycle/20160107T0300Z/waroona/0p3/ukv_os38/um/',
-            'origfiredir':'/g/data/en0/hxy548/fire_vars/waroona/0p3/'}, 
-        ## New waroona run (on GADI) by harvey in July 2020
-        ## same as waroona_run3 but fire coupling turned off
-        'waroona_run3uc':{
-            'path':'data/waroona_run3uc/',
-            'topog':'umnsaa_2016010515_slv.nc',
-            'filedates':np.array([datetime(2016,1,5,15) + timedelta(hours=x) for x in list(range(24))+list(range(36,60))]),
-            'hasfire':True,
-            'path_firefront':'fire/firefront.CSIRO_gadi_ncp.20160105T1500Z.nc',
-            'path_fireflux':'fire/sensible_heat.CSIRO_gadi_ncp.20160105T1500Z.nc',
-            'path_firespeed':'fire/fire_speed.CSIRO_gadi_ncp.20160105T1500Z.nc',
-            'path_v10m':'fire/10m_vwind.CSIRO_gadi_ncp.20160105T1500Z.nc',
-            'path_u10m':'fire/10m_uwind.CSIRO_gadi_ncp.20160105T1500Z.nc',
-            'path_firefront2':'fire/firefront.CSIRO_gadi_ncp.20160107T0300Z.nc',
-            'path_fireflux2':'fire/sensible_heat.CSIRO_gadi_ncp.20160107T0300Z.nc',
-            'path_firespeed2':'fire/fire_speed.CSIRO_gadi_ncp.20160107T0300Z.nc',
-            'path_v10m2':'fire/10m_vwind.CSIRO_gadi_ncp.20160107T0300Z.nc',
-            'path_u10m2':'fire/10m_uwind.CSIRO_gadi_ncp.20160107T0300Z.nc',
-            'run':'Run 10 July 2020',
-            'origdir':'/scratch/en0/hxy548/cylc-run/au-aa799/share/cycle/20160105T1500Z/waroona/0p3/ukv_os38/um/',
-            'origdir2':'/scratch/en0/hxy548/cylc-run/au-aa876/share/cycle/20160107T0300Z/waroona/0p3/ukv_os38/um/',
-            'origfiredir':'/g/data/en0/hxy548/fire_vars/waroona/0p3/'}, 
-        ## Day 2 run in July 2020, Day 2 with no ramp for heat flux at fire ignition
-        'waroona_run3_day2_orig':{
-            'path':'data/waroona_run3_day2_orig/',
-            'topog':'umnsaa_2016010703_slv.nc',
-            'filedates':np.array([datetime(2016,1,7,3) + timedelta(hours=x) for x in list(range(24))]),
-            'hasfire':True,
-            'path_firefront':'fire/firefront.CSIRO_new_gadi.20160105T1500Z.nc',
-            'path_fireflux':'fire/sensible_heat.CSIRO_new_gadi.20160105T1500Z.nc',
-            'path_firespeed':'fire/fire_speed.CSIRO_new_gadi.20160105T1500Z.nc',
-            'path_v10m':'fire/10m_vwind.CSIRO_new_gadi.20160105T1500Z.nc',
-            'path_u10m':'fire/10m_uwind.CSIRO_new_gadi.20160105T1500Z.nc',
-            'path_firefront2':'fire/firefront.CSIRO_gadi.20160107T0300Z.nc',
-            'path_fireflux2':'fire/sensible_heat.CSIRO_gadi.20160107T0300Z.nc',
-            'path_firespeed2':'fire/fire_speed.CSIRO_gadi.20160107T0300Z.nc',
-            'path_v10m2':'fire/10m_vwind.CSIRO_gadi.20160107T0300Z.nc',
-            'path_u10m2':'fire/10m_uwind.CSIRO_gadi.20160107T0300Z.nc',
-            'run':'Run 6 Feb 2020',
-            'origdir2':'/scratch/en0/hxy548/cylc-run/au-aa876/share/cycle/20160107T0300Z/waroona/0p3/ukv_os38/um/',
-            'origfiredir':'/g/data/en0/hxy548/fire_vars/waroona/0p3/'}, 
-        ## Day 2 run in July, early start for day2 output with fire spreading too fast
-        'waroona_run3e':{
-            'path':'data/waroona_run3e/',
-            'topog':'umnsaa_2016010615_slv.nc',
-            'filedates':np.array([datetime(2016,1,6,15) + timedelta(hours=x) for x in list(range(24))]),
-            'hasfire':True,
-            'path_firefront':'fire/firefront.CSIRO_gadi.20160106T1500Z.nc',
-            'path_fireflux':'fire/sensible_heat.CSIRO_gadi.20160106T1500Z.nc',
-            'path_firespeed':'fire/fire_speed.CSIRO_gadi.20160106T1500Z.nc',
-            'path_v10m':'fire/10m_vwind.CSIRO_gadi.20160106T1500Z.nc',
-            'path_u10m':'fire/10m_uwind.CSIRO_gadi.20160106T1500Z.nc',
-            'run':'Run 13 July 2020',
-            'origdir':'/scratch/en0/hxy548/cylc-run/au-aa876/share/cycle/20160106T1500Z/waroona/0p3/ukv_os38/um/',
-            },
-        ## Latest run from may 2020, 1p0 resolution run
-        'waroona_run3_1p0':{
-            'path':'data/waroona_run3_1p0/',
-            'topog':'umnsaa_2016010515_slv.nc',
-            'filedates':np.array([datetime(2016,1,5,15) + timedelta(hours=x) for x in list(range(24))]),
-            'hasfire':False,
-            'run':'Run may 2020',
-            'origdir':'/scratch/en0/hxy548/cylc-run/au-aa799/share/cycle/20160106T1500Z/waroona/1p0/ukv_os38/um/',
-            },
-        ## Copy of waroona_run2 suite, with fire coupling turned off
-        'waroona_run2uc':{
-            'path':'data/waroona_run2uc/',
-            'topog':'umnsaa_2016010515_slv.nc',
-            'filedates':np.array([datetime(2016,1,5,15) + timedelta(hours=x) for x in range(24)]),
-            'hasfire':True,
-            'path_firefront':'fire/firefront.CSIRO_new_ncp.20160105T1500Z.nc',
-            'path_fireflux':'fire/sensible_heat.CSIRO_new_ncp.20160105T1500Z.nc',
-            'path_firespeed':'fire/fire_speed.CSIRO_new_ncp.20160105T1500Z.nc',
-            'run':'Run ~12 December 2019',
-            'origdir':'/short/en0/jwg574/cylc-run/au-aa799/share/cycle/20160105T1500Z/waroona/0p3/ukv_os38/um/',
-            'origfiredir':'/raijin/short/en0/jwg574/cylc-run/au-aa799/work/20160105T1500Z/',
-            },
-        ## Run 1 was the first one I looked at, with east west rolls and no pyrocb
-        ## Attemp to recreate 'old' run weather and pyrocb, updated fire to use mean met (rather than instantaneous)
-        'waroona_run2':{
-            'path':'data/waroona_run2/',
-            'topog':'umnsaa_2016010515_slv.nc',
-            'filedates':np.array([datetime(2016,1,5,15) + timedelta(hours=x) for x in range(24)]),
-            'hasfire':True,
-            'path_firefront':'fire/firefront.CSIRO_24h_new.20160105T1500Z.nc',
-            'path_fireflux':'fire/sensible_heat.CSIRO_24h_new.20160105T1500Z.nc',
-            'path_firespeed':'fire/fire_speed.CSIRO_24h_new.20160105T1500Z.nc',
-            'run':'Run ~10 December 2019',
-            'origdir':'/short/en0/hxy548/cylc-run/au-aa799/share/cycle/20160105T1500Z/waroona/0p3/ukv_os38/um/',
-            'origfiredir':'/short/en0/hxy548/tmp/waroona/0p3',
-            },
-        ## Run 1 was the first one I looked at, with east west rolls and no pyrocb
-        'waroona_run1':{
-            'path':'data/waroona_run1/',
-            'topog':'umnsaa_2016010515_slv.nc',
-            'filedates':np.array([datetime(2016,1,5,15) + timedelta(hours=x) for x in range(24)]),
-            'hasfire':True,
-            'run':'Run in august 2019',
-            'path_firefront':'fire/firefront.CSIRO_24h.20160105T1500Z.nc',
-            'path_fireflux':'fire/sensible_heat.CSIRO_24h.20160105T1500Z.nc',
-            'path_firespeed':'fire/fire_speed.CSIRO_24h.20160105T1500Z.nc',
-            'path_v10m':'fire/10m_vwind.CSIRO_24h.20160105T1500Z.nc',
-            'path_u10m':'fire/10m_uwind.CSIRO_24h.20160105T1500Z.nc',
-            'origdir':'/short/en0/hxy548/cylc-run/au-aa799/share/cycle/20160105T1500Z/waroona/0p3/ukv_os38/um/',
-            'origfiredir':'/short/en0/hxy548/tmp/waroona/0p3/',
-            },
-        ## Old run had pyrocb but also lots of high clouds and hooked F160 bases
-        'waroona_old':{
-            'path':'data/waroona_old/',
-            'topog':'umnsaa_pa2016010515.nc',
-            'filedates':np.array([datetime(2016,1,5,15) + timedelta(hours=x) for x in range(18)]),
-            'hasfire':True,
-            'run':'Run in August 2018',
-            'origdir':'/g/data1a/en0/mxp548/access-fire/waroona/run3/accessdata/',
-            'path_firefront':'fire/firefront.01.nc', # under the data directory
-            'path_fireflux':'fire/sensible_heat.01.nc',
-            'path_firespeed':'fire/fire_speed.01.nc',
-            'origfiredir':'/short/en0/mxp548/cylc-run/au-aa714/work/20160105T1500Z/waroona_0p4_ukv_os38_um_fcst_000/',
-            },
-        ## Sirivan run (june 2019) at 100mx100m resolution
-        'sirivan_run1_hr':{
-            'path':'data/sirivan_run1_hr/',
-            'topog':'umnsaa_pa2017021121.nc',
-            'filedates':np.array([datetime(2017,2,11,21) + timedelta(hours=x) for x in range(24)]),
-            'hasfire':True,
-            'run':'Run in June 2019?',
-            'path_firefront':'fire/firefront.CSIRO_MinT.20170211T2100Z.nc',
-            'path_fireflux':'fire/sensible_heat.CSIRO_MinT.20170211T2100Z.nc',
-            'path_firespeed':'fire/fire_speed.CSIRO_MinT.20170211T2100Z.nc',
-            'origdir':'/short/en0/hxy548/cylc-run/au-aa860/share/cycle/20170211T2100Z/sirivan/0p1/ukv_os38/um',
-            'origfiredir':'/short/en0/hxy548/cylc-run/au-aa860/work/20170211T2100Z/sirivan_0p1_ukv_os38_um_fcst_000/',
-            },
-        ## Sirivan run around June (2019)
-        'sirivan_run1':{
-            'path':'data/sirivan_run1/',
-            'topog':'umnsaa_pa2017021121.nc',
-            'filedates':np.array([datetime(2017,2,11,21) + timedelta(hours=x) for x in range(24)]),
-            'hasfire':True,
-            'run':'Run in June 2019?',
-            'path_firefront':'fire/firefront.CSIRO_MinT.20170211T2100Z.nc',
-            'path_fireflux':'fire/sensible_heat.CSIRO_MinT.20170211T2100Z.nc',
-            'path_firespeed':'fire/fire_speed.CSIRO_MinT.20170211T2100Z.nc',
-            'path_v10m':'fire/10m_vwind.CSIRO_MinT.20170211T2100Z.nc',
-            'path_u10m':'fire/10m_uwind.CSIRO_MinT.20170211T2100Z.nc',
-            'origdir':'/short/en0/hxy548/cylc-run/au-aa860/share/cycle/20170211T2100Z/sirivan/0p3/ukv_os38/um',
-            'origfiredir':'/short/en0/hxy548/cylc-run/au-aa860/work/20170211T2100Z/sirivan_0p3_ukv_os38_um_fcst_000/',
-            },
-        ## Old Old run has bad lat/lons...
-        ## Note oldold run doesn't have QC at stage 5 resolution
-        'waroona_oldold':{
-            'path':'data/waroona_oldold/',
-            'topog':'stage5_sfc_orog.nc',
-            'filedates':np.array([datetime(2016,1,5,15)]),
-            'hasfire':False,
-            'run':'Run in october 2016',
-            'origdir':'/g/data1/en0/rjf548/fires/waroona.2016010615.vanj'
-            },
-        ## Nested run for NYE atmosphere around fire in SE NSW
-        ## Uses newer model version: 11.6
-        'NYE_run1':{
-            'path':'data/NYE_run1/',
-            'topog':'umnsaa_2019123009_slv.nc',
-            'filedates':np.array([datetime(2019,12,30,9) + timedelta(hours=x) for x in range(24)]),
-            'hasfire':False,
-            'run':'Run in June 2020',
-            'origdir':'/home/574/jwg574/cylc-run/u-bq575/share/cycle/20191230T0900Z/SEForest/0p3/',
-            },
+## Info that is the same for most runs
+#
+sim_info={
+    'sirivan':{
+        'filedates':np.array([datetime(2017,2,11,21) + timedelta(hours=x) for x in range(24)]),
+        'topog':'umnsaa_2017021121_slv.nc',
+        'WESN':[148.9936, 150.6036, -32.8064, -31.1964],
+        },
+    'waroona':{
+        'filedates':np.array([datetime(2016,1,5,15) + timedelta(hours=x) for x in list(range(24))+list(range(36,60))]),
+        'topog':'umnsaa_2016010515_slv.nc',
+        'WESN':[115.2936,116.9036, -33.7064,-32.0964 ],
+        },
+    'NYE':{
+        'topog':'umnsaa_2019123009_slv.nc',
+        'filedates':np.array([datetime(2019,12,30,9) + timedelta(hours=x) for x in range(24)]),
         }
+    }
 
+
+## Where are model outputs located, and run specific info
+run_info = {
+    ## run with new fire speed/fuel parameters turned up a bit again
+    'sirivan_run6_hr':{
+        'dir':'data/sirivan/run6/0p1/',
+        'WESN':[149.4412,150.2179,-32.3024,-31.6985],
+        'origdir':'/g/data/en0/hxy548/ACCESS-fire/sirivan/2020-08-19/20170211T2100Z/0p1/atmos/',
+        },
+    ## run with new fire speed/fuel parameters turned up
+    'sirivan_run5':{
+        'dir':'data/sirivan/run5/0p3/',
+        'WESN':[148.9936, 150.6036,-32.8064,-31.1964],
+        'origdir':'/g/data/en0/hxy548/ACCESS-fire/sirivan/2020-08-14/20170211T2100Z/0p3/atmos/',
+        },
+    ## run with new fire speed/fuel parameters
+    'sirivan_run5_hr':{
+        'dir':'data/sirivan/run5/0p1/',
+        'WESN':[149.2816,150.3175, -32.5184,-31.4825 ],
+        },
+    ## run with netcdf output (aug 4 2020)
+    'sirivan_run4':{
+        'dir':'data/sirivan/run4/0p3/',
+        },
+    ## New high res gadi run with fuelmap applied (April 2020)
+    'sirivan_run3_hr':{
+        'dir':'data/sirivan/run3_hr/',
+        'fire_affix':'CSIRO_gadi_fuelmap',
+        'origdir':'/scratch/en0/hxy548/cylc-run/au-aa860/share/cycle/20170211T2100Z/sirivan/0p1/ukv_os38/um/',
+        'origfiredir':'/g/data/en0/hxy548/fire_vars/sirivan/0p1/'
+        },
+    ## New sirivan run (on GADI) by harvey in Feb 2020
+    'sirivan_run2':{
+        'dir':'data/sirivan/run2/',
+        'fire_affix':'CSIRO_gadi',
+        'origdir':'/scratch/en0/hxy548/cylc-run/au-aa860/share/cycle/20170211T2100Z/sirivan/0p3/ukv_os38/um/',
+        'origfiredir':'/g/data/en0/hxy548/fire_vars/sirivan/0p3/'
+        },
+    ## high res version of sirivan run2 (100m x 100m)
+    'sirivan_run2_hr':{
+        'dir':'data/sirivan/run2_hr/',
+        'fire_affix':'CSIRO_gadi',
+        'run':'Run 26 Feb 2020',
+        'origdir':'/scratch/en0/hxy548/cylc-run/au-aa860/share/cycle/20170211T2100Z/sirivan/0p1/ukv_os38/um/',
+        'origfiredir':'/g/data/en0/hxy548/fire_vars/sirivan/0p1/'},
+    ## New waroona run (on GADI) by harvey in Feb 2020
+    ## Day 2 run on July 17th, 12 hour gap exists after the end of day 1,
+    ## heat flux ramps up over 30 minutes, initial fuel load zero within fire ignition area
+    'waroona_run3':{
+        'dir':'data/waroona/run3/',
+        'fire_affix':'CSIRO_new_gadi',
+        'run':'Run 6 Feb 2020',
+        'origdir':'/scratch/en0/hxy548/cylc-run/au-aa799/share/cycle/20160105T1500Z/waroona/0p3/ukv_os38/um/',
+        'origdir2':'/scratch/en0/hxy548/cylc-run/au-aa876/share/cycle/20160107T0300Z/waroona/0p3/ukv_os38/um/',
+        'origfiredir':'/g/data/en0/hxy548/fire_vars/waroona/0p3/'}, 
+    ## New waroona run (on GADI) by harvey in July 2020
+    ## same as waroona_run3 but fire coupling turned off
+    'waroona_run3uc':{
+        'dir':'data/waroona/run3uc/',
+        'fire_affix':'CSIRO_gadi_ncp',
+        'run':'Run 10 July 2020',
+        'origdir':'/scratch/en0/hxy548/cylc-run/au-aa799/share/cycle/20160105T1500Z/waroona/0p3/ukv_os38/um/',
+        'origdir2':'/scratch/en0/hxy548/cylc-run/au-aa876/share/cycle/20160107T0300Z/waroona/0p3/ukv_os38/um/',
+        'origfiredir':'/g/data/en0/hxy548/fire_vars/waroona/0p3/'}, 
+    ## Day 2 run in July 2020, Day 2 with no ramp for heat flux at fire ignition
+    'waroona_run3_day2_orig':{
+        'dir':'data/waroona/run3_day2_orig/',
+        'filedates':np.array([datetime(2016,1,7,3) + timedelta(hours=x) for x in list(range(24))]),
+        'fire_affix':'CSIRO_new_gadi',
+        'run':'Run 6 Feb 2020',
+        'origdir':'/scratch/en0/hxy548/cylc-run/au-aa876/share/cycle/20160107T0300Z/waroona/0p3/ukv_os38/um/',
+        'origfiredir':'/g/data/en0/hxy548/fire_vars/waroona/0p3/'}, 
+    ## Day 2 run in July, early start for day2 output with fire spreading too fast
+    'waroona_run3_day2_early':{
+        'dir':'data/waroona/run3_day2_early/',
+        'filedates':np.array([datetime(2016,1,6,15) + timedelta(hours=x) for x in list(range(24))]),
+        'fire_affix':'CSIRO_gadi',
+        'run':'Run 13 July 2020',
+        'origdir':'/scratch/en0/hxy548/cylc-run/au-aa876/share/cycle/20160106T1500Z/waroona/0p3/ukv_os38/um/',
+        },
+    ## Latest run from may 2020, 1p0 resolution run
+    'waroona_run3_hr':{
+        'dir':'data/waroona/run3_hr/',
+        'run':'Run may 2020',
+        'origdir':'/scratch/en0/hxy548/cylc-run/au-aa799/share/cycle/20160106T1500Z/waroona/1p0/ukv_os38/um/',
+        },
+    ## Copy of waroona_run2 suite, with fire coupling turned off
+    'waroona_run2uc':{
+        'dir':'data/waroona/run2uc/',
+        'fireaffix':'fire/firefront.CSIRO_new_ncp.20160105T1500Z.nc',
+        'path_fireflux':'fire/sensible_heat.CSIRO_new_ncp.20160105T1500Z.nc',
+        'path_firespeed':'fire/fire_speed.CSIRO_new_ncp.20160105T1500Z.nc',
+        'run':'Run ~12 December 2019',
+        'origdir':'/short/en0/jwg574/cylc-run/au-aa799/share/cycle/20160105T1500Z/waroona/0p3/ukv_os38/um/',
+        'origfiredir':'/raijin/short/en0/jwg574/cylc-run/au-aa799/work/20160105T1500Z/',
+        },
+    ## Run 1 was the first one I looked at, with east west rolls and no pyrocb
+    ## Attemp to recreate 'old' run weather and pyrocb, updated fire to use mean met (rather than instantaneous)
+    'waroona_run2':{
+        'dir':'data/waroona/run2/',
+        'fire_affix':'CSIRO_24h_new',
+        'run':'Run ~10 December 2019',
+        'origdir':'/short/en0/hxy548/cylc-run/au-aa799/share/cycle/20160105T1500Z/waroona/0p3/ukv_os38/um/',
+        'origfiredir':'/short/en0/hxy548/tmp/waroona/0p3',
+        },
+    ## Run 1 was the first one I looked at, with east west rolls and no pyrocb
+    'waroona_run1':{
+        'dir':'data/waroona/run1/',
+        'run':'Run in august 2019',
+        'fire_affix':'CSIRO_24h',
+        'origdir':'/short/en0/hxy548/cylc-run/au-aa799/share/cycle/20160105T1500Z/waroona/0p3/ukv_os38/um/',
+        'origfiredir':'/short/en0/hxy548/tmp/waroona/0p3/',
+        },
+    ## Old run had pyrocb but also lots of high clouds and hooked F160 bases
+    'waroona_old':{
+        'dir':'data/waroona/old/',
+        'filedates':np.array([datetime(2016,1,5,15) + timedelta(hours=x) for x in range(18)]),
+        'run':'Run in August 2018',
+        'firefront':'fire/firefront.01.nc', # under the data directory?
+        'origdir':'/g/data1a/en0/mxp548/access-fire/waroona/run3/accessdata/',
+        'origfiredir':'/short/en0/mxp548/cylc-run/au-aa714/work/20160105T1500Z/waroona_0p4_ukv_os38_um_fcst_000/',
+        },
+    ## Sirivan run (june 2019) at 100mx100m resolution
+    'sirivan_run1_hr':{
+        'dir':'data/sirivan/run1_hr/',
+        'run':'Run in June 2019?',
+        'fire_affix':'CSIRO_MinT',
+        'origdir':'/short/en0/hxy548/cylc-run/au-aa860/share/cycle/20170211T2100Z/sirivan/0p1/ukv_os38/um',
+        'origfiredir':'/short/en0/hxy548/cylc-run/au-aa860/work/20170211T2100Z/sirivan_0p1_ukv_os38_um_fcst_000/',
+        },
+    ## Sirivan run around June (2019)
+    'sirivan_run1':{
+        'dir':'data/sirivan/run1/',
+        'run':'Run in June 2019?',
+        'fire_affix':'CSIRO_MinT',
+        'origdir':'/short/en0/hxy548/cylc-run/au-aa860/share/cycle/20170211T2100Z/sirivan/0p3/ukv_os38/um',
+        'origfiredir':'/short/en0/hxy548/cylc-run/au-aa860/work/20170211T2100Z/sirivan_0p3_ukv_os38_um_fcst_000/',
+        },
+    ## Old Old run has bad lat/lons...
+    ## Note oldold run doesn't have QC at stage 5 resolution
+    'waroona_oldold':{
+        'dir':'data/waroona_oldold/',
+        'topog':'stage5_sfc_orog.nc',
+        'filedates':np.array([datetime(2016,1,5,15)]),
+        'run':'Run in october 2016',
+        'origdir':'/g/data1/en0/rjf548/fires/waroona.2016010615.vanj'
+        },
+    ## Nested run for NYE atmosphere around fire in SE NSW
+    ## Uses newer model version: 11.6
+    'NYE_run1':{
+        'dir':'data/NYE_run1/',
+        'run':'Run in June 2020',
+        'origdir':'/home/574/jwg574/cylc-run/u-bq575/share/cycle/20191230T0900Z/SEForest/0p3/',
+        },
+    }
+# populate run_info with sim_info
+for run in run_info.keys():
+    loc=run.split('_')[0]
+    for k,v in sim_info[loc].items():
+        # if sim location info not in run_info[run] dict, add it
+        if k not in run_info[run].keys():
+            run_info[run][k] = v
 
 ###
 ## METHODS
@@ -586,6 +471,23 @@ def read_nc_iris(fpath, constraints=None, keepvars=None, HSkip=None):
         print("     :",constraints)
     return cubes
 
+def fire_paths(model_run):
+    fdir = run_info[model_run]['dir']+'fire/'
+    affix='20' # if there is no affix, look for name.YYYYMMDDTHHmmZ.nc
+    if 'fire_affix' in run_info:
+        affix=run_info['fire_affix']
+    ffpaths=glob(fdir+'firefront.'+affix+'*')
+    fluxpaths=glob(fdir+'sensible_heat.'+affix+'*')
+    fspaths=glob(fdir+'fire_speed.'+affix+'*')
+    v10paths=glob(fdir+'10m_vwind.'+affix+'*')
+    u10paths=glob(fdir+'10m_uwind.'+affix+'*')
+    ffpaths.sort()
+    fluxpaths.sort()
+    fspaths.sort()
+    v10paths.sort()
+    u10paths.sort()
+    return [ffpaths, fluxpaths, fspaths, v10paths, u10paths]
+
 def read_fire(model_run='waroona_run1',
               dtimes=None, constraints=None, extent=None,
               firefront=True,
@@ -599,15 +501,12 @@ def read_fire(model_run='waroona_run1',
     Read fire output cubes matching dtimes time dim
     output is transposed from [time,lon,lat] -> [time, lat, lon] to match model output
     ARGUMENTS:
-        
     '''
     ## If no fire exists for model run, return None
-    if not model_outputs[model_run]['hasfire']:
+    fdir = run_info[model_run]['dir']+'fire/'
+    if not os.path.exists(fdir):
         # needs to be iterable to match cubelist return type (with wind counted twice) 
         return [None]*np.sum([firefront,sensibleheat,firespeed,wind,wind]) 
-    
-    ## Set hskip automatically for high res output
-    HSkip = _set_hskip_for_hr_(model_run,HSkip)
     
     ## if dtimes are passed, maybe we want some of day1 and day2,
     ## set day flag automatically using dtimes if available
@@ -615,7 +514,6 @@ def read_fire(model_run='waroona_run1',
     if day1 is None:
         if dtimes is not None:
             day1,day2 = False,False
-            modelhours = model_outputs[model_run]['filedates']
             if "waroona" in model_run and dtimes[-1] >= datetime(2016,1,6,15,1):
                 day2 = True
             if "waroona" in model_run and dtimes[0] < datetime(2016,1,6,15,1):
@@ -625,6 +523,7 @@ def read_fire(model_run='waroona_run1',
                 day2 = False
         else:
             day1=True
+        #modelhours = run_info[model_run]['filedates']
         #print("DEBUG: fire_read recursion")
         #print("     : model hours 0, -1: ",modelhours[0], modelhours[-1])
         #print("     : model hours 25, 24: ",modelhours[25], modelhours[24])
@@ -673,13 +572,13 @@ def read_fire(model_run='waroona_run1',
         return ret_cubes
 
     ## otherwise read fire paths and return fire cubes
-    ddir        = model_outputs[model_run]['path']
-    day2str = '2' if day2 else ''
-    ffpath      = ddir+model_outputs[model_run]['path_firefront'+day2str]
-    fluxpath    = ddir+model_outputs[model_run]['path_fireflux'+day2str]
-    fspath      = ddir+model_outputs[model_run]['path_firespeed'+day2str]
-    v10path     = ddir+model_outputs[model_run]['path_v10m'+day2str]
-    u10path     = ddir+model_outputs[model_run]['path_u10m'+day2str]
+    #sensible_heat.[affix.]YYYYMMDDTHHmmZ.nc',
+    #fire_speed, 10m_vwind, 10m_uwind
+    fpathlists= fire_paths(model_run)
+    
+    dind=0
+    if day2: 
+        dind=1
     
     if extent is not None:
         constraints = _constraints_from_extent_(extent,constraints)
@@ -687,11 +586,10 @@ def read_fire(model_run='waroona_run1',
     # Build up cubelist based on which files you want to read
     cubelist = iris.cube.CubeList()
     flags = [firefront, sensibleheat, firespeed, wind, wind]
-    paths = [ffpath, fluxpath, fspath, u10path, v10path]
     units = [None, 'Watts/m2', 'm/s', 'm/s', 'm/s']
-    for flag, path, unit in zip(flags, paths, units):
+    for flag, paths, unit in zip(flags, fpathlists, units):
         if flag:
-            cube, = read_nc_iris(path, constraints=constraints, HSkip=HSkip)
+            cube, = read_nc_iris(paths[dind], constraints=constraints, HSkip=HSkip)
             if unit is not None:
                 cube.units=unit
             cubelist.append(cube)
@@ -729,15 +627,6 @@ def read_fire(model_run='waroona_run1',
         
     return cubelist
 
-def _set_hskip_for_hr_(model_version,HSkip):
-    """ set HSkip to 3 if model_version is high res and HSkip has not been set manually """
-    #if ('_hr' in model_version):
-    #    if HSkip is None:
-    #        HSkip = 3
-    ## no longer doing this...
-
-    return HSkip
-
 def read_model_run(model_version, fdtime=None, subdtimes=None, extent=None,
                    add_topog=True, add_z=False, add_winds=False, add_theta=False,
                    add_dewpoint=False, add_RH=False, HSkip=None, constraints=None):
@@ -760,7 +649,6 @@ def read_model_run(model_version, fdtime=None, subdtimes=None, extent=None,
             WARNING: Some of these will use RAM
         HSkip: integer, optional
             slice horizontal dimension [::HSkip] to reduce resolution
-            high resolution output is automatically HSkipped by 3 unless HSkip is set to false
 
     RETURNS:
         iris.cube.CubeList with standardised dimensions [time, level, latitude, longitude]
@@ -798,20 +686,18 @@ def read_model_run(model_version, fdtime=None, subdtimes=None, extent=None,
     '''
 
     ## make sure we have model run data
-    assert model_version in model_outputs.keys(), "%s not yet supported by 'read_model_run'"%model_version
+    assert model_version in run_info.keys(), "%s not yet supported by 'read_model_run'"%model_version
 
-    ## Set HSkip to 3 for high res model outputs
-    ## can set HSkip to False to bypass this
-    HSkip=_set_hskip_for_hr_(model_version,HSkip)
-
-    ddir = model_outputs[model_version]['path']
-
+    ddir = run_info[model_version]['dir'] + 'atmos/'
+    locname=model_version.split('_')[0]
+    
     timelesscubes=[]
     allcubes=None
 
     ## No ftimes? set to all ftimes
     if fdtime is None:
-        fdtime = model_outputs[model_version]['filedates']
+        fdtime = run_info[locname]['filedates']
+            
     # make sure it's iterable
     if not hasattr(fdtime,'__iter__'):
         fdtime = [fdtime]
@@ -865,7 +751,7 @@ def read_model_run(model_version, fdtime=None, subdtimes=None, extent=None,
             height_varname = 'height_above_reference_ellipsoid'
             if constraints is not None:
                 height_varname = height_varname & constraints
-            height_date = model_outputs[model_version]['filedates'][0]
+            height_date = run_info[model_version]['filedates'][0]
             ro1_height_path = ddir+height_date.strftime('umnsaa_%Y%m%d%H_mdl_ro1.nc')
             zro, = read_nc_iris(ro1_height_path,
                                 constraints = height_varname, 
@@ -950,7 +836,6 @@ def read_model_run(model_version, fdtime=None, subdtimes=None, extent=None,
             # add single cube with time dim
             allcubes.append(sap0)
             
-
     ## NOW add any timeless cubes
     allcubes.extend(timelesscubes)
 
@@ -958,7 +843,7 @@ def read_model_run(model_version, fdtime=None, subdtimes=None, extent=None,
     if add_topog:
         # oldold is special case, topog read in read_waroona_oldold()
         if model_version != "waroona_oldold":
-            topog, = read_nc_iris(ddir + model_outputs[model_version]['topog'],
+            topog, = read_nc_iris(ddir+run_info[model_version]['topog'],
                                   constraints = 'surface_altitude',
                                   HSkip=HSkip)
             if 1 in topog.shape:
@@ -1156,7 +1041,7 @@ def read_standard_run(dtime, constraints=None, extent=None, mv='waroona_run1', H
     '''
 
     dstamp=dtime.strftime('%Y%m%d%H')
-    ddir = model_outputs[mv]['path']
+    ddir = run_info[mv]['dir']+'atmos/'
 
     # If we just want a particular extent, subset to that extent using constraints
     if extent is not None:
@@ -1219,7 +1104,7 @@ def read_waroona_old(dtime, constraints=None, extent=None):
 
     '''
     dstamp=dtime.strftime('%Y%m%d%H')
-    ddir = model_outputs['waroona_old']['path']
+    ddir = run_info['waroona_old']['dir']+'atmos/'
     # First read topography
 
     # If we just want a particular extent, subset to that extent using constraints
@@ -1261,7 +1146,7 @@ def read_waroona_oldold(constraints=None, extent=None):
         4: z_th / (m)                          (Hybrid height: 70; latitude: 88; longitude: 88)
         5: z_rho / (m)                         (Hybrid height: 70; latitude: 88; longitude: 88)
     '''
-    ddir = model_outputs['waroona_oldold']['path']
+    ddir = run_info['waroona_oldold']['dir']
     xwind_path = ddir+'combined_alltimes_ml_xwind_stage5.nc'
     ywind_path = ddir+'combined_alltimes_ml_ywind_stage5.nc'
     zwind_path = ddir+'combined_alltimes_ml_zwind_stage5.nc'
@@ -1297,7 +1182,7 @@ def read_waroona_oldold(constraints=None, extent=None):
         ywind1, = read_nc_iris(ywind_path)
         zwind, = read_nc_iris(zwind_path)
         ## Read topography
-        topog1, = read_nc_iris(ddir+model_outputs['waroona_oldold']['topog'])
+        topog1, = read_nc_iris(ddir+run_info['waroona_oldold']['topog'])
         ## Read heights of theta and rho levels
         zth1, = read_nc_iris(ddir+'stage5_ml_htheta.nc')
         zrho1, = read_nc_iris(ddir+'stage5_ml_hrho.nc')
@@ -1352,7 +1237,7 @@ def read_sirivan_run1(dtime, constraints=None, extent=None, HSkip=None):
 
     '''
     dstamp=dtime.strftime('%Y%m%d%H')
-    ddir = model_outputs['sirivan_run1']['path']
+    ddir = run_info['sirivan_run1']['dir']+'atmos/'
     # First read topography
 
     # If we just want a particular extent, subset to that extent using constraints
@@ -1402,12 +1287,12 @@ def read_topog(model_version, extent=None, HSkip=None):
     Read topography cube
     '''
 
-    ddir = model_outputs[model_version]['path']
+    ddir = run_info[model_version]['dir']+'atmos/'
 
     constraints='surface_altitude'
     if extent is not None:
         constraints = _constraints_from_extent_(extent,constraints)
-    topog, = read_nc_iris(ddir + model_outputs[model_version]['topog'],
+    topog, = read_nc_iris(ddir + run_info[model_version]['topog'],
                           constraints = constraints, HSkip=HSkip)
 
     # don't want time dim in topog
@@ -1660,6 +1545,49 @@ def HC06D_read(sites=[], extent=None, concat=False):
         return pandas.concat(ret_data.values(),axis=0)
     return ret_data
 
+## Read AIFS based csv files
+def AIFS_read_path(path):
+    """
+    Return pandas dataframe based on path input
+    titles:
+        Station	DF	Cur %	Grass t/ha	EST HH:MM dd/mm/yy	
+        T	Td	RH	Wd	Ws km/h	Wg km/h	FFDR/FFDI	GFDR/GFDI
+    """
+    
+    ## Read data
+    print("INFO: reading ",path)
+    data = pandas.read_csv(path) # skiprows=1 removes titles
+
+    # read datetimes
+    dind_str='EST HH:MM dd/mm/yy' # local time column
+    data[dind_str] = pandas.to_datetime(data[dind_str], dayfirst=True)
+    
+    # Wind direction from string to degrees clockwise from due North
+    wind_dir_map = {"N":0,"NNE":22.5,"NE":45,"ENE":67.5,"E":90,
+                    "ESE":112.5,"SE":135,"SSE":157.5,"S":180,
+                    "SSW":202.5,"SW":225,"WSW":247.5,"W":270,
+                    "WNW":292.5,"NW":315,"NNW":337.5,}
+    data['Wd'] = data['Wd'].map(wind_dir_map)
+    
+    def number_from_fdi(fdistr): 
+        return int(fdistr.split(' ')[1])
+    for key in ['FFDR/FFDI','GFDR/GFDI']:
+        data[key] = data[key].apply(number_from_fdi,convert_dtype=True)
+    
+    
+    # make sure data columns are numeric (not string)
+    for key in data.keys():
+        if key not in ['Station',dind_str]:
+            data[key] = pandas.to_numeric(data[key], errors='coerce')
+    # add column for Ws in m/s
+    # km/h * 1000/3600
+    data['Ws m/s'] = data['Ws km/h'] / 3.6
+    
+    # set local time to be the index, and sort by date
+    data = data.set_index(dind_str)
+    data = data.sort_values(by=dind_str)
+    return data
+
 def read_model_timeseries(model_run,latlon,
                           radial_avg_degrees=None,
                           d0=None,dN=None,
@@ -1681,7 +1609,8 @@ def read_model_timeseries(model_run,latlon,
                   lat-radial_avg_degrees, 
                   lat+radial_avg_degrees]
     
-    umhours = model_outputs[model_run]['filedates']
+    umhours = run_info[model_run]['filedates']
+    
     # limit hours desired to d0-dN
     if d0 is not None:
         di=min(utils.date_index(d0,umhours)-1, 0)

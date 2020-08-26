@@ -130,7 +130,7 @@ def cloud_system(model_run='waroona_run2', hour=20,
         send_to_browser: instead of trying to save figures, send one to the browser (interactive)
     """
     
-    hours=fio.model_outputs[model_run]['filedates']
+    hours=fio.run_info[model_run]['filedates']
     dtime=hours[hour]
     if extent is None:
         extentname = model_run.split('_')[0]

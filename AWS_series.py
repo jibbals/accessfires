@@ -19,6 +19,38 @@ from utilities import fio, plotting, utils
 
 _sn_='AWS'
 
+_AWS_={
+    "moree_airport":{
+        "path_AIFS":"data/AWS/MoreeAirport.csv",
+        "latlon":[-29.4946, 149.8505], # degrees
+        "latlon_model":None , # no equivalent nearby spot within model bounds
+        "latlon_model_hr":None , 
+        "altitude":214, # metres ASL
+        },
+    "coonabarabran_airport":{
+        "path_AIFS":"data/AWS/CoonabarabranAirport.csv",
+        "latlon":[-31.3330,149.2699],
+        "latlon_model":[-31.3330,149.2699],
+        "latlon_model_hr":[-31.51,149.2699],
+        "altitude":645,
+        },
+    "dubbo_airport":{
+        "path_AIFS":"data/AWS/DubboAirport.csv",
+        "latlon":[-32.2189,148.5696],
+        "latlon_model":[-32.22,149.1], 
+        "latlon_model_hr":[-32.22,149.3], 
+        "altitude":285,
+        },
+    "murrurundi_gap":{
+        "path_AIFS":"data/AWS/MurrurundiGap.csv",
+        "latlon":[-31.74,150.79],
+        "latlon_model":[-31.74,150.5],
+        "latlon_model_hr":[-31.74,150.3],
+        "altitude":729.4,
+        },
+    }
+
+
 # Wagerup AWS entries to plot
 # there may be a better way to set all these plotting parameters...
 __AWS_PLOTS__ = {'Wind direction':{'dfnames':['Dta10','Dta30'],
@@ -89,6 +121,198 @@ def df_time_series(df, subplots=None, units=None, legend=True):
             plt.ylabel(units[title],fontsize=12)
     return f, axes
 
+def AWS_plot_timeseries(df,key,d0=None,dN=None,**plotargs):
+    """
+    ARGS:
+        df: dataframe with datetime index
+        key: string name of item from df to be plotting
+    """
+    
+    subdf=df.copy()
+    if d0 is not None:
+        subdf = subdf.loc[d0:dN]
+    
+    subdf[key].plot(**plotargs)
+
+def AIFS_Summary(mr='sirivan_run5',d0=None,dN=None):
+    """
+    show AIFS dataset sites, and compare T, RH, FFDI, and winds against 
+    colocated model data
+    """
+    sites=[]
+    for site in _AWS_.keys():
+        if 'path_AIFS' in _AWS_[site]:
+            sites.append(site)
+    sitecolors=['#a6cee3','#b2df8a','#fb9a99','#fdbf6f','#cab2d6',]
+    # linestyles for model/data
+    ls_model='--'
+    ls='-'
+    lw=3
+    offset=timedelta(hours=10)
+                
+    ## Subset to datetime using these limits
+    h0_model=fio.run_info[mr]['filedates'][0]
+    hN_model=fio.run_info[mr]['filedates'][-1]
+    d0= h0_model+offset-timedelta(hours=2)
+    dN= hN_model+offset+timedelta(hours=2)
+                
+    # create figure    
+    fig=plt.figure(figsize=[13,20])
+    # first subplot is map
+    _,ax1 = plotting.map_tiff_qgis(fname='sirivan_AIFS.tiff',fig=fig,subplot_row_col_n=[5,1,1])
+    
+    # Timeseries: T, indices, Wind
+    ax_T = plt.subplot(5,1,2)
+    ax_RH= plt.subplot(5,1,3,sharex=ax_T)
+    ax_I = plt.subplot(5,1,4,sharex=ax_T)
+    ax_W = plt.subplot(5,1,5,sharex=ax_T)
+    
+    # for each site, get latlon, color, plot data
+    for sitei,site in enumerate(sites):
+        path = _AWS_[site]['path_AIFS']
+        latlon = _AWS_[site]['latlon']
+        
+        color=sitecolors[sitei]
+        # plot_date arguments for model timeseries
+        pdargs = {'color':color,
+                  'linestyle':ls_model,
+                  'marker':''}
+        # aws_timeseries arguments for site timeseries
+        awsargs= {'d0':d0,
+                  'dN':dN,
+                  'color':color,
+                  'linestyle':ls,
+                  'linewidth':lw
+                  }
+        ## arguments for quiver plotting
+        #quiverargs={'color':color, 
+        #            'alpha':0.5,
+        #            'pivot':'mid', # put arrow on centre of ws line
+        #            #'scale':0.05, # scale down the auto size??
+        #            'headwidth':3,
+        #            'headlength':2,
+        #            'headaxislength':2,
+        #            'width':.004
+        #            }
+        
+        df = fio.AIFS_read_path(path)
+        site_wd=(df.loc[d0:dN])['Wd']
+        site_u,site_v = utils.uv_from_wind_degrees(site_wd.to_numpy())
+        site_lt = df.loc[d0:dN].index.to_numpy()
+        site_ws=(df.loc[d0:dN])['Ws km/h'].to_numpy() / 3.6 # km/h -> m/s
+        
+        
+        cubes=None
+        latlon_model = _AWS_[site]['latlon_model']
+        if '_hr' in mr:
+            latlon_model = _AWS_[site]['latlon_model_hr']
+        if latlon_model is not None:
+            #print("WARNING: using uarbry instead of site latlon until on NCI")
+            #cubes=fio.read_model_timeseries(mr, 
+            #                                latlon=plotting._latlons_['uarbry'], 
+            #                                dN=h0_model+timedelta(hours=2),
+            #                                wind_10m=True)
+            #print("DEBUG: ",cubes)
+            print("INFO: reading", latlon_model)
+            cubes=fio.read_model_timeseries(mr,
+                                            latlon=latlon_model,
+                                            dN=hN_model,
+                                            wind_10m=True)
+            #print(cubes)
+            # get model T, FDI, 10m Winds
+            model_T,model_RH = cubes.extract(['air_temperature','relative_humidity'])
+            model_ws,model_u,model_v = cubes.extract(['s_10m','u_10m','v_10m'])
+            ctimes = utils.dates_from_iris(model_T) + offset
+            model_T0 = model_T[:,0].data.data - 273.15
+            model_RH0 = model_RH[:,0].data*100 # %
+            model_ws0 = model_ws.data # m/s
+            model_u0 = model_u.data # m/s
+            model_v0 = model_v.data # m/s
+            if np.any(model_ws0 < 0):
+                print("ERROR: Windspeed < 0")
+                print(model_ws0)
+                print(model_u0)
+                print(model_v0)
+                print(np.sqrt(model_u0**2+model_v0**2))
+                assert False, "Shouldn't have negative wind magnitude"
+            Drought = np.repeat(10,len(model_T0))
+            model_FFDI = utils.FFDI(Drought,model_RH0,model_T0,model_ws0*3.6)
+        
+        ## Timeseries
+        # Add time series for temperature
+        plt.sca(ax_T)
+        AWS_plot_timeseries(df,'T', **awsargs)
+        if cubes is not None:
+            plt.plot_date(ctimes, model_T0, **pdargs)
+        #plt.title('T')
+        plt.ylabel('T [Celcius]')
+        
+        plt.sca(ax_RH)
+        AWS_plot_timeseries(df,'RH', **awsargs)
+        if cubes is not None:
+            plt.plot_date(ctimes,model_RH0, **pdargs)
+        plt.ylabel('RH [%]')
+        
+        # Add time series for indices
+        plt.sca(ax_I)
+        AWS_plot_timeseries(df,'FFDR/FFDI', **awsargs)
+        if cubes is not None:
+            # model FFDI
+            plt.plot_date(ctimes,model_FFDI, **pdargs)
+        #AWS_plot_timeseries(df,'GFDR/GFDI',d0=d0,dN=dN,color='m')
+        plt.ylabel('FFDI')
+        
+        # add ts for winds
+        plt.sca(ax_W)
+        AWS_plot_timeseries(df,'Ws m/s', **awsargs)
+        # now add quiver for sites
+        #n_arrows=12
+        #qskip = max(int(np.floor(len(site_u)/n_arrows)),1)
+        #als = 0.6 # arrow length scale
+        #plt.quiver(site_lt[::qskip], site_ws[::qskip], 
+        #           site_u[::qskip]*als, site_v[::qskip]*als, 
+        #           **quiverargs,
+        #           )
+        
+        plt.ylabel('Winds [m/s]')
+        if cubes is not None:
+            plt.plot_date(ctimes, model_ws0, **pdargs)
+            
+            ## normalize windspeed for unit length quivers
+            #wdnorm = np.sqrt(model_u0**2 + model_v0**2)
+            ## dont show quiver at every single point
+            #qskip = max(int(np.floor(len(wdnorm)/n_arrows)),1)
+            ## Add quiver
+            #plt.quiver(ctimes[::qskip], model_ws0[::qskip], 
+            #           model_u0[::qskip]/wdnorm[::qskip]*als, 
+            #           model_v0[::qskip]/wdnorm[::qskip]*als, 
+            #           **quiverargs,
+            #           )
+        
+        ## MAP ADDITIONS
+        # Add point to map in axis 1
+        plt.sca(ax1)
+        plotting.map_add_nice_text(ax1,latlons=[latlon],texts=[site],markercolors=sitecolors[sitei])
+        # add normal points to map
+        plotting.map_add_locations_extent('sirivans',nice=True)
+        if (cubes is not None) and (not np.all(np.array(latlon)==np.array(latlon_model))):
+            plotting.map_add_nice_text(ax1,latlons=[latlon_model],texts=[''],markercolors=sitecolors[sitei], markers=['X'])
+    
+    # legend for sites
+    plotting.add_legend(ax_T,
+                        colours=sitecolors[:len(sites)],
+                        labels=sites,
+                        )
+    # legend for markers
+    plotting.add_legend(ax_I,
+                        colours=['k']*2,
+                        labels=['data','model'],
+                        styles=['-','--'],
+                        )
+    plt.sca(ax_W)
+    plt.xlabel("local time (UTC+10)")
+    fio.save_fig(mr,_sn_,"sirivan_AWS",plt)
+
 # read wagerup
 def summary_wagerup(d0=None,dN=None, UTC=True):
     """
@@ -140,7 +364,7 @@ def combine_site_and_model(AWS='wagerup', model_run='waroona_run1',
     subplots = deepcopy(__AWS_PLOTS__)
     df_aws, aws_attrs = fio.read_AWS_wagerup(UTC=UTC)
 
-    umhours = fio.model_outputs[model_run]['filedates']
+    umhours = fio.run_info[model_run]['filedates']
     
     ## Read Model output:
     data_model0 = fio.read_model_run(model_run, fdtime=umhours, extent=extent, 
@@ -370,8 +594,8 @@ def HC06D_summary(mr='sirivan_run1'):
     #sites=pandas.concat(data.values(),axis=0)
     sitecolors=['#a6cee3','#1f78b4','#b2df8a','#33a02c','#fb9a99','#e31a1c','#fdbf6f','#ff7f00','#cab2d6',]
     ## Subset to datetime using these limits
-    d0=fio.model_outputs[mr]['filedates'][0]
-    dN=fio.model_outputs[mr]['filedates'][-1]
+    d0=fio.run_info[mr]['filedates'][0]
+    dN=fio.run_info[mr]['filedates'][-1]
                 
     # create figure    
     fig=plt.figure(figsize=[13,16])
@@ -401,7 +625,10 @@ def HC06D_summary(mr='sirivan_run1'):
 if __name__=='__main__':
     
     ## Examine AIFS time series vs model weather/ffdi
-    
+    if True:
+        for run in ['sirivan_run5_hr',]:
+            AIFS_Summary(run)
+
     
     
     ## Summary of wagerup waroona stuff
