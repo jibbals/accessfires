@@ -39,7 +39,7 @@ from utilities import plotting, utils, fio
 ###
 _sn_ = 'met_profiles'
 
-def hodograph(u,v,latlon,average=0,ax=None,ztop=18000,**hodoargs):
+def hodograph(u,v,latlon,average=0,ax=None,ztop=18000,axlims=[-50,50],**hodoargs):
     """
     hodograph plot
     args:
@@ -68,6 +68,8 @@ def hodograph(u,v,latlon,average=0,ax=None,ztop=18000,**hodoargs):
         hodo=Hodograph(ax)
     cs=hodo.plot_colormapped(u0[zinds],v0[zinds],height[zinds],**hodoargs)
     hodo.add_grid(increment=20)
+    hodo.ax.set_xlim(axlims[0],axlims[1])
+    hodo.ax.set_ylim(axlims[0],axlims[1])
     return cs
     
 def f160(press,Temp,Tempd, latlon,
@@ -235,7 +237,7 @@ def model_metpy_hour(dtime=datetime(2016,1,6,7),
         fio.save_fig(model_version,_sn_,utc,plt,subdir=latlon_stamp+'/f160')
         
         ## Plot HODOR GRAPHIC
-        cs=hodograph(u[i],v[i],latlon)
+        cs=hodograph(u[i],v[i],latlon,axlims=[-40,40])
         plt.title(suptitle)
         
         cbar_ax = plt.gcf().add_axes([0.86, 0.3, 0.03, 0.4])# X Y Width Height
