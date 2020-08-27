@@ -203,9 +203,21 @@ def AIFS_Summary(mr='sirivan_run5',d0=None,dN=None):
         
         
         cubes=None
-        latlon_model = _AWS_[site]['latlon_model']
-        if '_hr' in mr:
-            latlon_model = _AWS_[site]['latlon_model_hr']
+        WESN=fio.run_info[mr]['WESN']
+        latlon_model=None
+        # if latlon is close to model region, compare nearby
+        if latlon[1] < WESN[0]:
+            if latlon[1] > WESN[0]-0.7:
+                latlon_model=[latlon[0],WESN[0]+0.075]
+        elif latlon[1] > WESN[1]:
+            if latlon[1] < WESN[1]+0.7:
+                latlon_model=[latlon[0],WESN[1]-0.075]
+        if latlon[0] > WESN[3]:
+            if latlon[0] < WESN[3]+0.6:
+                latlon_model=[WESN[3]-0.075, latlon[1]]
+            else:
+                latlon_model=None
+            
         if latlon_model is not None:
             #print("WARNING: using uarbry instead of site latlon until on NCI")
             #cubes=fio.read_model_timeseries(mr, 
@@ -213,7 +225,7 @@ def AIFS_Summary(mr='sirivan_run5',d0=None,dN=None):
             #                                dN=h0_model+timedelta(hours=2),
             #                                wind_10m=True)
             #print("DEBUG: ",cubes)
-            print("INFO: reading", latlon_model)
+            #print("INFO: reading", latlon_model)
             cubes=fio.read_model_timeseries(mr,
                                             latlon=latlon_model,
                                             dN=hN_model,
@@ -626,7 +638,7 @@ if __name__=='__main__':
     
     ## Examine AIFS time series vs model weather/ffdi
     if True:
-        for run in ['sirivan_run5_hr',]:
+        for run in ['sirivan_run5_hr','sirivan_run5','sirivan_run4_hr']:
             AIFS_Summary(run)
 
     

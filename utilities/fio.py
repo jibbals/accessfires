@@ -592,6 +592,9 @@ def read_fire(model_run='waroona_run1',
     units = [None, 'Watts/m2', 'm/s', 'm/s', 'm/s']
     for flag, paths, unit in zip(flags, fpathlists, units):
         if flag:
+            if len(paths) < 1:
+                print("ERROR: missing files")
+                print("     :", fpathlists)
             cube, = read_nc_iris(paths[dind], constraints=constraints, HSkip=HSkip)
             if unit is not None:
                 cube.units=unit
