@@ -59,16 +59,19 @@ run_info = {
         'WESN':[149.4412,150.2179,-32.3024,-31.6985],
         'origdir':'/g/data/en0/hxy548/ACCESS-fire/sirivan/2020-08-19/20170211T2100Z/0p1/atmos/',
         },
+    'sirivan_run6':{
+        'dir':'data/sirivan/run6/0p3/',
+        'WESN':[149.4412,150.2179,-32.3024,-31.6985],
+        },
     ## run with new fire speed/fuel parameters turned up
+    'sirivan_run5_hr':{
+        'dir':'data/sirivan/run5/0p1/',
+        'WESN':[149.2816,150.3175, -32.5184,-31.4825 ],
+        },
     'sirivan_run5':{
         'dir':'data/sirivan/run5/0p3/',
         'WESN':[148.9936, 150.6036,-32.8064,-31.1964],
         'origdir':'/g/data/en0/hxy548/ACCESS-fire/sirivan/2020-08-14/20170211T2100Z/0p3/atmos/',
-        },
-    ## run with new fire speed/fuel parameters
-    'sirivan_run5_hr':{
-        'dir':'data/sirivan/run5/0p1/',
-        'WESN':[149.2816,150.3175, -32.5184,-31.4825 ],
         },
     ## run with netcdf output (aug 4 2020)
     'sirivan_run4':{

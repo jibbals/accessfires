@@ -34,7 +34,7 @@ import pandas
 _sn_='localtests'
 
 
-mr='sirivan_run4'
+mr='sirivan_run6'
 umhours=fio.run_info[mr]['filedates'][:2]
 cubes=fio.read_model_run(mr,extent=[150.0,150.2,-31.99,-31.9],fdtime=umhours)
 print(cubes)
