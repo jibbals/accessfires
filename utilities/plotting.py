@@ -347,8 +347,8 @@ def map_draw_gridlines(ax, linewidth=1, color='black', alpha=0.5,
         gl.xlocator = matplotlib.ticker.FixedLocator(xrange)
         gl.ylocator = matplotlib.ticker.FixedLocator(yrange)
 
-def map_contourf(extent, data, lat,lon, title="",
-                 clabel="", cbar=True, cbarform=None, **contourfargs):
+def map_contourf(data, lat,lon, title="",
+                 cbargs={}, **contourfargs):
     '''
     Show topography map matching extents
     '''
@@ -357,15 +357,20 @@ def map_contourf(extent, data, lat,lon, title="",
     cb = None
     
     # set x and y limits to match extent
-    xlims = extent[0:2] # East to West
-    ylims = extent[2:] # South to North
+    xlims = lon[0],lon[-1] # East to West
+    ylims = lat[0],lat[-1] # South to North
     plt.ylim(ylims); plt.xlim(xlims)
-    if cbar:
-        cb=plt.colorbar(label=clabel, format=cbarform, pad=0.01)
+    if len(cbargs)>0:
+        if "label" not in cbargs:
+            cbargs['label']=""
+        if "pad" not in cbargs:
+            cbargs['pad']=0.01
+        cb=plt.colorbar(**cbargs)
     plt.title(title)
     ## Turn off the tick values
     plt.xticks([]); plt.yticks([])
     return cs, cb
+
 
 def map_fire(ff,lats,lons, **contourargs):
     """   

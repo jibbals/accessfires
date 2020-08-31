@@ -35,7 +35,6 @@ _sn_ = 'pyrocb'
 
 __cloud_thresh__ = constants.cloud_threshold
 
-
 ## List of PyroCB latlon, and time 
 __PCB_occurrences__ = {
     'waroona_run3':{
@@ -598,7 +597,7 @@ def moving_pyrocb(model_run='waroona_run3', dtimes = None,
             
             fio.save_fig(model_run,_sn_,ffdtimes[i],plt,subdir='moving')
         
-    
+
 def pyrocb_model_run(model_run='waroona_run1', dtime=datetime(2016,1,5,15),
                      localtime=True, ):
     """
@@ -685,21 +684,108 @@ def pyrocb_model_run(model_run='waroona_run1', dtime=datetime(2016,1,5,15),
         plt.subplots_adjust(hspace=0.08)
         fio.save_fig(model_run, _sn_, ffdtimes[i], plt, dpi=200)
 
+
+def examine_metrics(mr,hour=0,extent=None,levels=[0,10,20,30,40],HSkip=None):
+    """
+    wind direction mapping, at various levels
+    """
+    locname=mr.split('_')[0]
+    if extent is None:
+        extent=plotting._extents_[locname+'z']
+    model_hour = fio.sim_info[locname]['filedates'][hour]
+    cubes=fio.read_model_run(mr, fdtime=model_hour,extent=extent,HSkip=HSkip,
+                             add_winds=True)
+    u,v = cubes.extract(['u','v'])
+    ctimes=utils.dates_from_iris(u)
+    ff,=fio.read_fire(mr,dtimes=ctimes,extent=extent,HSkip=HSkip)
+    lats,lons = u.coord('latitude').points, u.coord('longitude').points
+    heights=utils.height_from_iris(u)
+    offset_hours=timedelta(hours=fio.run_info[mr]['UTC_offset'])
+    
+    ## cbar for wind dir
+    cmap_wind='gnuplot2' # continuous
+    norm_wind=col.Normalize(vmin=0,vmax=360)
+    tickform_wind=tick.ScalarFormatter()
+    levels_wind=np.arange(361)
+    
+    cmap_vort='PRGn' # divergent
+    norm_vort=col.SymLogNorm(.00005,vmin=-.01, vmax=.01)
+    tickform_vort=tick.LogFormatter()
+    levels_vort=np.union1d(np.union1d(-1*np.logspace(-5,-2),0),np.logspace(-5,-2))
+    
+    ## loop over levels and times
+    for cti, utc in enumerate(ctimes):
+        local_time = utc+offset_hours
+        metrics={}
+        for mname, cmap, norm, tickform, clevs in zip(
+                ['wind_direction','vorticity'],
+                [cmap_wind,cmap_vort],
+                [norm_wind,norm_vort],
+                [tickform_wind,tickform_vort],
+                [levels_wind,levels_vort]):
+        
+            # for each time we make a figure
+            fig=plt.figure(figsize=[8,16])
+            
+            for levi, lev in enumerate(levels):
+                plt.subplot(len(levels),1,len(levels)-levi)
+                
+                wd = utils.wind_dir_from_uv(u[cti,lev,:,:].data.data,v[cti,lev,:,:].data.data)
+                vort, OW, OWZ = utils.vorticity(u[cti,lev,:,:].data.data,v[cti,lev,:,:].data.data,lats,lons)
+                metrics['wind_direction']=wd
+                metrics['vorticity']=vort
+                
+                metric=metrics[mname]
+                # set cbargs to make colorbar within plot
+                cbargs={}
+                cs,cb=plotting.map_contourf(metric,lats,lons,
+                                            levels = clevs,
+                                            cmap=cmap, 
+                                            norm=norm,
+                                            )#clabel='m/s', cbarform=cbarform)
+                
+                tstring="~ %5.0f m"%(heights[lev])
+                if levi == len(levels)-1:
+                    tstring="%s ~ %5.0f m - %s"%(local_time.strftime("%H:%M"),heights[lev],mname)
+                plt.title(tstring)
+                # add nearby towns
+                plotting.map_add_locations_extent(locname,hide_text=False,nice=True)
+                
+                # Add fire front
+                plotting.map_fire(ff[cti].data,lats,lons,
+                                  alpha=0.5 + 0.5*(levi==0), 
+                                  )
+    
+            # add colour bar
+            axes=[0.87, 0.20, 0.04, 0.6] 
+            #f.subplots_adjust(top=0.95)
+            fig.subplots_adjust(wspace=0.001)
+            fig.subplots_adjust(right=axes[0]-0.03)
+            cbar_ax = fig.add_axes(axes)
+            fig.colorbar(cs, cax=cbar_ax, format=tickform)
+            # save figure
+            fio.save_fig(mr,_sn_,utc,plt,subdir=mname)
+
 if __name__ == '__main__':
     
     waroona_second_half = np.array([datetime(2016,1,5,15)+ timedelta(hours=12+x) for x in range(12)])
     sirivan_good_half = np.array([datetime(2017,2,12,4)+ timedelta(hours=x) for x in range(6)])
     
-    ## check to see where pcb are occurring
-    if True:
-        for run in ['sirivan_run5','sirivan_run5_hr','sirivan_run6','sirivan_run6_hr']:
-            ## gridded Sample already done
-            locname=run.split('_')[0]
-            sample_showing_grid(model_run=run, extentname=locname, HSkip=5)
-        for run in ['sirivan_run5_hr']:
-            for hour in sirivan_good_half:
+    for hi,hour in enumerate(sirivan_good_half):
+        if True:
+            for run in ['sirivan_run5','sirivan_run5_hr','sirivan_run6','sirivan_run6_hr']:
+                examine_metrics(run,hour=hi+13,HSkip=None)
+
+        ## check to see where pcb are occurring
+        if False:
+            for run in ['sirivan_run5','sirivan_run5_hr','sirivan_run6','sirivan_run6_hr']:
+                ## gridded Sample already done
+                locname=run.split('_')[0]
+                sample_showing_grid(model_run=run, extentname=locname, HSkip=5)
+            for run in ['sirivan_run5_hr']:
                 pyrocb_model_run(run, dtime=hour)
                 moving_pyrocb(run, dtimes=[hour], xlen=0.25)
+            
 
 
     ## New zoomed, moving pyrocb plotting

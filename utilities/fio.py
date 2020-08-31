@@ -37,17 +37,20 @@ sim_info={
     'sirivan':{
         'filedates':np.array([datetime(2017,2,11,21) + timedelta(hours=x) for x in range(24)]),
         'topog':'umnsaa_2017021121_slv.nc',
+        'UTC_offset':11,
         'WESN':[148.9936, 150.6036, -32.8064, -31.1964],
         'UTC_offset':11, # utc + 11 in summer, utc+10 for other seasons
         },
     'waroona':{
         'filedates':np.array([datetime(2016,1,5,15) + timedelta(hours=x) for x in list(range(24))+list(range(36,60))]),
         'topog':'umnsaa_2016010515_slv.nc',
+        'UTC_offset':8,
         'WESN':[115.2936,116.9036, -33.7064,-32.0964 ],
         'UTC_offset':8, # utc + 8, no summer daylight savings
         },
     'NYE':{
         'topog':'umnsaa_2019123009_slv.nc',
+        'UTC_offset':11,
         'filedates':np.array([datetime(2019,12,30,9) + timedelta(hours=x) for x in range(24)]),
         'UTC_offset':11, # utc + 11 in summer
         }
@@ -189,6 +192,7 @@ run_info = {
     ## Sirivan run around June (2019)
     'sirivan_run1':{
         'dir':'data/sirivan/run1/',
+        'topog':'umnsaa_pa2017021121.nc',
         'run':'Run in June 2019?',
         'fire_affix':'CSIRO_MinT',
         'origdir':'/short/en0/hxy548/cylc-run/au-aa860/share/cycle/20170211T2100Z/sirivan/0p3/ukv_os38/um',
@@ -480,8 +484,9 @@ def read_nc_iris(fpath, constraints=None, keepvars=None, HSkip=None):
 def fire_paths(model_run):
     fdir = run_info[model_run]['dir']+'fire/'
     affix='20' # if there is no affix, look for name.YYYYMMDDTHHmmZ.nc
-    if 'fire_affix' in run_info:
-        affix=run_info['fire_affix']
+    if 'fire_affix' in run_info[model_run]:
+        affix=run_info[model_run]['fire_affix']
+    print("DEBUG: looking for file:",fdir+'firefront.'+affix+'*')
     ffpaths=glob(fdir+'firefront.'+affix+'*')
     fluxpaths=glob(fdir+'sensible_heat.'+affix+'*')
     fspaths=glob(fdir+'fire_speed.'+affix+'*')
