@@ -221,15 +221,17 @@ def PFT_from_cubelist(cubes0, latlon=None, tskip=None, latskip=None, lonskip=Non
 
 if __name__=='__main__':
     # deresolved horizontally (don't need high res)
-    Hskip=6
+    HSkip=8
+    HSkip_hr=12
     #['sirivan_run1','waroona_run1','waroona_run2','waroona_run2uc']:#,'waroona_old']:
 
-    for mr in ['sirivan_run3_hr']:
-    # let's time how long it takes
+    for mr in ['sirivan_run4','sirivan_run5','sirivan_run5_hr','sirivan_run6','sirivan_run6_hr']:
+        MRSKIP=HSkip_hr if 'hr' in mr else HSkip
+        # let's time how long it takes
         start = timer()
         extentname=mr.split('_')[0]
         extent=plotting._extents_[extentname]
-        hours = fio.model_outputs[mr]['filedates']
+        hours = fio.run_info[mr]['filedates']
         PFT_full=[]
         dtimes=[]
         cubes=None
@@ -237,20 +239,24 @@ if __name__=='__main__':
             del cubes
             # Read the cubes for one hour at a time
             cubes = fio.read_model_run(mr, fdtime=hour, extent=extent,
+                                       HSkip=MRSKIP,
                                        add_z=True, add_RH=True,
                                        add_topog=True, add_winds=True,
-                                       add_theta=True)
+                                       add_theta=True,)
             
-            PFT = PFT_from_cubelist(cubes, latskip=Hskip, lonskip=Hskip)
+            PFT = PFT_from_cubelist(cubes)
             PFT_full.append(PFT)
             dtimes.append(cubes[0].dim_coords[0].points)
         
-        # extend along time dimension...
+        ## COMBINE PFT ARRAY along time dimension...
         PFT=np.concatenate(PFT_full,axis=0)
         dtimes = np.concatenate(dtimes,axis=0) # array of seconds since 1970-01-01 00:00:00
-        lats = cubes[0].coord('latitude').points[::Hskip]
-        lons = cubes[0].coord('longitude').points[::Hskip]
-        Pa = cubes[0][:,0,::Hskip,::Hskip]
+        ## Fix coordinates
+        ## Copy existing coords and attributes
+        lats = cubes[0].coord('latitude').points
+        lons = cubes[0].coord('longitude').points
+        Pa, = cubes.extract('air_pressure')
+        Pa = Pa[:,0] # surface only
         
         # copy dimensions
         timecoord = iris.coords.DimCoord(dtimes, 'time', units=Pa.coord('time').units)
@@ -276,12 +282,13 @@ if __name__=='__main__':
         PFTcube.attributes=attributes
         
         # save file
-        fname='data/%s/PFT.nc'%mr
+        ddir=fio.run_info[mr]['dir']
+        fname='%s/PFT.nc'%ddir
         iris.save(PFTcube,fname)
         
         
         end = timer()
-        print("Info: time to read model run and calculate data/%s/PFT.nc: %.2f minutes"%(mr, (end-start)/60.0))
+        print("Info: time to read model run and calculate %s : %.2f minutes"%(fname, (end-start)/60.0))
         
         # test file:
         f = iris.load(fname)

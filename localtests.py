@@ -34,12 +34,15 @@ import pandas
 _sn_='localtests'
 
 
-mr='sirivan_run6'
+mr='sirivan_run1'
 umhours=fio.run_info[mr]['filedates'][:2]
-cubes=fio.read_model_run(mr,extent=[150.0,150.2,-31.99,-31.9],fdtime=umhours)
+cubes=fio.read_model_run(mr,extent=[149,150.2,-32.1,-31],fdtime=umhours[0],
+                         HSkip=5)
 print(cubes)
-
-ff=fio.read_fire(mr)
-print(ff)
+print(len(cubes[0].coord('latitude').points))
+print(cubes[0].coord('latitude').points)
+print(cubes[0].coord('latitude').points[::5])
+#ff=fio.read_fire(mr)
+#print(ff)
 
 
