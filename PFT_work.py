@@ -149,9 +149,8 @@ def firepower_comparison(runs=['waroona_run1','waroona_old','waroona_run2','waro
     lat,lon = PFT[runs[0]]['latlon']
     fpextent = plotting._extents_[runs[0].split('_')[0]]
     
-    offset = timedelta(hours=8)
-    if lon > 130:
-        offset = timedelta(hours=10)
+    offset = timedelta(hours=fio.run_info['UTC_offset'])
+    
     labels = runs
     #labels = ['new','orig'] # just for poster
     
@@ -303,11 +302,11 @@ if __name__ == '__main__':
     #firepower_comparison()
 
     ## Summary figure for PFT at a site for one output hour
-    if False:
-        for mr in ['sirivan_run1','sirivan_run1_hr']:
+    if True:
+        for mr in ['sirivan_run4','sirivan_run6_hr','sirivan_run6','sirivan_run5_hr','sirivan_run5']:
             #['waroona_run3', 'waroona_run1']:
             dtimes = fio.run_info[mr]['filedates']
-            for hour in np.arange(5,20):
+            for hour in np.arange(12,22):
                 model_run_PFT_summary(model_run=mr, hour=dtimes[hour])
     
     

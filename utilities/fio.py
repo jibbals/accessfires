@@ -37,20 +37,17 @@ sim_info={
     'sirivan':{
         'filedates':np.array([datetime(2017,2,11,21) + timedelta(hours=x) for x in range(24)]),
         'topog':'umnsaa_2017021121_slv.nc',
-        'UTC_offset':11,
         'WESN':[148.9936, 150.6036, -32.8064, -31.1964],
         'UTC_offset':11, # utc + 11 in summer, utc+10 for other seasons
         },
     'waroona':{
         'filedates':np.array([datetime(2016,1,5,15) + timedelta(hours=x) for x in list(range(24))+list(range(36,60))]),
         'topog':'umnsaa_2016010515_slv.nc',
-        'UTC_offset':8,
         'WESN':[115.2936,116.9036, -33.7064,-32.0964 ],
         'UTC_offset':8, # utc + 8, no summer daylight savings
         },
     'NYE':{
         'topog':'umnsaa_2019123009_slv.nc',
-        'UTC_offset':11,
         'filedates':np.array([datetime(2019,12,30,9) + timedelta(hours=x) for x in range(24)]),
         'UTC_offset':11, # utc + 11 in summer
         }
@@ -419,7 +416,8 @@ def read_pft(model_run='waroona_run1',times=None, lats=None, lons=None):
     returns pft, pftlats, pftlons
     '''
     # load the single cube in PFT.nc
-    pft0,=iris.load('data/%s/PFT.nc'%model_run)
+    fpath=run_info[model_run]['dir']+'/PFT.nc'
+    pft0,=iris.load(fpath)
     
     # pft is [time, lats, lons]
     pft = pft0
