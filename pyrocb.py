@@ -692,11 +692,14 @@ if __name__ == '__main__':
     
     ## check to see where pcb are occurring
     if True:
-        ## gridded Sample already done
-        #sample_showing_grid(model_run="sirivan_run5_hr", extentname='sirivan', HSkip=5)
-        for hour in sirivan_good_half:
-            pyrocb_model_run('sirivan_run5_hr', dtime=hour)
-            moving_pyrocb('sirivan_run5_hr', dtimes=[hour], xlen=0.25)
+        for run in ['sirivan_run5','sirivan_run5_hr','sirivan_run6','sirivan_run6_hr']:
+            ## gridded Sample already done
+            locname=run.split('_')[0]
+            sample_showing_grid(model_run=run, extentname=locname, HSkip=5)
+        for run in ['sirivan_run5_hr']:
+            for hour in sirivan_good_half:
+                pyrocb_model_run(run, dtime=hour)
+                moving_pyrocb(run, dtimes=[hour], xlen=0.25)
 
 
     ## New zoomed, moving pyrocb plotting
