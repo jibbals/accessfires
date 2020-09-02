@@ -65,9 +65,33 @@ __PCB_occurrences__ = {
         'time':[datetime(2016,1,5,21), datetime(2016,1,6,0), 
                 datetime(2016,1,6,8),]
         },
+    'sirivan_run7_hr':{ #Maybe PCB at 0700 UTC or 1800 LT
+        'latlon':[(-32.05,149.95),(-32.02,150.02)],
+        'time':[datetime(2017,2,12,6), datetime(2017,2,12,7),]
+        },
+    'sirivan_run7':{ # Doesn't look like much in this run....
+        'latlon':[(-32.1,149.9),(-32,150)],
+        'time':[datetime(2017,2,12,6), datetime(2017,2,12,7),]
+        },
+    'sirivan_run6_hr':{ # big pyroCu, maybe not CB
+        'latlon':[(-32.7,149.9),(-31.975, 149.875)],
+        'time':[datetime(2017,2,12,4), datetime(2017,2,12,7),]
+        },
+    'sirivan_run6':{ # Doesn't look like more than PyroCu on this run
+        'latlon':[(-32.05,149.96),(-32.05,149.96)],
+        'time':[datetime(2017,2,12,6), datetime(2017,2,12,7),]
+        },
     'sirivan_run5_hr':{
         'latlon':[(-31.96,149.84),(-32, 149.9)],
         'time':[datetime(2017,2,12,7), datetime(2017,2,12,9),]
+        },
+    'sirivan_run5':{ # Doesn't look like more than PyroCu on this run
+        'latlon':[(-32.05,149.96),(-32.05,149.96)],
+        'time':[datetime(2017,2,12,6), datetime(2017,2,12,7),]
+        },
+    'sirivan_run4':{ # Doesn't look like more than PyroCu on this run
+        'latlon':[(-32.05,149.96),(-32.05,149.96)],
+        'time':[datetime(2017,2,12,6), datetime(2017,2,12,7),]
         },
     'sirivan_run2_hr':{
         'latlon':[(-32.1,149.8),(-32.13,149.95),
@@ -175,7 +199,8 @@ def map_with_transect(data,lat,lon, transect,
     start,end = transect
     
     # map contour using input data and arguments
-    cs, cb = plotting.map_contourf(extent, data, lat, lon,
+    #data, lat,lon, title="",cbargs={}, **contourfargs
+    cs, cb = plotting.map_contourf(data, lat, lon,
                                    **map_contourf_args)
     
     # fn for adding little arrow to map
@@ -199,7 +224,7 @@ def map_with_transect(data,lat,lon, transect,
     
     # Add fire outline
     if ff is not None:
-        print("DEBUG: mapfire:",ff.shape,lat.shape,lon.shape)
+        #print("DEBUG: mapfire:",ff.shape,lat.shape,lon.shape)
         plotting.map_fire(ff,lat,lon)
     
     return cs,cb
@@ -377,13 +402,18 @@ def pyrocb(w, u, qc, z, wmean, topog, lat, lon,
     clevs_vertwind = np.union1d(np.union1d(2.0**np.arange(-2,6),
                                            -1*(2.0**np.arange(-2,6))),
                                 np.array([0]))
+    #print("DEBUG: calling map_with_transect:")
+    #print("     :",np.shape(wmean), len(lat),len(lon),np.shape(ff))
     cs, _ = map_with_transect(wmean, lat, lon, transect1, ff=ff, 
                               extralines=[transect2,transect3],
                               extracolors=['b','teal'],
-                              clevs = clevs_vertwind, cbar=False, 
+                              cbargs={}, # effectively turns off cbar
+                              levels = clevs_vertwind, 
                               cmap=plotting._cmaps_['verticalvelocity'],
                               norm=col.SymLogNorm(0.25), 
-                              cbarform=tick.ScalarFormatter(), clabel='m/s')
+                              #cbarform=tick.ScalarFormatter(), 
+                              #clabel='m/s',
+                              )
     plt.title(wmeantitle)
     
     # add nearby towns
@@ -507,10 +537,11 @@ def moving_pyrocb(model_run='waroona_run3', dtimes = None,
         transects = [[plat,plon-xlen/2.0,plat,plon+xlen/2.0] for (plat,plon) in pcb_centres]
         
         ## fire front
-        ff, = fio.read_fire(model_run=model_run, 
+        ff, sh = fio.read_fire(model_run=model_run, 
                             dtimes=ffdtimes, 
                             extent=extent, 
                             firefront=True,
+                            sensibleheat=True,
                             HSkip=HSkip)
         # cubes to calculate zth
         p, pmsl = cubes.extract(['air_pressure','air_pressure_at_sea_level'])
@@ -529,8 +560,10 @@ def moving_pyrocb(model_run='waroona_run3', dtimes = None,
 
 
             fire=None
+            sheat=None
             if ff is not None:
                 fire=ff[i].data.data
+                sheat=sh[i].data.data
             qci = qc[i].data.data
             ui = u[i].data.data
             wi = w[i].data.data
@@ -549,12 +582,13 @@ def moving_pyrocb(model_run='waroona_run3', dtimes = None,
             plt.subplot(3,1,1)
             cs, _ = map_with_transect(wmean.data, lat, lon, transect=[start,end], 
                                       ff=fire, color='k', linewidth=1,
-                                      clevs = clevs_vertwind,
-                                      cbar=False, 
+                                      cbargs={}, 
+                                      levels = clevs_vertwind,
                                       cmap=plotting._cmaps_['verticalvelocity'],
                                       norm=col.SymLogNorm(0.25), 
-                                      cbarform=tick.ScalarFormatter(), 
-                                      clabel='m/s')
+                                      #cbarform=tick.ScalarFormatter(), 
+                                      #clabel='m/s',
+                                      )
             plotting.map_add_locations_extent(extentname,hide_text=True) 
             wmeantitle='Vertical motion mean (%3.0fm - %4.0fm)'%(h0,h1)
             plt.title(wmeantitle)
@@ -562,7 +596,7 @@ def moving_pyrocb(model_run='waroona_run3', dtimes = None,
             ## Transect of vert motion
             plt.subplot(3,1,2)
             transect_plus_stream(wi,ui,qci,topog,zth,lat,lon,start,end,ztop,
-                                 ff=fire,
+                                 sh=sheat,
                                  contours=clevs_vertwind)
             
             plt.ylabel('height (m)')
@@ -599,7 +633,7 @@ def moving_pyrocb(model_run='waroona_run3', dtimes = None,
         
 
 def pyrocb_model_run(model_run='waroona_run1', dtime=datetime(2016,1,5,15),
-                     localtime=True, ):
+                     localtime=True, HSkip=None,):
     """
     Try to show pyrocb using two figures:
         1: left to right transect showing winds and potential temp
@@ -612,7 +646,8 @@ def pyrocb_model_run(model_run='waroona_run1', dtime=datetime(2016,1,5,15),
     
     ## read um output over extent [t, lev, lat, lon]
     cubes = fio.read_model_run(model_run, fdtime=[dtime], extent=extent,
-                               add_z=True, add_winds=True, add_topog=True)
+                               add_z=True, add_winds=True, add_topog=True,
+                               HSkip=HSkip,)
     
     w, = cubes.extract('upward_air_velocity')
     u, = cubes.extract('u')
@@ -625,7 +660,9 @@ def pyrocb_model_run(model_run='waroona_run1', dtime=datetime(2016,1,5,15),
 
     ## fire front
     ffdtimes = utils.dates_from_iris(w)
-    ff, = fio.read_fire(model_run=model_run, dtimes=ffdtimes, extent=extent, firefront=True)
+    ff, = fio.read_fire(model_run=model_run, dtimes=ffdtimes, extent=extent,
+                        firefront=True,
+                        HSkip=HSkip,)
     
     ## Make transects based on PCB occurrence listed latlons
     # sirivan run transects are twice as wide as waroona (bigger fire)
@@ -682,7 +719,9 @@ def pyrocb_model_run(model_run='waroona_run1', dtime=datetime(2016,1,5,15),
         # Save figure into animation folder with numeric identifier
         plt.suptitle(stitle)
         plt.subplots_adjust(hspace=0.08)
-        fio.save_fig(model_run, _sn_, ffdtimes[i], plt, dpi=200)
+        fio.save_fig(model_run, _sn_, ffdtimes[i], plt,
+                     subdir='Xtransect',
+                     dpi=200)
 
 
 def examine_metrics(mr,hour,extent=None,HSkip=None):
@@ -787,21 +826,22 @@ if __name__ == '__main__':
     waroona_second_half = np.array([datetime(2016,1,5,15)+ timedelta(hours=12+x) for x in range(12)])
     sirivan_good_half = np.array([datetime(2017,2,12,4)+ timedelta(hours=x) for x in range(6)])
     
-    for hi,hour in enumerate(sirivan_good_half):
-        if True:
+    for hour in sirivan_good_half:
+    #for hour in [datetime(2017,2,11,21)]:
+        if False:
             for run in ['sirivan_run5','sirivan_run5_hr','sirivan_run6','sirivan_run6_hr','sirivan_run7','sirivan_run7_hr']:
                 examine_metrics(run,hour=hour,HSkip=None)
 
         ## check to see where pcb are occurring
-        if True:
+        if False:
             for run in ['sirivan_run7','sirivan_run7_hr']:
                 locname=run.split('_')[0]
                 sample_showing_grid(model_run=run, extentname=locname, HSkip=5)
-        if False:
+        if True:
             # When sample used to put some data in pcb occurrence dict run these
-            for run in ['sirivan_run7','sirivan_run7_hr']:
-                pyrocb_model_run(run, dtime=hour)
-                moving_pyrocb(run, dtimes=[hour], xlen=0.25)
+            for run in ['sirivan_run4','sirivan_run7_hr','sirivan_run6_hr','sirivan_run5_hr',]:
+                pyrocb_model_run(run, dtime=hour,HSkip=None)
+                moving_pyrocb(run, dtimes=[hour], xlen=0.25,HSkip=None)
             
 
 
