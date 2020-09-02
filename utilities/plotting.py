@@ -342,7 +342,7 @@ def map_draw_gridlines(ax, linewidth=1, color='black', alpha=0.5,
     gl = ax.gridlines(linewidth=linewidth, color=color, alpha=alpha, 
                       linestyle=linestyle, draw_labels=draw_labels)
     if draw_labels:
-        gl.xlabels_top = gl.ylabels_right = False
+        gl.top_labels = gl.right_labels = False
         gl.xformatter = LONGITUDE_FORMATTER
         gl.yformatter = LATITUDE_FORMATTER
     if gridlines is not None:

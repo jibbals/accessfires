@@ -494,7 +494,7 @@ def fire_paths(model_run):
     affix='20' # if there is no affix, look for name.YYYYMMDDTHHmmZ.nc
     if 'fire_affix' in run_info[model_run]:
         affix=run_info[model_run]['fire_affix']
-    print("DEBUG: looking for file:",fdir+'firefront.'+affix+'*')
+    #print("DEBUG: looking for file:",fdir+'firefront.'+affix+'*')
     ffpaths=glob(fdir+'firefront.'+affix+'*')
     fluxpaths=glob(fdir+'sensible_heat.'+affix+'*')
     fspaths=glob(fdir+'fire_speed.'+affix+'*')

@@ -751,6 +751,9 @@ def examine_metrics(mr,hour,extent=None,HSkip=None):
                 metric=metrics[mname]
                 # set cbargs to make colorbar within plot
                 cbargs={}
+                print("DEBUG: precontourf",mname)
+                print("     :",np.shape(metric),np.shape(lats),np.shape(lons),np.shape(clevs))
+                print("     :",clevs)
                 cs,cb=plotting.map_contourf(metric,lats,lons,
                                             levels = clevs,
                                             cmap=cmap, 
@@ -782,18 +785,16 @@ def examine_metrics(mr,hour,extent=None,HSkip=None):
 if __name__ == '__main__':
     
     waroona_second_half = np.array([datetime(2016,1,5,15)+ timedelta(hours=12+x) for x in range(12)])
-    sirivan_good_half = np.array([datetime(2017,2,12,3)+ timedelta(hours=x) for x in range(8)])
+    sirivan_good_half = np.array([datetime(2017,2,12,4)+ timedelta(hours=x) for x in range(6)])
     
     for hi,hour in enumerate(sirivan_good_half):
         if True:
             for run in ['sirivan_run5','sirivan_run5_hr','sirivan_run6','sirivan_run6_hr','sirivan_run7','sirivan_run7_hr']:
-            #for run in ['sirivan_run7','sirivan_run7_hr']:
                 examine_metrics(run,hour=hour,HSkip=None)
 
         ## check to see where pcb are occurring
-        #if True:
-        #    for run in ['sirivan_run6_hr','sirivan_run6','sirivan_run7','sirivan_run7_hr']:
-                ## gridded Sample already done
+        if True:
+            for run in ['sirivan_run7','sirivan_run7_hr']:
                 locname=run.split('_')[0]
                 sample_showing_grid(model_run=run, extentname=locname, HSkip=5)
         if False:
