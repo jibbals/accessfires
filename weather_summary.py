@@ -194,7 +194,7 @@ def weather_summary_model(model_version='waroona_run1',
         extentname=None
         extent = zoom_in
     if fdtimes is None:
-        fdtimes = fio.model_outputs[model_version]['filedates']
+        fdtimes = fio.run_info[model_version]['filedates']
     FF = None
     
     # read one hour at a time, plot each available time slice
@@ -266,7 +266,7 @@ def weather_series(model_run='waroona_run3',
     qc_thresh = constants.cloud_threshold
     
     # READ EVERYTHING, SUBSET, CALC DESIRED METRICS, PLOT METRICS
-    modeltimes = fio.model_outputs[model_run]['filedates']
+    modeltimes = fio.run_info[model_run]['filedates']
     fdtimes = modeltimes[-24:] if day2 else modeltimes[:24]
     cubes = fio.read_model_run(model_run, extent=extent,
                                HSkip=HSkip,
@@ -578,7 +578,7 @@ def weather_series(model_run='waroona_run3',
 if __name__=='__main__':
     
     
-    waroona_run3times = fio.model_outputs['waroona_run3']['filedates']
+    waroona_run3times = fio.run_info['waroona_run3']['filedates']
     waroona_day2zoom = [115.7,116.0, -33.18,-32.9]
     ## run for all of waroona_run2 datetimes
     #weather_summary_model(model_version='waroona_run3')
@@ -593,8 +593,8 @@ if __name__=='__main__':
     
     ## Run weather summary
     if True:
-        for mr,exname in zip(['sirivan_run6_hr',],['sirivanz',]):
-            fdt = fio.model_outputs[mr]['filedates']
+        for mr,exname in zip(['sirivan_run7_hr','sirivan_run7'],['sirivanz','sirivanz']):
+            fdt = fio.run_info[mr]['filedates']
 
             zoom_in = plotting._extents_[exname]
 

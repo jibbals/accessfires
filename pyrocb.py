@@ -685,14 +685,15 @@ def pyrocb_model_run(model_run='waroona_run1', dtime=datetime(2016,1,5,15),
         fio.save_fig(model_run, _sn_, ffdtimes[i], plt, dpi=200)
 
 
-def examine_metrics(mr,hour=0,extent=None,levels=[0,10,20,30,40],HSkip=None):
+def examine_metrics(mr,hour,extent=None,HSkip=None):
     """
     wind direction mapping, at various levels
     """
     locname=mr.split('_')[0]
     if extent is None:
-        extent=plotting._extents_[locname+'z']
-    model_hour = fio.sim_info[locname]['filedates'][hour]
+        extent=plotting._extents_[locname+'_pcb']
+    #model_hour = fio.sim_info[locname]['filedates'][hour]
+    model_hour=hour
     cubes=fio.read_model_run(mr, fdtime=model_hour,extent=extent,HSkip=HSkip,
                              add_winds=True)
     u,v = cubes.extract(['u','v'])
@@ -706,23 +707,33 @@ def examine_metrics(mr,hour=0,extent=None,levels=[0,10,20,30,40],HSkip=None):
     cmap_wind='gnuplot2' # continuous
     norm_wind=col.Normalize(vmin=0,vmax=360)
     tickform_wind=tick.ScalarFormatter()
-    levels_wind=np.arange(361)
+    clevels_wind=np.arange(361)
+    levels_wind=[0,15,30,45]
     
     cmap_vort='PRGn' # divergent
     norm_vort=col.SymLogNorm(.00005,vmin=-.01, vmax=.01)
     tickform_vort=tick.LogFormatter()
-    levels_vort=np.union1d(np.union1d(-1*np.logspace(-5,-2),0),np.logspace(-5,-2))
+    clevels_vort=np.union1d(np.union1d(-1*np.logspace(-5,-2),0),np.logspace(-5,-2))
+    levels_vort=[0,20,40,60,80]
+    
+    cmap_ow='gnuplot2' # continuous
+    norm_ow=col.Normalize(vmin=0,vmax=1)
+    tickform_ow=tick.ScalarFormatter()
+    clevels_ow=np.linspace(0,1,60)
+    levels_ow=levels_vort
     
     ## loop over levels and times
     for cti, utc in enumerate(ctimes):
         local_time = utc+offset_hours
         metrics={}
-        for mname, cmap, norm, tickform, clevs in zip(
-                ['wind_direction','vorticity'],
-                [cmap_wind,cmap_vort],
-                [norm_wind,norm_vort],
-                [tickform_wind,tickform_vort],
-                [levels_wind,levels_vort]):
+        for mname, cmap, norm, tickform, clevs, levels in zip(
+                ['wind_direction','vorticity','OkuboWeiss'],
+                [cmap_wind,cmap_vort,cmap_ow],
+                [norm_wind,norm_vort,norm_ow],
+                [tickform_wind,tickform_vort,tickform_ow],
+                [clevels_wind,clevels_vort,clevels_ow],
+                [levels_wind,levels_vort,levels_ow]
+                ):
         
             # for each time we make a figure
             fig=plt.figure(figsize=[8,16])
@@ -734,7 +745,9 @@ def examine_metrics(mr,hour=0,extent=None,levels=[0,10,20,30,40],HSkip=None):
                 vort, OW, OWZ = utils.vorticity(u[cti,lev,:,:].data.data,v[cti,lev,:,:].data.data,lats,lons)
                 metrics['wind_direction']=wd
                 metrics['vorticity']=vort
-                
+                metrics['OkuboWeiss']=OW
+                metrics['OkuboWeissNormed']=OWZ
+
                 metric=metrics[mname]
                 # set cbargs to make colorbar within plot
                 cbargs={}
@@ -746,7 +759,7 @@ def examine_metrics(mr,hour=0,extent=None,levels=[0,10,20,30,40],HSkip=None):
                 
                 tstring="~ %5.0f m"%(heights[lev])
                 if levi == len(levels)-1:
-                    tstring="%s ~ %5.0f m - %s"%(local_time.strftime("%H:%M"),heights[lev],mname)
+                    tstring="%s ~ %5.0f m - %s"%(local_time.strftime("%d %H:%M"),heights[lev],mname)
                 plt.title(tstring)
                 # add nearby towns
                 plotting.map_add_locations_extent(locname,hide_text=False,nice=True)
@@ -769,20 +782,23 @@ def examine_metrics(mr,hour=0,extent=None,levels=[0,10,20,30,40],HSkip=None):
 if __name__ == '__main__':
     
     waroona_second_half = np.array([datetime(2016,1,5,15)+ timedelta(hours=12+x) for x in range(12)])
-    sirivan_good_half = np.array([datetime(2017,2,12,4)+ timedelta(hours=x) for x in range(6)])
+    sirivan_good_half = np.array([datetime(2017,2,12,3)+ timedelta(hours=x) for x in range(8)])
     
     for hi,hour in enumerate(sirivan_good_half):
         if True:
-            for run in ['sirivan_run5','sirivan_run5_hr','sirivan_run6','sirivan_run6_hr']:
-                examine_metrics(run,hour=hi+13,HSkip=None)
+            for run in ['sirivan_run5','sirivan_run5_hr','sirivan_run6','sirivan_run6_hr','sirivan_run7','sirivan_run7_hr']:
+            #for run in ['sirivan_run7','sirivan_run7_hr']:
+                examine_metrics(run,hour=hour,HSkip=None)
 
         ## check to see where pcb are occurring
-        if False:
-            for run in ['sirivan_run5','sirivan_run5_hr','sirivan_run6','sirivan_run6_hr']:
+        #if True:
+        #    for run in ['sirivan_run6_hr','sirivan_run6','sirivan_run7','sirivan_run7_hr']:
                 ## gridded Sample already done
                 locname=run.split('_')[0]
                 sample_showing_grid(model_run=run, extentname=locname, HSkip=5)
-            for run in ['sirivan_run5_hr']:
+        if False:
+            # When sample used to put some data in pcb occurrence dict run these
+            for run in ['sirivan_run7','sirivan_run7_hr']:
                 pyrocb_model_run(run, dtime=hour)
                 moving_pyrocb(run, dtimes=[hour], xlen=0.25)
             

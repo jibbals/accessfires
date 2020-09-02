@@ -276,7 +276,11 @@ if __name__=='__main__':
                   'geospatial_lat_units',
                   'publisher_institution', 'publisher_name', 'publisher_type', 
                   'publisher_url', 'naming_authority']
-        attributes = { k:Pa.attributes[k] for k in attrkeys }
+        attributes={}
+        for k in attrkeys:
+            if k in Pa.attributes.keys():
+                attributes[k] = Pa.attributes[k]
+        #attributes = { k:Pa.attributes[k] for k in attrkeys }
         attributes['geospatial_lon_max'] = np.max(lons)
         attributes['geospatial_lat_max'] = np.max(lats)
         PFTcube.attributes=attributes

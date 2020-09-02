@@ -56,6 +56,16 @@ sim_info={
 
 ## Where are model outputs located, and run specific info
 run_info = {
+    ## run with new fire speed/fuel parameters changed again
+    'sirivan_run7_hr':{
+        'dir':'data/sirivan/run7/0p1/',
+        'WESN':[149.3616,150.3975,-32.3024,-31.6985],
+        'origdir':'/g/data/en0/hxy548/ACCESS-fire/sirivan/2020-08-19/20170211T2100Z/0p1/atmos/',
+        },
+    'sirivan_run7':{
+        'dir':'data/sirivan/run7/0p3/',
+        'WESN':[149.4412,150.2179,-32.3024,-31.6985],
+        },
     ## run with new fire speed/fuel parameters turned up a bit again
     'sirivan_run6_hr':{
         'dir':'data/sirivan/run6/0p1/',

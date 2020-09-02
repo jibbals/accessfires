@@ -79,6 +79,7 @@ _extents_['sirivan']    = [149.2, 150.4, -32.4, -31.6]
 _extents_['sirivan_linescan']   = [149.48, 150.04, -32.18, -31.85]
 _extents_['sirivanz']   = [149.4, 150.15, -32.2, -31.8]
 _extents_['sirivans']   = [147,154, -34, -29] # synoptic
+_extents_['sirivan_pcb']= [149.675, 150.1, -32.08,-31.9]
 
 _latlons_['dunedoo']    = -32.019, 149.39
 _latlons_['borambil']   = -32.0367, 150.00
@@ -243,12 +244,14 @@ def map_add_locations_extent(extentname,
                   'waroonaf':['waroona','yarloop'],
                   'sirivan':['dunedoo','cassillis','uarbry'],
                   'sirivanz':['dunedoo','cassillis','uarbry'],
-                  'sirivans':['dunedoo','cassillis','uarbry']}
+                  'sirivans':['dunedoo','cassillis','uarbry'],
+                  'sirivan_pcb':['cassillis','uarbry'],
+                  }
     dx=.025
     dxfire = .025
     dy=.015
     dyfire = .015
-    if extentname in ['sirivan','sirivans']:
+    if 'sirivan' in extentname:
         dx=[.065,.02,.125]
         dy =[.02,.015,-.07]
         dxfire=.05
@@ -273,7 +276,7 @@ def map_add_locations_extent(extentname,
         map_add_locations([firename], text=[['Ignition',''][hide_text]], 
                           color='r', marker='*', dx=dxfire, dy=dyfire, textcolor='k')
         # add weather stations
-        if extentname=='waroona':
+        if 'waroona' in extentname:
             map_add_locations(['wagerup'],[['AWS',''][hide_text]],
                               color='b', marker='*', dx=-.025,dy=.01)
 
