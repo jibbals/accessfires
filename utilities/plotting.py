@@ -70,6 +70,12 @@ _latlons_['perth']      = -31.9505, 115.8605
 _latlons_['fire_waroona'] = -32.89, 116.17
 _latlons_['fire_waroona_upwind'] = -32.89 -0.004, 116.17+0.009 # ~ 1km from fire
 
+## Extra locs
+_latlons_['sydney']    = -33.8688, 151.2093
+_latlons_['brisbane']  = -27.4698, 153.0251
+_latlons_['canberra']  = -35.2809, 149.1300
+_latlons_['melbourne'] = -37.8136, 144.9631
+
 # two PyroCB
 _latlons_['pyrocb_waroona1'] = -32.87,116.1 # ~4pm first day
 _latlons_['pyrocb_waroona2'] = 0,0 # 1100-1400 second day
@@ -87,6 +93,9 @@ _latlons_['uarbry']     = -32.047280, 149.71
 _latlons_['coolah']     = -31.8234,149.722
 _latlons_['sirivan']    = _latlons_['uarbry'] # no idea where sir ivan is..
 _latlons_['cassillis']      = -32.01, 150.0
+_latlons_['leadville'] = -32.0383, 149.5779
+_latlons_['merotherie'] = -32.1586, 149.5696
+_latlons_['turill'] = -32.1692, 149.8360
 _latlons_['fire_sirivan'] = -32.05, 149.59
 _latlons_['fire_sirivan_upwind'] = -32.01, 149.5
 # one pyrocb
@@ -242,10 +251,10 @@ def map_add_locations_extent(extentname,
     locstrings = {'waroona':['waroona','yarloop'],
                   'waroonaz':['waroona','hamel'],
                   'waroonaf':['waroona','yarloop'],
-                  'sirivan':['dunedoo','cassillis','uarbry'],
-                  'sirivanz':['dunedoo','cassillis','uarbry'],
+                  'sirivan':['dunedoo','cassillis','leadville','merotherie','turill',],
+                  'sirivanz':['cassillis','leadville','merotherie','turill'],
                   'sirivans':['dunedoo','cassillis','uarbry'],
-                  'sirivan_pcb':['cassillis','uarbry'],
+                  'sirivan_pcb':['cassillis','turill','coolah'],
                   }
     dx=.025
     dxfire = .025
@@ -424,7 +433,9 @@ def map_sensibleheat(sh, lat, lon,
     if 'vmin' not in contourfargs:
         contourfargs['vmin']=100
     if 'cmap' not in contourfargs:
-        contourfargs['cmap']='cividis'# was 'gnuplot2'
+        contourfargs['cmap']='YlOrRd'# was 'gnuplot2'
+    #if 'extend' not in contourfargs:
+    #    contourfargs['extend']='max'
     
     shlatlon=flux
     if (sh.shape[0] == len(lon)) and (sh.shape[0] != len(lat)):
@@ -449,13 +460,15 @@ def map_sensibleheat(sh, lat, lon,
         if 'pad' not in cbar_kwargs:
             # space between cbar and fig axis
             cbar_kwargs['pad'] = 0.01
+        #if 'extend' not in cbar_kwargs:
+        #    cbar_kwargs['extend']='max'
         if 'ticks' not in cbar_kwargs:
             cbar_kwargs['ticks'] = [1e2,1e3,1e4,1e5],
             xtick_labels=['2','3','4','5']
         else:
             xtick_labels=cbar_kwargs['ticks']
         if 'label' not in cbar_kwargs:
-            cbar_kwargs['label'] ='log$_{10}$ Heat Flux [Wm$^{-2}$]',
+            cbar_kwargs['label'] ='log$_{10}$ Wm$^{-2}$',
         
         cbar=plt.colorbar(cs, **cbar_kwargs)
         cbar.ax.set_xticklabels(xtick_labels)

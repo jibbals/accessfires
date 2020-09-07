@@ -580,6 +580,8 @@ if __name__=='__main__':
     
     waroona_run3times = fio.run_info['waroona_run3']['filedates']
     waroona_day2zoom = [115.7,116.0, -33.18,-32.9]
+    si_hours=fio.sim_info['sirivan']['filedates']
+    
     ## run for all of waroona_run2 datetimes
     #weather_summary_model(model_version='waroona_run3')
     

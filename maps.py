@@ -44,7 +44,9 @@ __NESTS__ = {'waroona_run1':{'centre':[-32.9, 116.1],
                             'resolution':[.036,.01,.0028],
                              'nlats':[384,576,576],
                              'nlons':[384,576,576],
-                             'wider_view':[125,162,-44,-11],
+                             'wider_view':[137,158,-40,-20],
+                             'tiffname':'EasternAus.tiff',
+                             'pointnames':['sydney','brisbane','canberra','melbourne']
                              },
             }
 # old and run2 are the same as run1
@@ -121,7 +123,7 @@ def outline_waroona():
     
     fio.save_fig_to_path("figures/waroona_outline.png",plt,dpi=300)
 
-def show_nests(model_run='waroona_run1', annotate_res=True, title=''):
+def show_nests(model_run='waroona_run1', annotate_res=False, title=''):
     """
     show nested grids on stock image of australia, resolution annotated
     """
@@ -136,7 +138,7 @@ def show_nests(model_run='waroona_run1', annotate_res=True, title=''):
     # create figure and projection
     fig, ax = plotting.map_tiff_qgis(tiffname,
                                      extent=aust,
-                                     show_grid=True, 
+                                     show_grid=False, 
                                      locnames=locnames)
     
     # add coastline, stock img (tiff is currently just for zoomed in stuff)
@@ -162,10 +164,10 @@ def show_nests(model_run='waroona_run1', annotate_res=True, title=''):
                                        linewidth=2,
                                        #linestyle='-',
                                        alpha=0.9,
-                                       transform=ccrs.PlateCarree()
+                                       #transform=ccrs.PlateCarree()
                                        ))
         # transform for our epsg
-        maptransform=ccrs.PlateCarree()._as_mpl_transform(ax)
+        #maptransform=ccrs.PlateCarree()._as_mpl_transform(ax)
         
         # outline for text/markers
         outlinecolor='k'
@@ -173,8 +175,8 @@ def show_nests(model_run='waroona_run1', annotate_res=True, title=''):
         text_effects = [patheffects.withStroke(linewidth=3, foreground=outlinecolor)]
         text_color="wheat"
         ## add text
-        txt = ax.annotate(['Nest 1','Nest 2','N3'][i], xy=botleft, 
-                          xycoords=maptransform, 
+        txt = ax.annotate(['Nest 1','Nest 2','N3/N4'][i], xy=botleft, 
+                          #xycoords=maptransform, 
                           color=text_color,
                           ha='left', va='bottom')
         txt.set_path_effects(text_effects)
@@ -189,17 +191,17 @@ def show_nests(model_run='waroona_run1', annotate_res=True, title=''):
             txt.set_path_effects(text_effects)
             
     if title=='':
-        locname = str.capitalize(model_run.split('_')[0])
-        if locname == 'Sirivan':
-            locname = 'Sir Ivan'
-        title = "Fire-Access model run nests at %s"%locname
+        loclabel='Waroona'
+        if locname == 'sirivan':
+            loclabel = 'Sir Ivan'
+        title = "Fire-Access model run nests at %s"%loclabel
     plt.title(title)
     ## Add zoom of nest 3?
-    fio.save_fig(model_run,_sn_,'nested_grid',plt)
+    fio.save_fig('maps',locname,'nested_grid',plt)
     
 if __name__=='__main__':
     
     #outline_waroona()
     
-    for mr in ['waroona_run3']:
+    for mr in ['sirivan_run1']:
         show_nests(mr)

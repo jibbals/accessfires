@@ -16,8 +16,6 @@ import numpy as np
 from matplotlib.lines import Line2D
 from datetime import datetime,timedelta
 
-
-
 import iris
 
 from cartopy import crs as ccrs
@@ -81,12 +79,7 @@ def fireplan(ff, fire_contour_map = 'autumn',
         extent=extent, 
         **kwtiffargs,
         )
-    if 'waroona' in extentname:
-        plotting.map_add_nice_text(ax,[plotting._latlons_['waroona'],plotting._latlons_['yarloop']],
-                                   texts=['Waroona','Yarloop'], fontsizes=14)
-    else:
-        plotting.map_add_nice_text(ax,[plotting._latlons_['uarbry']],
-                                   texts=['Uarbry'], fontsizes=14)
+    plotting.map_add_locations_extent(extentname, hide_text=False, nice=True)
     
     # plot contours at each hour
     tstamp=[]
@@ -105,9 +98,12 @@ def fireplan(ff, fire_contour_map = 'autumn',
         ffdata = ff_f[hourinds][ii].data.data
         
         linewidth=1 + (ii == nt-1) # make final hour thicker
-        fire_line = plt.contour(lon, lat, ffdata, np.array([0]),
-                                colors=color, linewidths=linewidth,
-                                )
+        plotting.map_fire(ffdata,lat,lon,
+                          linewidth=linewidth,
+                          colors=color)
+        #fire_line = plt.contour(lon, lat, ffdata, np.array([0]),
+        #                        colors=color, linewidths=linewidth,
+        #                        )
     if color is not None:
         # final contour gets bonus blue line
         final_line=plt.contour(lon,lat,ff_f[-1].data.data, np.array([0]), 
@@ -295,13 +291,56 @@ def fireplan_vs_isochrones():
                         )
     
     fio.save_fig(mr,_sn_,"fireplan_vs_isochrones.png",plt)
+
+def heatmap(mr,extentname=None,winds=True):
+    """
+    """
+    if extentname is None:
+        extentname=mr.split('_')[0]
     
+    extent=plotting._extents_[extentname]
+    sh,u10,v10 = fio.read_fire(mr,extent=extent,firefront=False,sensibleheat=True,wind=True)
+    
+    lats=sh.coord('latitude').points
+    lons=sh.coord('longitude').points
+    times=utils.dates_from_iris(sh)
+    skip=10 # every 10 mins
+    start=120 # start after 2 hours
+    shsubset = sh[start::skip]
+    u10subset= u10[start::skip]
+    v10subset= v10[start::skip]
+    timessubset = times[start::skip]
+    
+    for dti,dt in enumerate(timessubset):
+        # local time for title
+        lt = dt + timedelta(hours=fio.run_info[mr]['UTC_offset'])
+        # satellite view
+        f,ax = plotting.map_tiff_qgis(fname=extentname+".tiff", extent=extent)
+        # add locations
+        plotting.map_add_locations_extent(extentname,nice=True)
+        # add heatflux
+        plotting.map_sensibleheat(shsubset[dti].data,lats,lons,alpha=0.9)
+        # add winds
+        if winds:
+            plt.streamplot(lons,lats,u10subset[dti].data,v10subset[dti].data, 
+                           density=(0.3,0.3),minlength=0.4)
+        # add title
+        plt.title(lt.strftime("Heat flux %H:%M (LT)"))
+        # save/close figure
+        fio.save_fig(mr,_sn_,dt,plt,subdir="fluxmap")
+    
+    #if annotate:
+    #    plt.annotate(s="max heat flux = %6.1e W/m2"%np.max(sh),
+    #                 xy=[0,1.06],
+    #                 xycoords='axes fraction', 
+    #                 fontsize=10)
+
 if __name__=='__main__':
     ### Run the stuff
     ext_sirivan=plotting._extents_['sirivan']
     ##fireplan comparison
-    if True:
-        fireplan_comparison(model_runs=["sirivan_run1","sirivan_run4","sirivan_run5","sirivan_run5_hr"],
+    if False:
+        fireplan_comparison(model_runs=["sirivan_run4","sirivan_run5","sirivan_run5_hr"],
                 colors=['k','orange','teal','magenta'],
                 extent=ext_sirivan,
                 mapname='sirivan.tiff',
@@ -315,11 +354,17 @@ if __name__=='__main__':
     if False:
         fireplan_vs_isochrones()
     
-    ## Just create a fireplan figure:
+    ## Create sensible heat flux outlines
     if True:
-        fireplanruns = ['sirivan_run2_hr','waroona_old','waroona_run1','sirivan_run1','waroona_run3','waroona_run2']
-        fireplanruns = ["sirivan_run1","sirivan_run4","sirivan_run5"]
-        fireplanruns = ['sirivan_run5_hr']
+        runs=['sirivan_run1','sirivan_run5_hr','sirivan_run6_hr','sirivan_run7_hr']
+        locs=['sirivanz']*len(runs)
+        for mr,extentname in zip(runs,locs):
+            heatmap(mr,extentname)
+            
+    
+    ## Just create a fireplan figure:
+    if False:
+        fireplanruns = ['sirivan_run5_hr','sirivan_run6_hr','sirivan_run7_hr','sirivan_run4','sirivan_run5','sirivan_run6','sirivan_run7']
         for mr in fireplanruns:
             extent = plotting._extents_[mr.split('_')[0]]
     
