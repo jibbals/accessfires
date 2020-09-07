@@ -286,8 +286,8 @@ if __name__=='__main__':
         PFTcube.attributes=attributes
         
         # save file
-        ddir=fio.run_info[mr]['dir']
-        fname='%s/PFT.nc'%ddir
+        #ddir=fio.run_info[mr]['dir']
+        fname= "data/PFT/"+mr+".nc"
         iris.save(PFTcube,fname)
         
         
