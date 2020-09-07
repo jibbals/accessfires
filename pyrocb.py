@@ -224,7 +224,7 @@ def map_with_transect(data,lat,lon, transect,
     
     # Add fire outline
     if ff is not None:
-        #print("DEBUG: mapfire:",ff.shape,lat.shape,lon.shape)
+        print("DEBUG: mapfire:",ff.shape,lat.shape,lon.shape)
         plotting.map_fire(ff,lat,lon)
     
     return cs,cb
@@ -402,8 +402,8 @@ def pyrocb(w, u, qc, z, wmean, topog, lat, lon,
     clevs_vertwind = np.union1d(np.union1d(2.0**np.arange(-2,6),
                                            -1*(2.0**np.arange(-2,6))),
                                 np.array([0]))
-    #print("DEBUG: calling map_with_transect:")
-    #print("     :",np.shape(wmean), len(lat),len(lon),np.shape(ff))
+    print("DEBUG: calling map_with_transect:")
+    print("     :",np.shape(wmean), len(lat),len(lon),np.shape(ff))
     cs, _ = map_with_transect(wmean, lat, lon, transect1, ff=ff, 
                               extralines=[transect2,transect3],
                               extracolors=['b','teal'],
@@ -640,6 +640,7 @@ def pyrocb_model_run(model_run='waroona_run1', dtime=datetime(2016,1,5,15),
         2: Three transects (forming somewhat of an asterix) of vertical winds
     Makes figures for single hour defined by dtime input argument
     """
+    print("INFO: starting pyrocb_model_run(",model_run,dtime")")
     ### First use datetime and extentname to read correct outputs:
     extentname=model_run.split('_')[0]
     extent = plotting._extents_[extentname]

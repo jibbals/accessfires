@@ -608,8 +608,6 @@ def read_fire(model_run='waroona_run1',
     flags = [firefront, sensibleheat, firespeed, wind, wind]
     units = [None, 'Watts/m2', 'm/s', 'm/s', 'm/s']
     for flag, paths, unit in zip(flags, fpathlists, units):
-        print("DEBUG:")
-        print(flag,paths,unit)
         if flag:
             if len(paths) < 1:
                 print("ERROR: missing files")

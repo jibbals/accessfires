@@ -300,6 +300,8 @@ def heatmap(mr,extentname=None,winds=True):
     
     extent=plotting._extents_[extentname]
     sh,u10,v10 = fio.read_fire(mr,extent=extent,firefront=False,sensibleheat=True,wind=True)
+    #print("DEBUG: u10")
+    #print(u10)
     
     lats=sh.coord('latitude').points
     lons=sh.coord('longitude').points
@@ -323,7 +325,7 @@ def heatmap(mr,extentname=None,winds=True):
         # add winds
         if winds:
             plt.streamplot(lons,lats,u10subset[dti].data,v10subset[dti].data, 
-                           density=(0.3,0.3),minlength=0.4)
+                           density=(0.3,0.3),minlength=0.4,arrowsize=2)
         # add title
         plt.title(lt.strftime("Heat flux %H:%M (LT)"))
         # save/close figure
