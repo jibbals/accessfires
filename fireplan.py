@@ -30,6 +30,7 @@ _sn_ = 'fireplan'
 
 def fireplan(ff, fire_contour_map = 'autumn',
              show_cbar=True, cbar_XYWH= [0.65, 0.63, .2, .02],
+             extentname=None,
              color_by_day=None,
              **kwtiffargs):
 #             fig=None,subplot_row_col_n=None,
@@ -73,7 +74,8 @@ def fireplan(ff, fire_contour_map = 'autumn',
     ## PLOTTING
 
     # First show satellite image and locations
-    extentname='sirivan' if extent[0]>130 else 'waroonaf'
+    if extentname is None:
+        extentname='sirivan' if extent[0]>130 else 'waroonaf'
     fig, ax = plotting.map_tiff_qgis(
         fname=extentname+'.tiff',
         extent=extent, 
@@ -292,7 +294,7 @@ def fireplan_vs_isochrones():
     
     fio.save_fig(mr,_sn_,"fireplan_vs_isochrones.png",plt)
 
-def heatmap(mr,extentname=None,winds=True):
+def heatmap(mr,extentname=None,winds=False):
     """
     """
     if extentname is None:
@@ -328,6 +330,7 @@ def heatmap(mr,extentname=None,winds=True):
                            density=(0.3,0.3),minlength=0.4,arrowsize=2)
         # add title
         plt.title(lt.strftime("Heat flux %H:%M (LT)"))
+        plt.tight_layout()
         # save/close figure
         fio.save_fig(mr,_sn_,dt,plt,subdir="fluxmap")
     
@@ -358,7 +361,7 @@ if __name__=='__main__':
     
     ## Create sensible heat flux outlines
     if True:
-        runs=['sirivan_run1','sirivan_run5_hr','sirivan_run6_hr','sirivan_run7_hr']
+        runs=['sirivan_run5_hr']
         locs=['sirivanz']*len(runs)
         for mr,extentname in zip(runs,locs):
             heatmap(mr,extentname)
@@ -366,17 +369,19 @@ if __name__=='__main__':
     
     ## Just create a fireplan figure:
     if False:
-        fireplanruns = ['sirivan_run5_hr','sirivan_run6_hr','sirivan_run7_hr','sirivan_run4','sirivan_run5','sirivan_run6','sirivan_run7']
+        fireplanruns = ['sirivan_run5_hr',]#'sirivan_run6_hr','sirivan_run7_hr','sirivan_run4','sirivan_run5','sirivan_run6','sirivan_run7']
         for mr in fireplanruns:
-            extent = plotting._extents_[mr.split('_')[0]]
+            extentname=mr.split('_')[0]+'z'
+            extent = plotting._extents_[extentname]
     
             ## Plot fireplan for high res run
             # read all the fire data
             ff, = fio.read_fire(model_run=mr, dtimes=None,
                             extent=extent, firefront=True,
                             HSkip=None)
-        
-            fig,ax = fireplan(ff, show_cbar=True, cbar_XYWH=[.18,.3,.2,.02])
+            
+            fig,ax = fireplan(ff, show_cbar=False, cbar_XYWH=[.18,.3,.2,.02],
+                        extentname=extentname)
             fio.save_fig(mr, _sn_, 'fireplan.png', plt)
         
 

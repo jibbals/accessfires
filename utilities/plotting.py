@@ -261,15 +261,16 @@ def map_add_locations_extent(extentname,
     dy=.015
     dyfire = .015
     if 'sirivan' in extentname:
-        dx=[.065,.02,.125]
-        dy =[.02,.015,-.07]
         dxfire=.05
         dyfire=-.06
 
     # Where is fire ignition
     firename = "fire_"+extentname
-    if extentname[-1] in ["s","z"]:
-        firename = "fire_"+extentname[:-1]
+    if extentname[-1] in ["s","z","f","b"]:
+        if 'waroona' in extentname:
+            firename = "fire_waroona"
+        else:
+            firename = "fire_sirivan"
 
     locs = locstrings[extentname]
     text = [name.capitalize() for name in locs]

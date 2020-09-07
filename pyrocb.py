@@ -418,7 +418,7 @@ def pyrocb(w, u, qc, z, wmean, topog, lat, lon,
     
     # add nearby towns
     if extentname is not None:
-        plotting.map_add_locations_extent(extentname)
+        plotting.map_add_locations_extent(extentname,nice=True)
     
     ### transect plots
     ###
@@ -640,7 +640,7 @@ def pyrocb_model_run(model_run='waroona_run1', dtime=datetime(2016,1,5,15),
         2: Three transects (forming somewhat of an asterix) of vertical winds
     Makes figures for single hour defined by dtime input argument
     """
-    print("INFO: starting pyrocb_model_run(",model_run,dtime")")
+    print("INFO: starting pyrocb_model_run(",model_run,dtime,")")
     ### First use datetime and extentname to read correct outputs:
     extentname=model_run.split('_')[0]
     extent = plotting._extents_[extentname]
@@ -840,19 +840,17 @@ if __name__ == '__main__':
                 sample_showing_grid(model_run=run, extentname=locname, HSkip=5)
         if True:
             # When sample used to put some data in pcb occurrence dict run these
-            for run in ['sirivan_run4','sirivan_run7_hr','sirivan_run6_hr','sirivan_run5_hr',]:
+            for run in ['sirivan_run5_hr',]:#'sirivan_run7_hr','sirivan_run6_hr','sirivan_run4',]:
                 pyrocb_model_run(run, dtime=hour,HSkip=None)
                 moving_pyrocb(run, dtimes=[hour], xlen=0.25,HSkip=None)
             
 
 
     ## New zoomed, moving pyrocb plotting
-    if False:
-        #mr = 'sirivan_run2_hr'
-        #xlen=.4 # degrees of longitude for transect length
+    if True:
         mr='waroona_run3'
         xlen=0.1
-        hours=[waroona_second_half[0]] # run half the hours
+        hours=waroona_second_half # run half the hours
         moving_pyrocb(model_run=mr, 
                       dtimes=hours,
                       xlen=xlen)
