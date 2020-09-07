@@ -426,8 +426,8 @@ def read_pft(model_run='waroona_run1',times=None, lats=None, lons=None):
     returns pft, pftlats, pftlons
     '''
     # load the single cube in PFT.nc
-    fname= "data/PFT/"+mr+".nc"
-    pft0,=iris.load(fname)
+    fpath=run_info[model_run]['dir']+'/PFT.nc'
+    pft0,=iris.load(fpath)
     
     # pft is [time, lats, lons]
     pft = pft0
@@ -505,7 +505,7 @@ def fire_paths(model_run):
     fspaths.sort()
     v10paths.sort()
     u10paths.sort()
-    return [ffpaths, fluxpaths, fspaths, v10paths, u10paths]
+    return [ffpaths, fluxpaths, fspaths, u10paths, v10paths]
 
 def read_fire(model_run='waroona_run1',
               dtimes=None, constraints=None, extent=None,
@@ -593,7 +593,7 @@ def read_fire(model_run='waroona_run1',
 
     ## otherwise read fire paths and return fire cubes
     #sensible_heat.[affix.]YYYYMMDDTHHmmZ.nc',
-    #fire_speed, 10m_vwind, 10m_uwind
+    #fire_speed, 10m_uwind, 10m_vwind
     fpathlists= fire_paths(model_run)
     
     dind=0
