@@ -246,19 +246,20 @@ def model_run_PFT_summary(model_run='waroona_run1', hour=datetime(2016,1,5,15)):
     '''
     Show PFT map, underneath topography overlaid with curly surface wind map
     '''
-    extentname=model_run.split('_')[0]
+    extentname=model_run.split('_')[0]+'z'
     extent = plotting._extents_[extentname]
     
     cubes = fio.read_model_run(model_run,[hour],extent=extent, 
                                add_topog=True,add_winds=True)
     u0,v0 = cubes.extract(['u','v'], strict=True)
+    
     dtimes = utils.dates_from_iris(u0,remove_seconds=True)
     lats = u0.coord('latitude').points
     lons = u0.coord('longitude').points
-    heights = utils.height_from_iris(u0)
-    surface = heights < 500
-    u=np.mean(u0[:,surface,:,:].data, axis=1)
-    v=np.mean(v0[:,surface,:,:].data, axis=1)
+    #heights = utils.height_from_iris(u0)
+    #surface = heights < 500
+    #u=np.mean(u0[:,surface,:,:].data, axis=1)
+    #v=np.mean(v0[:,surface,:,:].data, axis=1)
     
     terrain0 = cubes.extract('surface_altitude',strict=True)
     terrain = terrain0.data
@@ -267,7 +268,7 @@ def model_run_PFT_summary(model_run='waroona_run1', hour=datetime(2016,1,5,15)):
     pft, ptimes, plats, plons = fio.read_pft(model_run, dtimes, lats, lons)
     
     ## Read fire front
-    ff, = fio.read_fire(model_run, dtimes, extent=extent)
+    ff, u10, v10 = fio.read_fire(model_run, dtimes, extent=extent,wind=True)
     
     
     for i,dtime in enumerate(dtimes):
@@ -284,7 +285,7 @@ def model_run_PFT_summary(model_run='waroona_run1', hour=datetime(2016,1,5,15)):
         PFT_map(pft[i],plats,plons)
         
         # overlay winds
-        plt.streamplot(lons,lats,u[i],v[i], color='k', 
+        plt.streamplot(lons,lats,u10[i].data,v10[i].data, color='k', 
                        density=(.8, .5))
         
         plotting.map_add_locations_extent(extentname,hide_text=True)
