@@ -426,7 +426,7 @@ def read_pft(model_run='waroona_run1',times=None, lats=None, lons=None):
     returns pft, pftlats, pftlons
     '''
     # load the single cube in PFT.nc
-    fpath = "data/PFT/"+mr+".nc"
+    fpath = "data/PFT/"+model_run+".nc"
     pft0, = iris.load(fpath)
     
     # pft is [time, lats, lons]
