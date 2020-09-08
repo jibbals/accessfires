@@ -289,7 +289,7 @@ def weather_series(model_run='waroona_run3',
     offset_hrs = 8
     if localtime:
         if extent[0] > 130:
-            offset_hrs = 10
+            offset_hrs = fio.sim_info['sirivan']['UTC_offset']
         offset = timedelta(hours=offset_hrs)
         ftimes_lt = np.array([ft + offset for ft in ftimes ])
         ctimes_lt = np.array([ct + offset for ct in ctimes ])
@@ -353,8 +353,8 @@ def weather_series(model_run='waroona_run3',
     ## get wind speed/ wind dir
     u, v = cubes.extract(['x_wind','y_wind'])
     ## wind speed at 10m is output by the fire model
-    u10=np.swapaxes(u10.data, 1,2) # time, lon, lat -> time, lat, lon
-    v10=np.swapaxes(v10.data, 1,2) # also for v10
+    u10=u10.data #np.swapaxes(u10.data, 1,2) # time, lon, lat -> time, lat, lon
+    v10=v10.data #np.swapaxes(v10.data, 1,2) # also for v10
     u500=u[:,index_500m,:,:]
     v500=v[:,index_500m,:,:]
     
@@ -462,7 +462,7 @@ def weather_series(model_run='waroona_run3',
     plt.sca(ax_fp)
     if showPFT:
         line_pft, = plt.plot_date(ptimes_lt, pft, '--', 
-                                 color=color_fp, label='PFT', alpha=0.6)
+                                color=color_fp, label='PFT', alpha=0.6)
     if showFP:
         line_fp, = plt.plot_date(ftimes_lt, firepower, '-',
                                  color=color_fp, label='firepower')
@@ -586,15 +586,16 @@ if __name__=='__main__':
     #weather_summary_model(model_version='waroona_run3')
     
     ## Run timeseries
-    if False:
+    if True:
         # day1 waroona:
-        weather_series('waroona_run3',showmap=True)
+        #weather_series('waroona_run3',showmap=True)
         # day2 waroona:
-        weather_series('waroona_run3', day2=True, showPFT=False, extent=waroona_day2zoom)
-        
+        #weather_series('waroona_run3', day2=True, showPFT=False, extent=waroona_day2zoom)
+        weather_series('sirivan_run5_hr',showFP=True,showPFT=True,showmap=True,
+                HSkip=2)
     
     ## Run weather summary
-    if True:
+    if False:
         for mr,exname in zip(['sirivan_run7_hr','sirivan_run7'],['sirivanz','sirivanz']):
             fdt = fio.run_info[mr]['filedates']
 

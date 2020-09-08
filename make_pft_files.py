@@ -221,11 +221,11 @@ def PFT_from_cubelist(cubes0, latlon=None, tskip=None, latskip=None, lonskip=Non
 
 if __name__=='__main__':
     # deresolved horizontally (don't need high res)
-    HSkip=8
-    HSkip_hr=12
+    HSkip=10
+    HSkip_hr=3*HSkip
     #['sirivan_run1','waroona_run1','waroona_run2','waroona_run2uc']:#,'waroona_old']:
 
-    for mr in ['sirivan_run4','sirivan_run5','sirivan_run5_hr','sirivan_run6','sirivan_run6_hr']:
+    for mr in ['sirivan_run5_hr','sirivan_run6','sirivan_run6_hr']:
         MRSKIP=HSkip_hr if 'hr' in mr else HSkip
         # let's time how long it takes
         start = timer()
