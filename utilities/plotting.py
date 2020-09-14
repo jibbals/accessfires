@@ -396,6 +396,9 @@ def map_fire(ff,lats,lons, **contourargs):
     """
     if ff is None:
         return None
+    # unmask if necessary
+    if np.ma.is_masked(ff):
+        ff = ff.data
     # default fire colour:
     if 'colors' not in contourargs:
         contourargs['colors']='red'

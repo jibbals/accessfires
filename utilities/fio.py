@@ -549,7 +549,7 @@ def read_fire(model_run='waroona_run1',
         #print("     : model hours 25, 24: ",modelhours[25], modelhours[24])
         #print("     : dtimes 0, -1: ",dtimes[0],dtimes[-1])
         #print("     : day1, day2:", day1, day2)
-    print("DEBUG: dayflags:",day1,day2)
+    #print("DEBUG: dayflags:",day1,day2)
     ## if reading both days, read one at a time and combine
     if day1 and day2:
         cubelist1=read_fire(
@@ -761,8 +761,12 @@ def read_model_run(model_version, fdtime=None, subdtimes=None, extent=None,
             else:
                 allcubes.extend(slv)
             # model output on rho levels and theta levels are slightly different
-            # rename the rho levels air pressure (or else it's repeated)
-            ro1.extract('air_pressure')[0].rename('air_pressure_rho')
+            #print("DEBUG: fio air_pressure renaming")
+            #print(ro1)
+            #print(th1)
+            if len(ro1.extract('air_pressure')) > 0:
+                # rename the rho levels air pressure (or else it's repeated)
+                ro1.extract('air_pressure')[0].rename('air_pressure_rho')
 
             allcubes.extend(ro1)
             allcubes.extend(th1)

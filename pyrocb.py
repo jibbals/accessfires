@@ -225,6 +225,7 @@ def map_with_transect(data,lat,lon, transect,
     # Add fire outline
     if ff is not None:
         print("DEBUG: mapfire:",ff.shape,lat.shape,lon.shape)
+        print("     : ",type(ff))
         plotting.map_fire(ff,lat,lon)
     
     return cs,cb
@@ -344,8 +345,8 @@ def sample_showing_grid(model_run='waroona_run3', extentname=None, HSkip=None):
         f, axes = plt.subplots(3,1,figsize=[12,16],subplot_kw={'projection': ccrs.PlateCarree()})
         for ax, hi in zip(axes,[h1,h2,h3]):
             plt.sca(ax)
-            cs = top_down_vertical_motion(W[0,hi].data.data,
-                                          FF=FF[0].data, Q=Q[0,hi].data.data,
+            cs = top_down_vertical_motion(W[0,hi].data,
+                                          FF=FF[0].data, Q=Q[0,hi].data,
                                           lat=lat,lon=lon,)
             plotting.map_add_locations_extent(extentname,hide_text=True)
             plotting.map_draw_gridlines(ax,)
@@ -562,11 +563,18 @@ def moving_pyrocb(model_run='waroona_run3', dtimes = None,
             fire=None
             sheat=None
             if ff is not None:
-                fire=ff[i].data.data
-                sheat=sh[i].data.data
-            qci = qc[i].data.data
-            ui = u[i].data.data
-            wi = w[i].data.data
+                fire=ff[i].data
+                sheat=sh[i].data
+            qci = qc[i].data
+            ui = u[i].data
+            wi = w[i].data
+            if np.ma.is_masked(qci):
+                qci=qci.data
+            if np.ma.is_masked(ui):
+                ui=ui.data
+            if np.ma.is_masked(wi):
+                wi=wi.data
+                
             
             ## calc zth
             # repeat surface pressure along z axis
@@ -684,17 +692,17 @@ def pyrocb_model_run(model_run='waroona_run1', dtime=datetime(2016,1,5,15),
     h0,h1 = utils.height_from_iris(wmean,bounds=True)[0]
     
     # pull data from masked arrays from cubes
-    zi = z.data.data
-    topogi = topog.data.data
+    zi = z.data
+    topogi = topog.data
     # for each timestep:
     for i in range(len(ffdtimes)):
-        qci = qc[i].data.data
-        wi = w[i].data.data
-        ui = u[i].data.data
-        wmeani = wmean[i].data.data 
+        qci = qc[i].data
+        wi = w[i].data
+        ui = u[i].data
+        wmeani = wmean[i].data 
         ffi = None
         if ff is not None:
-            ffi = ff[i].data.data
+            ffi = ff[i].data
         
         ## First make the left to right figure
         #left_right_slice(qci, ui, wi, zi, topogi, lat, lon, X1)
@@ -781,8 +789,8 @@ def examine_metrics(mr,hour,extent=None,HSkip=None):
             for levi, lev in enumerate(levels):
                 plt.subplot(len(levels),1,len(levels)-levi)
                 
-                wd = utils.wind_dir_from_uv(u[cti,lev,:,:].data.data,v[cti,lev,:,:].data.data)
-                vort, OW, OWZ = utils.vorticity(u[cti,lev,:,:].data.data,v[cti,lev,:,:].data.data,lats,lons)
+                wd = utils.wind_dir_from_uv(u[cti,lev,:,:].data,v[cti,lev,:,:].data)
+                vort, OW, OWZ = utils.vorticity(u[cti,lev,:,:].data,v[cti,lev,:,:].data,lats,lons)
                 metrics['wind_direction']=wd
                 metrics['vorticity']=vort
                 metrics['OkuboWeiss']=OW
@@ -838,7 +846,7 @@ if __name__ == '__main__':
             for run in ['sirivan_run7','sirivan_run7_hr']:
                 locname=run.split('_')[0]
                 sample_showing_grid(model_run=run, extentname=locname, HSkip=5)
-        if True:
+        if False:
             # When sample used to put some data in pcb occurrence dict run these
             for run in ['sirivan_run5_hr',]:#'sirivan_run7_hr','sirivan_run6_hr','sirivan_run4',]:
                 pyrocb_model_run(run, dtime=hour,HSkip=None)
@@ -848,12 +856,16 @@ if __name__ == '__main__':
 
     ## New zoomed, moving pyrocb plotting
     if True:
-        mr='waroona_run3'
-        xlen=0.1
-        hours=waroona_second_half # run half the hours
-        moving_pyrocb(model_run=mr, 
-                      dtimes=hours,
-                      xlen=xlen)
+        mr='sirivan_run7'
+        xlen=0.2
+        #hours=waroona_second_half # run half the hours
+        hours=[datetime(2017,2,11,21)] # first hour for testing
+        pyrocb_model_run(mr, 
+                         dtime=hours[0],
+                         HSkip=None)
+        #moving_pyrocb(model_run=mr, 
+        #              dtimes=hours,
+        #              xlen=xlen)
     
     ### all plots for runs:
     if False:
