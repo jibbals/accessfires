@@ -719,7 +719,7 @@ def read_model_run(model_version, fdtime=None, subdtimes=None, extent=None,
 
     ## No ftimes? set to all ftimes
     if fdtime is None:
-        fdtime = run_info[locname]['filedates']
+        fdtime = run_info[model_version]['filedates']
             
     # make sure it's iterable
     if not hasattr(fdtime,'__iter__'):
