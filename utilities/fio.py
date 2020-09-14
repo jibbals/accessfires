@@ -888,7 +888,11 @@ def read_model_run(model_version, fdtime=None, subdtimes=None, extent=None,
     # Rename some stuff in model versions 4 and above (new netcdf)
     # also remove dupes here
     #print("DEBUG:",allcubes)
-    for dupecubes in ["mass_fraction_of_cloud_ice_in_air","upward_air_velocity","mass_fraction_of_cloud_liquid_water_in_air","air_temperature","air_pressure",]:
+    for dupecubes in ["mass_fraction_of_cloud_ice_in_air",
+                      "upward_air_velocity",
+                      "mass_fraction_of_cloud_liquid_water_in_air",
+                      "air_temperature","air_pressure",
+                      "specific_humidity"]:
         dupes = allcubes.extract(dupecubes)
         if len(dupes) > 1:
             remove_duplicate_cubes(dupes,allcubes,ndims_expected=4)
