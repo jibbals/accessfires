@@ -242,7 +242,9 @@ def cube_to_xyz(cube,
     pull out the data and reshape it to [lon,lat,lev]
     """
     assert len(cube.shape)==3, "cube is not 3-D"
-    data = cube[:ztop,:,:].data.data
+    data = cube[:ztop,:,:].data
+    if np.ma.is_masked(data):
+        data=data.data
     # data is now a level, lat, lon array... change to lon, lat, lev
     xyz = np.moveaxis(np.moveaxis(data,0,2),0,1)
     return xyz
@@ -366,7 +368,9 @@ def firepower_from_cube(shcube):
         lon.guess_bounds()
     grid_areas = iris.analysis.cartography.area_weights(shcube)
 
-    firepower = shcube.data.data * grid_areas # W/m2 * m2
+    firepower = shcube.data * grid_areas # W/m2 * m2
+    if np.ma.is_masked(firepower):
+        firepower=firepower.data
     return firepower/1e9 # Watts to Gigawatts
 
 def lat_lon_index(lat,lon,lats,lons):

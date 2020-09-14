@@ -220,19 +220,19 @@ def weather_summary_model(model_version='waroona_run1',
         # for each time slice create a weather summary plot
         for i,dtime in enumerate(dtimes):
             
-            ui, vi = u[i].data.data, v[i].data.data
-            wi = w[i].data.data
+            ui, vi = u[i].data, v[i].data
+            wi = w[i].data
             qci = None
             if qc is not None:
-                qci = qc[i].data.data
+                qci = qc[i].data
             if ff is not None:
-                FF = ff[i].data.data
+                FF = ff[i].data
             
             plot_weather_summary(ui, vi, wi, height, lat, lon, 
                                  extentname=extentname,
                                  Q = qci, FF=FF,
                                  hwind_limits=hwind_limits,
-                                 topog=topog.data.data,
+                                 topog=topog.data,
                                  )
             
             offsethours=8 if np.min(lon)<120 else 10
@@ -252,6 +252,7 @@ def weather_series(model_run='waroona_run3',
                    showwsmax=False,
                    showmap=False,
                    localtime=True,
+                   test=False,
                    ):
     """
         time series of surface weather
@@ -268,6 +269,8 @@ def weather_series(model_run='waroona_run3',
     # READ EVERYTHING, SUBSET, CALC DESIRED METRICS, PLOT METRICS
     modeltimes = fio.run_info[model_run]['filedates']
     fdtimes = modeltimes[-24:] if day2 else modeltimes[:24]
+    if test:
+        fdtimes=[modeltimes[0],] # Testing just look at first hour
     cubes = fio.read_model_run(model_run, extent=extent,
                                HSkip=HSkip,
                                fdtime=fdtimes)
@@ -286,10 +289,8 @@ def weather_series(model_run='waroona_run3',
     ftimes = utils.dates_from_iris(sh)
     ftimes_lt = ftimes
     ctimes_lt = ctimes
-    offset_hrs = 8
+    offset_hrs = fio.run_info[model_run]['UTC_offset']
     if localtime:
-        if extent[0] > 130:
-            offset_hrs = fio.sim_info['sirivan']['UTC_offset']
         offset = timedelta(hours=offset_hrs)
         ftimes_lt = np.array([ft + offset for ft in ftimes ])
         ctimes_lt = np.array([ct + offset for ct in ctimes ])
@@ -324,32 +325,41 @@ def weather_series(model_run='waroona_run3',
     #print("DEBUG: cubes")
     #print()
     #print(cubes)
-    q,T,qc = cubes.extract(['specific_humidity','air_temperature','qc'])
+    qTqc = cubes.extract(['specific_humidity','air_temperature','qc'])
+    print("DEBUG: cubes")
+    print(qTqc)
+    q,T,qc = qTqc
+    #q,T,qc = cubes.extract(['specific_humidity','air_temperature','qc'])
     
     #index_500m = np.argmin(np.abs(q.coord('level_height').points - 500))
 
     index_500m = np.argmin(np.abs(utils.height_from_iris(q)-500))
     assert index_500m > 0, "Index500 didn't work = %d"%index_500m
-    
+    print("DEBUG: 1")
     clats, clons = q.coord('latitude').points, q.coord('longitude').points
+    print("DEBUG: coords")
     # compute RH from specific and T in kelvin
     T.convert_units('K')
     # just want surface for Temp and RH
     q = q[:,0,:,:]
-    T = T[:,0,:,:].data.data
+    T = T[:,0,:,:].data
+    print("DEBUG: units and slices")
     qc_sum = qc.collapsed('model_level_number', iris.analysis.SUM)
     qc_frac = np.sum(qc_sum.data > qc_thresh, axis=(1,2))/(len(clats)*len(clons))
     qc_weight = qc_sum.collapsed(['longitude','latitude'], iris.analysis.SUM).data
+    print("DEBUG: sum weight and frac")
     #qc_weight[qc_weight <= 0.0001] = np.NaN # take out zeros
     qc_q3 = np.nanpercentile(qc_weight, 75)
     qc_q2 = np.nanpercentile(qc_weight, 50)
+    print("DEBUG: percentiles")
     qc_heavy = qc_weight > qc_q3
     qc_mid = (qc_weight > qc_q2) * (qc_weight < qc_q3)
+    print("DEBUG: heavy and mid flags")
     #qc_weight[np.isnan(qc_weight)] = 0.0 # return the zeros
-    RH = utils.relative_humidity_from_specific(q.data.data, T)
+    RH = utils.relative_humidity_from_specific(q.data, T)
     RH = np.mean(RH, axis=(1,2))
     T = np.mean(T, axis=(1,2))
-    
+    print("DEBUG: RH and T")
     ## get wind speed/ wind dir
     u, v = cubes.extract(['x_wind','y_wind'])
     ## wind speed at 10m is output by the fire model
@@ -368,17 +378,17 @@ def weather_series(model_run='waroona_run3',
     ws10_q3 = np.quantile(ws10_all, 0.75, axis=(1,2))
     ws10_max = np.max(ws10_all, axis=(1,2))
     ws10 = np.mean(ws10_all, axis=(1,2))
-    ws500_all = utils.wind_speed_from_uv_cubes(u500,v500).data.data
+    ws500_all = utils.wind_speed_from_uv_cubes(u500,v500).data
     ws500_q1 = np.quantile(ws500_all, 0.25, axis=(1,2))
     ws500_q3 = np.quantile(ws500_all, 0.75, axis=(1,2))
     #ws500_max = np.max(ws500_all, axis=(1,2))
     ws500 = np.mean(ws500_all, axis=(1,2))
-    
+    print("DEBUG: 3")
     # mean wind direction based on mean u,v
     u10_mean = np.mean(u10,axis=(1,2))
     v10_mean = np.mean(v10,axis=(1,2))
-    u500_mean = np.mean(u500.data.data,axis=(1,2)) 
-    v500_mean = np.mean(v500.data.data,axis=(1,2))
+    u500_mean = np.mean(u500.data,axis=(1,2)) 
+    v500_mean = np.mean(v500.data,axis=(1,2))
     #wd0 = utils.wind_dir_from_uv(u10_mean,v10_mean)
     
     #######################
@@ -389,15 +399,18 @@ def weather_series(model_run='waroona_run3',
     fig = plt.figure(figsize=[12,12])
     dx,dy = extent[1]-extent[0], extent[3]-extent[2]
     extentplus = np.array(extent)+np.array([-0.3*dx,0.3*dx,-0.2*dy,0.2*dy])
-    
+    print("DEBUG: 4")
     if showmap:
         # map with extent shown
         fig, ax_map = plotting.map_tiff_qgis(fname="%s.tiff"%extentname, 
                                              fig=fig,
                                              extent=list(extentplus), 
                                              subplot_row_col_n = [3,1,1],
-                                             locnames=[extentname,]
+                                             #locnames=[extentname,]
                                              )
+        plotting.map_add_locations_extent(extentnamez,
+                                          hide_text=False,
+                                          nice=True)
         # Add rectangle
         botleft = extent[0],extent[2]
         ax_map.add_patch(patches.Rectangle(xy=botleft,
@@ -414,25 +427,26 @@ def weather_series(model_run='waroona_run3',
         # add fire outline
         plt.sca(ax_map)
         # Firefront shown at each 6 hour increment:
-        ffhours = fdtimes[6::6]
-        for ffhour in ffhours:
-            ffhind = utils.date_index(ffhour, ctimes) 
-            if ffhind is None:
-                ffhind = 0
-                ffhour = ctimes[0]
-            else:
-                ffhind = ffhind[0]
-            print("DEBUG:", type(ffhind), ffhind)
-            ffline = plotting.map_fire(ff[ffhind].data, lats, lons)
-            print("DEBUG: ffline: ", ffline)
-            if ffline is not None:
-                clbls = plt.clabel(ffline, [0], fmt=ffhour.strftime('%H'), 
-                                   inline=True, colors='wheat')
-                # padding so label is readable
-                plt.setp(clbls, path_effects=[patheffects.withStroke(linewidth=3, foreground="k")])
+        if not test:
+            ffhours = fdtimes[6::6]
+            for ffhour in ffhours:
+                ffhind = utils.date_index(ffhour, ctimes) 
+                if ffhind is None:
+                    ffhind = 0
+                    ffhour = ctimes[0]
+                else:
+                    ffhind = ffhind[0]
+                print("DEBUG:", type(ffhind), ffhind)
+                ffline = plotting.map_fire(ff[ffhind].data, lats, lons)
+                print("DEBUG: ffline: ", ffline)
+                if ffline is not None:
+                    clbls = plt.clabel(ffline, [0], fmt=ffhour.strftime('%H'), 
+                                       inline=True, colors='wheat')
+                    # padding so label is readable
+                    plt.setp(clbls, path_effects=[patheffects.withStroke(linewidth=3, foreground="k")])
         ax_map.set_title("Surface area-average over time")
     
-    
+    print("DEBUG: 5")
     ax_fp = plt.subplot(2+showmap,1,1+showmap) # firepower axis
     color_fp = "orange"
     ax_T = ax_fp.twinx() # Temperature
@@ -457,7 +471,7 @@ def weather_series(model_run='waroona_run3',
     color_ws500 = 'chocolate'
     
     
-    
+    print("DEBUG: 6")
     ## Plot firepower, and PFT on one axis
     plt.sca(ax_fp)
     if showPFT:
@@ -471,6 +485,7 @@ def weather_series(model_run='waroona_run3',
         plt.annotate("ignition",(mdates.date2num(ignition), 0), xytext=(-60, -5), 
                      textcoords='offset points', arrowprops=dict(arrowstyle='-|>'), 
                      color='red')
+    print("DEBUG: 7")
     ## plot temperature on right axis
     plt.sca(ax_T)
     line_T, = plt.plot_date(ctimes_lt, T-273.15, '-',
@@ -502,39 +517,42 @@ def weather_series(model_run='waroona_run3',
     
     # add quartiles
     plt.fill_between(ctimes_lt, ws10_q3, ws10_q1, alpha=0.6, color='grey')
-    
-    # normalize windspeed for unit length quivers
-    wdnorm = np.sqrt(u10_mean**2 + v10_mean**2)
-    # dont show quiver at every single point
-    qskip = len(wdnorm)//24 # just show 24 arrows
-    plt.quiver(ctimes_lt[::qskip], ws10_q1[::qskip], 
-               u10_mean[::qskip]/wdnorm[::qskip], 
-               v10_mean[::qskip]/wdnorm[::qskip], 
-               pivot='mid', 
-               alpha=.9, 
-               color=color_ws,
-               headwidth=3, headlength=2, headaxislength=2,
-               width=.004)
+    print("DEBUG: 8")
+    if not test:
+        # normalize windspeed for unit length quivers
+        wdnorm = np.sqrt(u10_mean**2 + v10_mean**2)
+        # dont show quiver at every single point
+        qskip = len(wdnorm)//24 # just show 24 arrows
+        plt.quiver(ctimes_lt[::qskip], ws10_q1[::qskip], 
+                   u10_mean[::qskip]/wdnorm[::qskip], 
+                   v10_mean[::qskip]/wdnorm[::qskip], 
+                   pivot='mid', 
+                   alpha=.9, 
+                   color=color_ws,
+                   headwidth=3, headlength=2, headaxislength=2,
+                   width=.004)
     ## Same again but for 500m wind
     #plt.sca(ax_ws500)
     line_ws500, = plt.plot_date(ctimes_lt, ws500, '.',
                                 color=color_ws500, 
                                 label="500m wind speed (+IQR)",)
+    print("DEBUG: 9")
     # add quartiles
     plt.fill_between(ctimes_lt, ws500_q3, ws500_q1, alpha=0.4, color=color_ws500)
     
     # normalize windspeed for unit length quivers
     wdnorm500 = np.sqrt(u500_mean**2 + v500_mean**2)
-    
-    plt.quiver(ctimes_lt[::qskip], ws500_q3[::qskip], 
-               u500_mean[::qskip]/wdnorm500[::qskip], 
-               v500_mean[::qskip]/wdnorm500[::qskip], 
-               pivot='mid', 
-               alpha=.7, 
-               color=color_wd,
-               headwidth=3, headlength=2, headaxislength=2,
-               width=.003)
-    
+    if not test:
+            
+        plt.quiver(ctimes_lt[::qskip], ws500_q3[::qskip], 
+                   u500_mean[::qskip]/wdnorm500[::qskip], 
+                   v500_mean[::qskip]/wdnorm500[::qskip], 
+                   pivot='mid', 
+                   alpha=.7, 
+                   color=color_wd,
+                   headwidth=3, headlength=2, headaxislength=2,
+                   width=.003)
+    print("DEBUG: 10")
     # top row:
     
     ax_T.set_ylabel("Temperature (C)")
@@ -591,8 +609,9 @@ if __name__=='__main__':
         #weather_series('waroona_run3',showmap=True)
         # day2 waroona:
         #weather_series('waroona_run3', day2=True, showPFT=False, extent=waroona_day2zoom)
-        weather_series('sirivan_run5_hr',showFP=True,showPFT=True,showmap=True,
-                HSkip=2)
+        weather_series('sirivan_run7',showFP=True,showPFT=True,showmap=True,
+                HSkip=10, 
+                test=True)
     
     ## Run weather summary
     if False:
