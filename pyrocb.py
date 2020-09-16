@@ -833,29 +833,28 @@ def examine_metrics(mr,hour,extent=None,HSkip=None):
 if __name__ == '__main__':
     
     waroona_second_half = np.array([datetime(2016,1,5,15)+ timedelta(hours=12+x) for x in range(12)])
-    sirivan_good_half = np.array([datetime(2017,2,12,4)+ timedelta(hours=x) for x in range(6)])
-    
+    sirivan_good_half = np.array([datetime(2017,2,12,4)+ timedelta(hours=x) for x in range(5)])
+    si_runs=['sirivan_run5_hr','sirivan_run7_hr','sirivan_run6_hr']
     for hour in sirivan_good_half:
-    #for hour in [datetime(2017,2,11,21)]:
         if False:
-            for run in ['sirivan_run5','sirivan_run5_hr','sirivan_run6','sirivan_run6_hr','sirivan_run7','sirivan_run7_hr']:
+            for run in si_runs:
                 examine_metrics(run,hour=hour,HSkip=None)
 
         ## check to see where pcb are occurring
         if False:
-            for run in ['sirivan_run7','sirivan_run7_hr']:
+            for run in si_runs:
                 locname=run.split('_')[0]
                 sample_showing_grid(model_run=run, extentname=locname, HSkip=5)
-        if False:
+        if True:
             # When sample used to put some data in pcb occurrence dict run these
-            for run in ['sirivan_run5_hr',]:#'sirivan_run7_hr','sirivan_run6_hr','sirivan_run4',]:
+            for run in si_runs:
                 pyrocb_model_run(run, dtime=hour,HSkip=None)
                 moving_pyrocb(run, dtimes=[hour], xlen=0.25,HSkip=None)
             
 
 
     ## New zoomed, moving pyrocb plotting
-    if True:
+    if False:
         mr='sirivan_run7'
         xlen=0.2
         #hours=waroona_second_half # run half the hours

@@ -251,6 +251,7 @@ def weather_series(model_run='waroona_run3',
                    showPFT=False,
                    showwsmax=False,
                    showmap=False,
+                   showQC=False,
                    localtime=True,
                    test=False,
                    ):
@@ -335,31 +336,17 @@ def weather_series(model_run='waroona_run3',
 
     index_500m = np.argmin(np.abs(utils.height_from_iris(q)-500))
     assert index_500m > 0, "Index500 didn't work = %d"%index_500m
-    print("DEBUG: 1")
     clats, clons = q.coord('latitude').points, q.coord('longitude').points
-    print("DEBUG: coords")
     # compute RH from specific and T in kelvin
     T.convert_units('K')
     # just want surface for Temp and RH
     q = q[:,0,:,:]
     T = T[:,0,:,:].data
-    print("DEBUG: units and slices")
-    qc_sum = qc.collapsed('model_level_number', iris.analysis.SUM)
-    qc_frac = np.sum(qc_sum.data > qc_thresh, axis=(1,2))/(len(clats)*len(clons))
-    qc_weight = qc_sum.collapsed(['longitude','latitude'], iris.analysis.SUM).data
-    print("DEBUG: sum weight and frac")
-    #qc_weight[qc_weight <= 0.0001] = np.NaN # take out zeros
-    qc_q3 = np.nanpercentile(qc_weight, 75)
-    qc_q2 = np.nanpercentile(qc_weight, 50)
-    print("DEBUG: percentiles")
-    qc_heavy = qc_weight > qc_q3
-    qc_mid = (qc_weight > qc_q2) * (qc_weight < qc_q3)
-    print("DEBUG: heavy and mid flags")
+    # qc stuff takes heaps of RAM
     #qc_weight[np.isnan(qc_weight)] = 0.0 # return the zeros
     RH = utils.relative_humidity_from_specific(q.data, T)
     RH = np.mean(RH, axis=(1,2))
     T = np.mean(T, axis=(1,2))
-    print("DEBUG: RH and T")
     ## get wind speed/ wind dir
     u, v = cubes.extract(['x_wind','y_wind'])
     ## wind speed at 10m is output by the fire model
@@ -383,7 +370,6 @@ def weather_series(model_run='waroona_run3',
     ws500_q3 = np.quantile(ws500_all, 0.75, axis=(1,2))
     #ws500_max = np.max(ws500_all, axis=(1,2))
     ws500 = np.mean(ws500_all, axis=(1,2))
-    print("DEBUG: 3")
     # mean wind direction based on mean u,v
     u10_mean = np.mean(u10,axis=(1,2))
     v10_mean = np.mean(v10,axis=(1,2))
@@ -399,7 +385,6 @@ def weather_series(model_run='waroona_run3',
     fig = plt.figure(figsize=[12,12])
     dx,dy = extent[1]-extent[0], extent[3]-extent[2]
     extentplus = np.array(extent)+np.array([-0.3*dx,0.3*dx,-0.2*dy,0.2*dy])
-    print("DEBUG: 4")
     if showmap:
         # map with extent shown
         fig, ax_map = plotting.map_tiff_qgis(fname="%s.tiff"%extentname, 
@@ -426,27 +411,22 @@ def weather_series(model_run='waroona_run3',
         
         # add fire outline
         plt.sca(ax_map)
-        # Firefront shown at each 6 hour increment:
+        # Firefront shown at each hour increment:
         if not test:
-            ffhours = fdtimes[6::6]
-            for ffhour in ffhours:
-                ffhind = utils.date_index(ffhour, ctimes) 
+            for ffhour in fdtimes:
+                ffhind = utils.date_index(ffhour, ctimes)
                 if ffhind is None:
                     ffhind = 0
                     ffhour = ctimes[0]
-                else:
-                    ffhind = ffhind[0]
-                print("DEBUG:", type(ffhind), ffhind)
-                ffline = plotting.map_fire(ff[ffhind].data, lats, lons)
-                print("DEBUG: ffline: ", ffline)
-                if ffline is not None:
-                    clbls = plt.clabel(ffline, [0], fmt=ffhour.strftime('%H'), 
-                                       inline=True, colors='wheat')
-                    # padding so label is readable
-                    plt.setp(clbls, path_effects=[patheffects.withStroke(linewidth=3, foreground="k")])
+                ffline = plotting.map_fire(ff[ffhind].data, lats, lons,alpha=0.4)
+                #if ffline is not None:
+                #    clbls = plt.clabel(ffline, [0], fmt=ffhour.strftime('%H'), 
+                #                       inline=True, colors='wheat')
+                #    # padding so label is readable
+                #    plt.setp(clbls, path_effects=[patheffects.withStroke(linewidth=3, foreground="k")])
         ax_map.set_title("Surface area-average over time")
+        print("DEBUG: ffline done")
     
-    print("DEBUG: 5")
     ax_fp = plt.subplot(2+showmap,1,1+showmap) # firepower axis
     color_fp = "orange"
     ax_T = ax_fp.twinx() # Temperature
@@ -471,7 +451,6 @@ def weather_series(model_run='waroona_run3',
     color_ws500 = 'chocolate'
     
     
-    print("DEBUG: 6")
     ## Plot firepower, and PFT on one axis
     plt.sca(ax_fp)
     if showPFT:
@@ -494,18 +473,28 @@ def weather_series(model_run='waroona_run3',
     plt.sca(ax_RH)
     line_RH, = plt.plot_date(ctimes_lt, RH, '-',
                              color=color_RH, label="RH",)
-    plt.plot_date(ctimes_lt, qc_frac, 'o',
-                  color=color_qc, 
-                  fillstyle='none', 
-                  mec=color_qc,
-                  mew=1,)
-    line_qc, = plt.plot_date(ctimes_lt[qc_heavy], qc_frac[qc_heavy], 'o',
-                             color=color_qc,
-                             label="Clouds",
-                             fillstyle='full')
-    plt.plot_date(ctimes_lt[qc_mid], qc_frac[qc_mid], 'o',
-                  color=color_qc,
-                  fillstyle='bottom')
+
+    if showQC:
+        qc_sum = qc.collapsed('model_level_number', iris.analysis.SUM)
+        qc_frac = np.sum(qc_sum.data > qc_thresh, axis=(1,2))/(len(clats)*len(clons))
+        qc_weight = qc_sum.collapsed(['longitude','latitude'], iris.analysis.SUM).data
+        #qc_weight[qc_weight <= 0.0001] = np.NaN # take out zeros
+        qc_q3 = np.nanpercentile(qc_weight, 75)
+        qc_q2 = np.nanpercentile(qc_weight, 50)
+        qc_heavy = qc_weight > qc_q3
+        qc_mid = (qc_weight > qc_q2) * (qc_weight < qc_q3)
+        plt.plot_date(ctimes_lt, qc_frac, 'o',
+                      color=color_qc, 
+                      fillstyle='none', 
+                      mec=color_qc,
+                      mew=1,)
+        line_qc, = plt.plot_date(ctimes_lt[qc_heavy], qc_frac[qc_heavy], 'o',
+                                 color=color_qc,
+                                 label="Clouds",
+                                 fillstyle='full')
+        plt.plot_date(ctimes_lt[qc_mid], qc_frac[qc_mid], 'o',
+                      color=color_qc,
+                      fillstyle='bottom')
     
     ## Wind speed, wind speed stdev, wind dir quiver
     plt.sca(ax_ws)
@@ -568,7 +557,9 @@ def weather_series(model_run='waroona_run3',
     #ax_ws500.yaxis.label.set_color(color_ws500)
     
     ## Plot periphery
-    lines = [line_T, line_RH, line_qc]
+    lines = [line_T, line_RH,]
+    if showQC:
+        lines.append(line_qc)
     if showFP:
         lines.append(line_fp)
     if showPFT:
@@ -609,9 +600,9 @@ if __name__=='__main__':
         #weather_series('waroona_run3',showmap=True)
         # day2 waroona:
         #weather_series('waroona_run3', day2=True, showPFT=False, extent=waroona_day2zoom)
-        weather_series('sirivan_run7',showFP=True,showPFT=True,showmap=True,
+        weather_series('sirivan_run6_hr',showFP=True,showPFT=True,showmap=True,
                 HSkip=10, 
-                test=True)
+                test=False)
     
     ## Run weather summary
     if False:

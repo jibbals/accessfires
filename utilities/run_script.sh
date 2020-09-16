@@ -3,8 +3,8 @@
 #PBS -q express
 #PBS -N accessfires_script
 #PBS -l walltime=20:00:00
-#PBS -l mem=80000MB
-#PBS -l cput=20:00:00
+#PBS -l mem=120000MB
+#PBS -l cput=24:00:00
 #PBS -l wd
 #PBS -l ncpus=1
 #PBS -l storage=scratch/en0+gdata/en0+gdata/hh5

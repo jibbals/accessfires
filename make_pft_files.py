@@ -225,7 +225,7 @@ if __name__=='__main__':
     HSkip_hr=3*HSkip
     #['sirivan_run1','waroona_run1','waroona_run2','waroona_run2uc']:#,'waroona_old']:
 
-    for mr in ['sirivan_run5_hr','sirivan_run6','sirivan_run6_hr']:
+    for mr in ['sirivan_run6_hr']:
         MRSKIP=HSkip_hr if 'hr' in mr else HSkip
         # let's time how long it takes
         start = timer()

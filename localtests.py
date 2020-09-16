@@ -34,15 +34,27 @@ import pandas
 _sn_='localtests'
 
 
-mr='sirivan_run1'
-umhours=fio.run_info[mr]['filedates'][:2]
-cubes=fio.read_model_run(mr,extent=[149,150.2,-32.1,-31],fdtime=umhours[0],
-                         HSkip=5)
-print(cubes)
-print(len(cubes[0].coord('latitude').points))
-print(cubes[0].coord('latitude').points)
-print(cubes[0].coord('latitude').points[::5])
-#ff=fio.read_fire(mr)
-#print(ff)
+mr='waroona_run3'
+day1=fio.run_info[mr]['filedates'][:24]
+cubes1=fio.read_model_run(mr,extent=plotting._extents_['waroona'],
+                         fdtime=day1,
+                         #HSkip=5,
+                         )
+print(cubes1)
 
+w1 = cubes1.extract('upward_air_velocity')[0]
+wmax1 = w1.collapsed(['time','model_level_number','longitude', 'latitude'], iris.analysis.MAX)
 
+print("MAXIMUM:",wmax1.data)
+
+day2=fio.run_info[mr]['filedates'][24:]
+cubes2=fio.read_model_run(mr,extent=plotting._extents_['waroona'],
+                         fdtime=day2,
+                         #HSkip=5,
+                         )
+print(cubes2)
+
+w2 = cubes2.extract('upward_air_velocity')[0]
+wmax2 = w2.collapsed(['time','model_level_number','longitude', 'latitude'], iris.analysis.MAX)
+
+print("MAXIMUM:",wmax2.data)
