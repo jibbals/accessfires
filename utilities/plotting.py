@@ -217,6 +217,32 @@ def annotate_max_winds(winds, upto=None, **annotateargs):
     
     plt.annotate(**annotateargs)
 
+import matplotlib.colors as col
+import matplotlib.pyplot as plt
+import matplotlib.ticker as tick
+import numpy as np
+
+def contours_symlog(w,levels=5):
+    """
+    Jeff's handy log spacer
+    with <levels> colours log spaced on each side of 0
+    """
+    wmn = w.min()
+    wmx = w.max()
+    w1 = np.ceil(np.log2(np.maximum(wmx,-wmn)))
+    wc = 2.0**(w1+np.arange(-1*levels,1))
+    wc = np.union1d([0],np.union1d(wc,-wc))
+    
+    # Then the following code will plot w[k,:,:] with double-ended log scaling, at powers of 2, and a sensible colorbar:
+    #ax = plt.subplot(nr,2,2*ir+1,aspect='equal',sharex=ax,sharey=ax)
+    #wcon1 = wcon(w[k,:,:])
+    #plt.contourf(x*1e-3,y*1e-3,w[k,:,:],wcon1,cmap='RdYlBu_r',norm=col.SymLogNorm(wcon1[-1]/16,base=2.0))
+    #plt.colorbar(format=tick.LogFormatterSciNotation(base=2.0,minor_thresholds=(np.inf,np.inf)))
+    
+    return wc
+
+
+
 def map_add_grid(ax, **gridargs):
     """
     add gridlines to some plot axis
@@ -254,7 +280,7 @@ def map_add_locations_extent(extentname,
                   'sirivan':['dunedoo','cassillis','leadville','merotherie','turill',],
                   'sirivanz':['cassillis','leadville','merotherie','turill'],
                   'sirivans':['dunedoo','cassillis','uarbry'],
-                  'sirivan_pcb':['cassillis','turill','coolah'],
+                  'sirivan_pcb':['cassillis','uarbry'],
                   }
     dx=.025
     dxfire = .025

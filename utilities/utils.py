@@ -79,10 +79,11 @@ def profile_interpolation(cube, latlon, average=False):
         #do stuff
     return data0
 
-def number_of_interp_points(lats,lons,start,end, factor=1.3):
+def number_of_interp_points(lats,lons,start,end, factor=2.0):
     """
     Returns how many points should be interpolated to between start and end on latlon grid
-    Based on min grid size, multiplied by factor
+    Based on min grid size, multiplied by some factor
+        The factor drastically reduces a runtime warning stating "too many knots added"
     """
     lat0,lon0 = start
     lat1,lon1 = end
@@ -304,7 +305,7 @@ def height_from_iris(cube,bounds=False):
         assert False, "no height coords"
     if bounds:
         height = zbounds
-        print(type(height),np.shape(height))
+        #print(type(height),np.shape(height))
     return height
 
 
@@ -496,7 +497,7 @@ def find_max_index_2d(field):
     mloc = np.unravel_index(np.argmax(field,axis=None),field.shape)
     return mloc
 
-def vorticity(u,v,lats,lons):
+def vorticity(u,v,lats,lons,nans_to_zeros=False):
     """
     
     ARGUMENTS:
@@ -504,6 +505,7 @@ def vorticity(u,v,lats,lons):
         v = latitudinal wind [lats,lons] (m/s)
         lats (deg)
         lons (deg)
+        nans_to_zeros flag to change nans to zero
         
     RETURNS: zeta is transformed from m/s/deg to 1/s
         zeta, OW_norm, OWZ
@@ -554,6 +556,10 @@ def vorticity(u,v,lats,lons):
         zetanan[np.isclose(zeta,0)]=np.NaN
         OW_norm = OW/(zetanan**2)
         OWZ = OW/zetanan
+    # fix nans to zero
+    if nans_to_zeros:
+        OWZ[np.isnan(OWZ)]=0 
+        OW_norm[np.isnan(OW_norm)]=0 
     return zeta, OW_norm, OWZ
 
 def wind_dir_from_uv(u,v):

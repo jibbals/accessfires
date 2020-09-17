@@ -195,7 +195,6 @@ def map_with_transect(data,lat,lon, transect,
     plot contourf of whatever, plus firefront (optional).
     Add transect lines on top of contourf.
     """
-    extent=[lon[0],lon[-1],lat[0],lat[-1]]
     start,end = transect
     
     # map contour using input data and arguments
@@ -224,8 +223,8 @@ def map_with_transect(data,lat,lon, transect,
     
     # Add fire outline
     if ff is not None:
-        print("DEBUG: mapfire:",ff.shape,lat.shape,lon.shape)
-        print("     : ",type(ff))
+        #print("DEBUG: mapfire:",ff.shape,lat.shape,lon.shape)
+        #print("     : ",type(ff))
         plotting.map_fire(ff,lat,lon)
     
     return cs,cb
@@ -358,7 +357,7 @@ def sample_showing_grid(model_run='waroona_run3', extentname=None, HSkip=None):
 
 def pyrocb(w, u, qc, z, wmean, topog, lat, lon,
            transect1, transect2, transect3,
-           ff=None,
+           ff=None, sh=None,
            wmeantitle='Average vertical motion',
            extentname=None,
            ztop=15000,
@@ -460,7 +459,7 @@ def pyrocb(w, u, qc, z, wmean, topog, lat, lon,
         wslicex,xslicex,zslicex = plotting.transect_w(w, z, lat, lon, 
                                                       startx, endx,
                                                       title='',
-                                                      ff=ff,
+                                                      sh=sh,
                                                       topog=topog, 
                                                       colorbar=False,
                                                       ztop=ztop,
@@ -557,8 +556,6 @@ def moving_pyrocb(model_run='waroona_run3', dtimes = None,
                 wmean = w[i,25:48,:,:].collapsed('model_level_number', iris.analysis.MEAN)
             
             h0,h1 = utils.height_from_iris(wmean,bounds=True)[0]
-            #print("DEBUG: h0, h1:",h0,h1)
-
 
             fire=None
             sheat=None
@@ -615,7 +612,7 @@ def moving_pyrocb(model_run='waroona_run3', dtimes = None,
             plt.subplot(3,1,3)
             theta = utils.potential_temperature(p[i].data,Ta[i].data)
             plotting.transect_theta(theta,zth,lat,lon,start,end,
-                                    ff=fire,
+                                    sh=sheat,
                                     topog=topog, title='',
                                     ztop=ztop)
             
@@ -669,8 +666,8 @@ def pyrocb_model_run(model_run='waroona_run1', dtime=datetime(2016,1,5,15),
 
     ## fire front
     ffdtimes = utils.dates_from_iris(w)
-    ff, = fio.read_fire(model_run=model_run, dtimes=ffdtimes, extent=extent,
-                        firefront=True,
+    ff,sh = fio.read_fire(model_run=model_run, dtimes=ffdtimes, extent=extent,
+                        firefront=True, sensibleheat=True,
                         HSkip=HSkip,)
     
     ## Make transects based on PCB occurrence listed latlons
@@ -701,8 +698,11 @@ def pyrocb_model_run(model_run='waroona_run1', dtime=datetime(2016,1,5,15),
         ui = u[i].data
         wmeani = wmean[i].data 
         ffi = None
+        shi = None
         if ff is not None:
             ffi = ff[i].data
+        if sh is not None:
+            shi = sh[i].data
         
         ## First make the left to right figure
         #left_right_slice(qci, ui, wi, zi, topogi, lat, lon, X1)
@@ -722,7 +722,7 @@ def pyrocb_model_run(model_run='waroona_run1', dtime=datetime(2016,1,5,15),
         
         pyrocb(w=wi, u=ui, qc=qci, z=zi, wmean=wmeani, topog=topogi,
                lat=lat, lon=lon, transect1=X1, transect2=X2, transect3=X3,
-               ff=ffi,
+               ff=ffi,sh=shi,
                wmeantitle=wmeantitle,
                extentname=extentname)
         # Save figure into animation folder with numeric identifier
@@ -738,15 +738,19 @@ def examine_metrics(mr,hour,extent=None,HSkip=None):
     wind direction mapping, at various levels
     """
     locname=mr.split('_')[0]
+    extentname=locname+'_pcb'
     if extent is None:
-        extent=plotting._extents_[locname+'_pcb']
+        extent=plotting._extents_[extentname]
     #model_hour = fio.sim_info[locname]['filedates'][hour]
     model_hour=hour
     cubes=fio.read_model_run(mr, fdtime=model_hour,extent=extent,HSkip=HSkip,
                              add_winds=True)
     u,v = cubes.extract(['u','v'])
     ctimes=utils.dates_from_iris(u)
-    ff,=fio.read_fire(mr,dtimes=ctimes,extent=extent,HSkip=HSkip)
+    ff,u10,v10=fio.read_fire(mr,dtimes=ctimes,extent=extent,
+                             wind=True,
+                             HSkip=HSkip)
+    lats10,lons10 = u10.coord('latitude').points, u10.coord('longitude').points
     lats,lons = u.coord('latitude').points, u.coord('longitude').points
     heights=utils.height_from_iris(u)
     offset_hours=timedelta(hours=fio.run_info[mr]['UTC_offset'])
@@ -755,18 +759,21 @@ def examine_metrics(mr,hour,extent=None,HSkip=None):
     cmap_wind='gnuplot2' # continuous
     norm_wind=col.Normalize(vmin=0,vmax=360)
     tickform_wind=tick.ScalarFormatter()
+    ticks_wind=None
     clevels_wind=np.arange(361)
-    levels_wind=[0,15,30,45]
+    levels_wind=[0,-1,15,30,60]
     
     cmap_vort='PRGn' # divergent
-    norm_vort=col.SymLogNorm(.00005,vmin=-.01, vmax=.01)
-    tickform_vort=tick.LogFormatter()
+    norm_vort=col.SymLogNorm(.00005,vmin=-.01, vmax=.01)#base=2.0 only works on later matplotlib versions
+    tickform_vort=tick.LogFormatterSciNotation(base=2.0,minor_thresholds=(np.inf,np.inf))
+    ticks_vort=[[-.01,-.001,0,.001,.01], ['-1e-2', '-1e-3', '0', '1e-3','1e-2']]
     clevels_vort=np.union1d(np.union1d(-1*np.logspace(-5,-2),0),np.logspace(-5,-2))
-    levels_vort=[0,20,40,60,80]
+    levels_vort=[0,-1,20,40,60]
     
-    cmap_ow='gnuplot2' # continuous
+    cmap_ow='gnuplot2_r' # continuous
     norm_ow=col.Normalize(vmin=0,vmax=1)
     tickform_ow=tick.ScalarFormatter()
+    ticks_ow=[[0,.2,.4,.6,.8,1],['0','.2','.4','.6','.8','1']]
     clevels_ow=np.linspace(0,1,60)
     levels_ow=levels_vort
     
@@ -774,11 +781,12 @@ def examine_metrics(mr,hour,extent=None,HSkip=None):
     for cti, utc in enumerate(ctimes):
         local_time = utc+offset_hours
         metrics={}
-        for mname, cmap, norm, tickform, clevs, levels in zip(
+        for mname, cmap, norm, tickform, ticks, clevs, levels in zip(
                 ['wind_direction','vorticity','OkuboWeiss'],
                 [cmap_wind,cmap_vort,cmap_ow],
                 [norm_wind,norm_vort,norm_ow],
                 [tickform_wind,tickform_vort,tickform_ow],
+                [ticks_wind,ticks_vort,ticks_ow],
                 [clevels_wind,clevels_vort,clevels_ow],
                 [levels_wind,levels_vort,levels_ow]
                 ):
@@ -788,32 +796,52 @@ def examine_metrics(mr,hour,extent=None,HSkip=None):
             
             for levi, lev in enumerate(levels):
                 plt.subplot(len(levels),1,len(levels)-levi)
+                ilats=lats
+                ilons=lons
+                # use 10m winds if level is set to -1
+                if lev<0:
+                    ulev=u10[cti].data
+                    vlev=v10[cti].data
+                    ilats=lats10
+                    ilons=lons10
+                else:
+                    ulev=u[cti,lev,:,:].data
+                    vlev=v[cti,lev,:,:].data
                 
-                wd = utils.wind_dir_from_uv(u[cti,lev,:,:].data,v[cti,lev,:,:].data)
-                vort, OW, OWZ = utils.vorticity(u[cti,lev,:,:].data,v[cti,lev,:,:].data,lats,lons)
+                wd = utils.wind_dir_from_uv(ulev,vlev)
+                vort, OW, OWZ = utils.vorticity(ulev,vlev,ilats,ilons,nans_to_zeros=True)
                 metrics['wind_direction']=wd
                 metrics['vorticity']=vort
                 metrics['OkuboWeiss']=OW
                 metrics['OkuboWeissNormed']=OWZ
 
                 metric=metrics[mname]
+                # remove mask if it's there
+                if np.ma.is_masked(metric):
+                    metric=metric.data
                 # set cbargs to make colorbar within plot
-                cbargs={}
-                print("DEBUG: precontourf",mname)
-                print("     :",np.shape(metric),np.shape(lats),np.shape(lons),np.shape(clevs))
-                print("     :",clevs)
-                cs,cb=plotting.map_contourf(metric,lats,lons,
+                #cbargs={'format':tickform,}
+                #wcon1 = wcon(w[k,:,:])
+                #plt.contourf(x*1e-3,y*1e-3,w[k,:,:],wcon1,cmap='RdYlBu_r',norm=col.SymLogNorm(wcon1[-1]/16,base=2.0))
+                #plt.colorbar(format=tick.LogFormatterSciNotation(base=2.0,minor_thresholds=(np.inf,np.inf)))
+                #print("DEBUG: precontourf",mname)
+                #print("     :",np.shape(metric),np.shape(lats),np.shape(lons),np.shape(clevs))
+                #print("     :",clevs)
+                cs,cb=plotting.map_contourf(metric,ilats,ilons,
+                                            #cbargs=cbargs,
                                             levels = clevs,
                                             cmap=cmap, 
                                             norm=norm,
-                                            )#clabel='m/s', cbarform=cbarform)
+                                            )
                 
                 tstring="~ %5.0f m"%(heights[lev])
+                if lev < 0:
+                    tstring="10 m"
                 if levi == len(levels)-1:
                     tstring="%s ~ %5.0f m - %s"%(local_time.strftime("%d %H:%M"),heights[lev],mname)
                 plt.title(tstring)
                 # add nearby towns
-                plotting.map_add_locations_extent(locname,hide_text=False,nice=True)
+                plotting.map_add_locations_extent(extentname,hide_text=False,nice=True)
                 
                 # Add fire front
                 plotting.map_fire(ff[cti].data,lats,lons,
@@ -826,52 +854,40 @@ def examine_metrics(mr,hour,extent=None,HSkip=None):
             fig.subplots_adjust(wspace=0.001)
             fig.subplots_adjust(right=axes[0]-0.03)
             cbar_ax = fig.add_axes(axes)
-            fig.colorbar(cs, cax=cbar_ax, format=tickform)
+            
+            if ticks is not None:
+                cb=fig.colorbar(cs, cax=cbar_ax, ticks=ticks[0])
+                cb.ax.set_yticklabels(ticks[1])
+            else:
+                fig.colorbar(cs, cax=cbar_ax, format=tickform)
+            
             # save figure
             fio.save_fig(mr,_sn_,utc,plt,subdir=mname)
 
 if __name__ == '__main__':
     
     waroona_second_half = np.array([datetime(2016,1,5,15)+ timedelta(hours=12+x) for x in range(12)])
-    sirivan_good_half = np.array([datetime(2017,2,12,4)+ timedelta(hours=x) for x in range(5)])
-    si_runs=['sirivan_run5_hr','sirivan_run7_hr','sirivan_run6_hr']
-    for hour in sirivan_good_half:
-        if False:
-            for run in si_runs:
-                examine_metrics(run,hour=hour,HSkip=None)
-
-        ## check to see where pcb are occurring
-        if False:
-            for run in si_runs:
-                locname=run.split('_')[0]
-                sample_showing_grid(model_run=run, extentname=locname, HSkip=5)
-        if True:
-            # When sample used to put some data in pcb occurrence dict run these
-            for run in si_runs:
-                pyrocb_model_run(run, dtime=hour,HSkip=None)
-                moving_pyrocb(run, dtimes=[hour], xlen=0.25,HSkip=None)
-            
-
-
-    ## New zoomed, moving pyrocb plotting
-    if False:
-        mr='sirivan_run7'
-        xlen=0.2
-        #hours=waroona_second_half # run half the hours
-        hours=[datetime(2017,2,11,21)] # first hour for testing
-        pyrocb_model_run(mr, 
-                         dtime=hours[0],
-                         HSkip=None)
-        #moving_pyrocb(model_run=mr, 
-        #              dtimes=hours,
-        #              xlen=xlen)
+    si_hours = np.array([datetime(2017,2,12,4)+ timedelta(hours=x) for x in range(5)])
+    si_runs=['sirivan_run5_hr','sirivan_run7','sirivan_run6_hr']
+    # for testing on laptop just up to 2nd hour
+    test_runs=['sirivan_run4'] 
+    test_hours=[datetime(2017,2,11,22),] 
+    HSkip=2
+    #HSkip=5
     
-    ### all plots for runs:
-    if False:
-        model_runs = ['sirivan_run1',]# 'waroona_run2','sirivan_run1']
-        for mr in model_runs :
-            dtimes = fio.run_info[mr]['filedates']
-            #if True: # Maybe just do a few hours for testing
-            #    dtimes = dtimes[0:2]
-            for dtime in dtimes:
-                pyrocb_model_run(model_run=mr, dtime=dtime)
+    for hour in si_hours:
+        for run in si_runs:
+            # vorticity, okubo weiss etc...
+            if True:    
+                examine_metrics(run,hour=hour,HSkip=HSkip)
+
+            ## check to see where pcb are occurring
+            if False:
+                locname=run.split('_')[0]
+                sample_showing_grid(model_run=run, extentname=locname, HSkip=HSkip)
+        
+            if True:
+                # When sample used to put some data in pcb occurrence dict run these
+                pyrocb_model_run(run, dtime=hour,HSkip=HSkip)
+                moving_pyrocb(run, dtimes=[hour], xlen=0.25,HSkip=HSkip)
+            
