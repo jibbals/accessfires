@@ -308,7 +308,12 @@ def height_from_iris(cube,bounds=False):
         #print(type(height),np.shape(height))
     return height
 
-
+def unmask(arr):
+    #print("DEBUG: umask(arr)", type(arr))
+    if np.ma.isMaskedArray(arr):
+        #print("     : returning arr.data")
+        return arr.data
+    return arr
 
 
 def dates_from_iris(timedim, remove_seconds=True):

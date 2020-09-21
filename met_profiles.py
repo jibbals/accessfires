@@ -24,15 +24,15 @@ from metpy.plots import SkewT,Hodograph
 import matplotlib.pyplot as plt
 #import matplotlib.colors as col
 #import matplotlib.ticker as tick
-import matplotlib.gridspec as gridspec
+#import matplotlib.gridspec as gridspec
 
 import numpy as np
 from datetime import datetime,timedelta
-import iris # file reading and constraints etc
-#import warnings
 
 # local modules
 from utilities import plotting, utils, fio
+from pyrocb import __PCB_occurrences__
+
 
 ###
 ## GLOBALS
@@ -56,7 +56,7 @@ def hodograph(u,v,latlon,average=0,ax=None,ztop=18000,axlims=[-50,50],**hodoargs
     zinds=height > -999
     if ztop is not None:
         zinds=height<ztop
-    height=height * units("metre") # add units for metpy
+    height=height/1000.0 * units("kilometre") # add units for metpy
     u0 = utils.profile_interpolation(u,latlon,average=average).data * units('m/s')
     v0 = utils.profile_interpolation(v,latlon,average=average).data * units('m/s')
     
@@ -73,9 +73,10 @@ def hodograph(u,v,latlon,average=0,ax=None,ztop=18000,axlims=[-50,50],**hodoargs
     return cs
     
 def f160(press,Temp,Tempd, latlon,
-         fig=None, subplot=None,
+         fig=None,
          press_rho=None,uwind=None,vwind=None, 
-         nearby=2, alpha=0.3):
+         nearby=2, alpha=0.3,
+         **skewtargs):
     '''
     show skewt logp plot of temperature profile at latlon
     input cubes: pressures, temperatures are [z,lat,lon]
@@ -91,37 +92,26 @@ def f160(press,Temp,Tempd, latlon,
     lons=press.coord('longitude')
     lats=press.coord('latitude')
     
+    # Extract data array from cube, convert to desired units
     fromunits=[units(str(press.units)), units(str(Temp.units)), units(str(Tempd.units))]
     tounits=[units.mbar, units.degC, units.degC]
-    [p,T,Td] = [ (utils.profile_interpolation(cube,latlon).data.data*funit).to(tunit) for cube,funit,tunit in zip([press,Temp,Tempd],fromunits,tounits)]
-    #press0 = press.interpolate([('longitude',[latlon[1]]),
-    #                            ('latitude',[latlon[0]])],
-    #                           iris.analysis.Linear())
-    #temp0  = Temp.interpolate([('longitude',[latlon[1]]),
-    #                        ('latitude',[latlon[0]])],
-    #                       iris.analysis.Linear())
-    #tempd0 = Tempd.interpolate([('longitude',[latlon[1]]),
-    #                         ('latitude',[latlon[0]])],
-    #                        iris.analysis.Linear())
-    #
-    ## Plot T, and Td
-    ## pull out data array (units don't work with masked arrays)
-    #p = np.squeeze(press0.data.data) * units(str(press.units))
-    #p = p.to(units.mbar)
-    #T = np.squeeze(temp0.data.data) * units(str(Temp.units))
-    #T = T.to(units.degC)
-    #Td = np.squeeze(tempd0.data.data) * units(str(Tempd.units))
-    #Td = Td.to(units.degC)
+    pTTd = []
+    for cube,funit,tunit in zip([press,Temp,Tempd],fromunits,tounits):
+        # interpolate
+        darr0 = utils.profile_interpolation(cube,latlon).data
+        # unmask if necessary
+        darr1 = utils.unmask(darr0)
+        # conversion
+        darr2 = (darr1*funit).to(tunit)
+        pTTd.append(darr2)
+    p,T,Td = pTTd
     
-    #print("DEBUG: f160 interp1", p.shape, T.shape, Td.shape)
-    #print("DEBUG: f160 interp1", p, T, Td)
-    if fig is None:
-        fig = plt.figure(figsize=(9,9))
-    skewtargs={'fig':fig,
-               'rotation':45,
-               }
-    if subplot is not None:
-        skewtargs['subplot'] = subplot
+    # default args to SkewT method of library
+    if 'fig' not in skewtargs:
+        skewtargs['fig'] = plt.figure(figsize=(9,9))
+    if 'rotation' not in skewtargs:
+        skewtargs['rotation']=30
+    
     skew = SkewT(**skewtargs)
     skew.plot(p,T,tcolor, linewidth=2)
     skew.plot(p,Td,tdcolor, linewidth=2)
@@ -134,9 +124,9 @@ def f160(press,Temp,Tempd, latlon,
     ## Add wind profile if desired
     if uwind is not None and vwind is not None and press_rho is not None:
         # interpolate to desired lat/lon
-        u0 = utils.profile_interpolation(uwind,latlon).data.data
-        v0 = utils.profile_interpolation(vwind,latlon).data.data
-        p_rho0 = utils.profile_interpolation(press_rho,latlon).data.data
+        u0 = utils.unmask(utils.profile_interpolation(uwind,latlon).data)
+        v0 = utils.unmask(utils.profile_interpolation(vwind,latlon).data)
+        p_rho0 = utils.unmask(utils.profile_interpolation(press_rho,latlon).data)
         
         u = u0 * units('m/s')#units(str(uwind.units))
         v = v0 * units('m/s')#units(str(vwind.units))
@@ -182,7 +172,9 @@ def model_metpy_hour(dtime=datetime(2016,1,6,7),
                      latlon_stamp=None,
                      model_version='waroona_run1',
                      nearby=2,
-                     HSkip=None):
+                     HSkip=None,
+                     ztop=15000,
+                     ):
     '''
     Look at F160 plots over time for a particular location
     INPUTS: hour of interest, latlon, and label to describe latlon (for plotting folder)
@@ -209,12 +201,14 @@ def model_metpy_hour(dtime=datetime(2016,1,6,7),
                                HSkip=HSkip)
     p, t, td, u, v = cubes.extract(['air_pressure','air_temperature',
                                     'dewpoint_temperature','u','v'])
+    
     p_rho = p
     if model_version=='waroona_run1':
         p_rho, = cubes.extract('air_pressure_rho')
     
     ffdtimes = utils.dates_from_iris(p)
-    offset=timedelta(hours=8) if latlon[1] < 120 else timedelta(hours=10)
+    offset_hours=fio.run_info[model_version]['UTC_offset']
+    offset=timedelta(hours=offset_hours)
     
     for i in range(len(ffdtimes)):
         utc=ffdtimes[i]
@@ -223,7 +217,7 @@ def model_metpy_hour(dtime=datetime(2016,1,6,7),
         ## Plot side by side: FAILS for no reason... axes get messed up
         
         ## f160 plot
-        suptitle="%s (%s) %s"%(model_version,latlon_stamp,lt.strftime("%d %H:%M (LT)"))
+        suptitle="%s (%s) %s"%(model_version,latlon_stamp,lt.strftime("%H:%M (LT)"))
         
         
         #print(ffdtimes[i].strftime("DEBUG: %d %H:%M"))
@@ -237,13 +231,14 @@ def model_metpy_hour(dtime=datetime(2016,1,6,7),
         fio.save_fig(model_version,_sn_,utc,plt,subdir=latlon_stamp+'/f160')
         
         ## Plot HODOR GRAPHIC
-        cs=hodograph(u[i],v[i],latlon,axlims=[-40,40])
+        cs=hodograph(u[i,],v[i,],latlon,ztop=ztop,axlims=[-40,40])
         plt.title(suptitle)
         
-        cbar_ax = plt.gcf().add_axes([0.86, 0.3, 0.03, 0.4])# X Y Width Height
+        cbar_ax = plt.gcf().add_axes([0.79, 0.3, 0.03, 0.4])# X Y Width Height
         cb = plt.colorbar(cs, cax=cbar_ax, orientation='vertical',
                           format=matplotlib.ticker.ScalarFormatter(), 
                           pad=0)
+        cb.set_label('Altitude [km]')
         
         # Save figure
         fio.save_fig(model_version,_sn_,utc,plt,subdir=latlon_stamp+'/hodo')
@@ -251,49 +246,25 @@ def model_metpy_hour(dtime=datetime(2016,1,6,7),
 
 if __name__ == '__main__':
     
-    waroona_upwind = []
-    waroona_0630_pcb = [-32.9,116.05] # latlon
-    waroona_0630_pcb_stamp = "32.90S, 116.05E"
-    if False:
-        # show waroona f160 at PCB
-        model_metpy_hour(dtime=datetime(2016,1,6,6),
-                         latlon=waroona_0630_pcb,
-                         latlon_stamp=waroona_0630_pcb_stamp,
-                         model_version='waroona_run3', 
-                         nearby=1)
+    w_run = 'waroona_run3'
+    w_upwind = []
+    w_pcb = [-32.9,116.05] # latlon
     
-    if True: # lets look at sirivan f160
-        simid = -32, 149.8 # sirivan middle of burn area
-        wmid = -32.9,116 # waroona middle
-        for run,latlon in zip(['sirivan_run5_hr','waroona_run3'],[simid,wmid]):
-            for hour in fio.run_info[run]['filedates']:
-                model_metpy_hour(dtime=hour,
-                                 latlon=latlon,
-                                 #latlon_stamp="32.9S,116.05E",
-                                 model_version=run, 
-                                 nearby=0,
-                                 HSkip=None)
     
-    if False: # old stuff
-        topleft = [-32.75, 115.8] # random point away from the fire influence
-        pyrocb1 = plotting._latlons_['pyrocb_waroona1']
-        upwind  = plotting._latlons_['fire_waroona_upwind'] # ~1 km upwind of fire
-        loc_and_stamp = ([pyrocb1,topleft,upwind],['pyrocb1','topleft','upwind'])
-        #loc_and_stamp = ([upwind],['upwind'])
-        #checktimes = [ datetime(2016,1,6,5) + timedelta(hours=x) for x in range(2) ]
-        #checktimes = [ datetime(2016,1,5,15) ]
-        old_times = fio.run_info['waroona_old']['filedates']
-        run_times = fio.run_info['waroona_run1']['filedates']
-        
-        # 'waroona_run1','waroona_old'],[run_times,run_times,run_times,old_times]):
-        for mv, dtimes in zip(['waroona_run2','waroona_run2uc'],[run_times,run_times]):
-            for dtime in dtimes:
-                for latlon,latlon_stamp in zip(loc_and_stamp[0],loc_and_stamp[1]):
-                    try:
-                        f160_hour(dtime, latlon=latlon,
-                                  latlon_stamp=latlon_stamp,
-                                  model_version=mv)
-                    except OSError as ose:
-                        print("WARNING: probably no file for ",mv,dtime)
-                        print("       :", ose)
-
+    if True: # lets look at sirivan
+        si_runs = ['sirivan_run5_hr','sirivan_run6_hr', 'sirivan_run7_hr', 'sirivan_run7']
+        for si_run in si_runs:
+            si_pcb = __PCB_occurrences__[si_run]['latlon'][-1]
+            si_upwind = plotting._latlons_['fire_sirivan_upwind']
+            si_mid = -32, 149.8 # sirivan middle of burn area
+            si_hours = fio.run_info[si_run]['filedates'][8:]
+            for hour in si_hours:
+                for latlon,stamp in zip([si_upwind,si_mid,si_pcb],
+                                        ['upwind', 'mid_fire', 'pcb']):
+                    model_metpy_hour(dtime=hour,
+                                     latlon=latlon,
+                                     latlon_stamp=stamp,
+                                     model_version=si_run, 
+                                     nearby=0,
+                                     HSkip=None)
+    
