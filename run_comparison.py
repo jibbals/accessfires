@@ -92,7 +92,7 @@ def compare_winds(mr1='waroona_run2', mr2='waroona_run2uc',
     hcmap=plotting._cmaps_['windspeed']
     # vertical wind colourbar is constant
     wcmap=plotting._cmaps_['verticalvelocity']
-    wnorm=colors.SymLogNorm(0.25) # linear to +- 0.25, then log scale
+    wnorm=colors.SymLogNorm(0.25,base=2.) # linear to +- 0.25, then log scale
     wcontours=np.union1d(np.union1d(2.0**np.arange(-2,6),-1*(2.0**np.arange(-2,6))),np.array([0]))
     
     # make 4 vertical bins
@@ -289,7 +289,7 @@ def compare_clouds(mr1='waroona_run2', mr2='waroona_run2uc',
     # log between 0.01 and 0.3
     logmax=np.log(colormax)/np.log(10)-0.01
     cmap=plotting._cmaps_['qc']
-    norm=colors.SymLogNorm(0.01, vmin=0,vmax=colormax)
+    norm=colors.SymLogNorm(0.01, vmin=0,vmax=colormax,base=2.)
     clevs=np.union1d(np.union1d(np.logspace(-2,logmax,30),0),colormax) 
     
     extentname = mr1.split('_')[0]

@@ -41,7 +41,7 @@ def vert_motion_slices(qc,w,lh,lat,lon,
     
     # colour bar stuff
     cmap=plotting._cmaps_['verticalvelocity']
-    norm=col.SymLogNorm(0.25)
+    norm=col.SymLogNorm(0.25,base=2.)
     cbarform=tick.ScalarFormatter()
     contours=np.union1d(np.union1d(2.0**np.arange(-2,6),-1*(2.0**np.arange(-2,6))),np.array([0]))
     

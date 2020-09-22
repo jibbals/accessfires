@@ -5,9 +5,12 @@ data.lnk
 # ignore figures unless added specifically
 figures_old
 figures
+outputs
+prelim
 
 # ignore notebook checkpoints
 .ipynb*
+iframe_figures
 
 # ignore pycache
 **__pycache__
