@@ -752,6 +752,8 @@ def examine_metrics(mr,hour,extent=None,HSkip=None):
                              HSkip=HSkip)
     lats10,lons10 = u10.coord('latitude').points, u10.coord('longitude').points
     lats,lons = u.coord('latitude').points, u.coord('longitude').points
+    fflats,fflons = ff.coord('latitude').points, ff.coord('longitude').points
+
     heights=utils.height_from_iris(u)
     offset_hours=timedelta(hours=fio.run_info[mr]['UTC_offset'])
     
@@ -799,6 +801,7 @@ def examine_metrics(mr,hour,extent=None,HSkip=None):
                 ilats=lats
                 ilons=lons
                 # use 10m winds if level is set to -1
+
                 if lev<0:
                     ulev=u10[cti].data
                     vlev=v10[cti].data
@@ -826,7 +829,7 @@ def examine_metrics(mr,hour,extent=None,HSkip=None):
                 #plt.colorbar(format=tick.LogFormatterSciNotation(base=2.0,minor_thresholds=(np.inf,np.inf)))
                 #print("DEBUG: precontourf",mname)
                 #print("     :",np.shape(metric),np.shape(lats),np.shape(lons),np.shape(clevs))
-                #print("     :",clevs)
+                #print("     :",np.shape(ilats),np.shape(ilons))
                 cs,cb=plotting.map_contourf(metric,ilats,ilons,
                                             #cbargs=cbargs,
                                             levels = clevs,
@@ -844,7 +847,7 @@ def examine_metrics(mr,hour,extent=None,HSkip=None):
                 plotting.map_add_locations_extent(extentname,hide_text=False,nice=True)
                 
                 # Add fire front
-                plotting.map_fire(ff[cti].data,lats,lons,
+                plotting.map_fire(ff[cti].data,fflats,fflons,
                                   alpha=0.5 + 0.5*(levi==0), 
                                   )
     
@@ -870,13 +873,13 @@ if __name__ == '__main__':
     si_hours = np.array([datetime(2017,2,12,4)+ timedelta(hours=x) for x in range(5)])
     si_runs=['sirivan_run5_hr','sirivan_run7','sirivan_run6_hr']
     # for testing on laptop just up to 2nd hour
-    test_runs=['sirivan_run4'] 
+    test_runs=['sirivan_run7_hr'] 
     test_hours=[datetime(2017,2,11,22),] 
     HSkip=2
     #HSkip=5
     
     for hour in si_hours:
-        for run in si_runs:
+        for run in test_runs:
             # vorticity, okubo weiss etc...
             if True:    
                 examine_metrics(run,hour=hour,HSkip=HSkip)
