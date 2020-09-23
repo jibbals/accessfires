@@ -769,22 +769,23 @@ def examine_metrics(mr,hour,extent=None,HSkip=None):
     tickform_vort=tick.LogFormatterSciNotation(base=2.0,minor_thresholds=(np.inf,np.inf))
     ticks_vort=[[-.05,-.01,-.001,0,.001,.01,.05], 
                 ['-.05','-.01', '-.001', '0', '.001','.01','.05']]
-    clevels_vort=np.union1d(np.union1d(-1*np.logspace(-5,-2),0),np.logspace(-5,-2))
+    clevels_vort=np.union1d(np.union1d(-5*np.logspace(-5,-2),0),5*np.logspace(-5,-2))
     levels_vort=[0,-1,20,40,60]
     
     cmap_ow='gnuplot2_r' # continuous
     norm_ow=norm_vort
     tickform_ow=tickform_vort
-    ticks_ow=ticks_vort
-    clevels_ow=clevels_vort
+    ticks_ow=[[-0.01,-.001,0,.001,.01],
+             ['-.01','-.001','0','.001','.01']]
+    clevels_ow=clevels_vort/5.0
     levels_ow=levels_vort
     
     cmap_owz='gnuplot2_r' # continuous
-    norm_owz=col.Normalize(vmin=0,vmax=1)
+    norm_owz=col.SymLogNorm(1,vmin=0,vmax=10,base=2)
     tickform_owz=tick.ScalarFormatter()
-    ticks_owz=[[0,.2,.4,.6,.8,1],
-              ['0','.2','.4','.6','.8','1']]
-    clevels_owz=np.linspace(0,1,60)
+    ticks_owz=[[0,1,2,4,10],
+              ['0','1','2','4','10']]
+    clevels_owz=np.union1d(np.linspace(0,1,20),np.logspace(0,1,40))
     levels_owz=levels_vort
     
     ## loop over levels and times
@@ -831,8 +832,6 @@ def examine_metrics(mr,hour,extent=None,HSkip=None):
                 if np.ma.is_masked(metric):
                     metric=metric.data
                 
-                print("DEBUG: precontourf",mname)
-                print("     :",cmap, norm)
                 cs,cb=plotting.map_contourf(metric,ilats,ilons,
                                             #cbargs=cbargs,
                                             levels = clevs,
