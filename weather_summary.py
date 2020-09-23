@@ -59,7 +59,7 @@ def plot_weather_summary(U,V,W, height, lat, lon, extentname,
     
     # vertical wind colourbar is constant
     wcmap=plotting._cmaps_['verticalvelocity']
-    wnorm=colors.SymLogNorm(0.25) # linear to +- 0.25, then log scale
+    wnorm=colors.SymLogNorm(0.25,base=2.) # linear to +- 0.25, then log scale
     wcontours=np.union1d(np.union1d(2.0**np.arange(-2,6),-1*(2.0**np.arange(-2,6))),np.array([0]))
     nhcontours=16
     hcontours=nhcontours

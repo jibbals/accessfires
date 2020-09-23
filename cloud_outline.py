@@ -107,7 +107,7 @@ def clouds_2panel(topog,s,u,v,
     ## Second row is transect plots
     plt.subplot(3,1,2)
     #Lets do theta using log normal after 300 degrees
-    #norm = colors.SymLogNorm(300)
+    #norm = colors.SymLogNorm(300,base=2.)
     #contours = np.arange(280,350,1)
     #lines = np.union1d(np.arange(280,301,2), np.arange(310,351,10))
     thslice, xslice, zslice = plotting.transect_theta(th,z,lat,lon,start,end,topog=topog,

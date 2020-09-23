@@ -284,7 +284,7 @@ def top_down_vertical_motion(W,lat,lon,FF=None,Q=None,):
     
     # Standard color scale
     wcmap=plotting._cmaps_['verticalvelocity']
-    wnorm=col.SymLogNorm(0.25) # linear to +- 0.25, then log scale
+    wnorm=col.SymLogNorm(0.25,base=2.) # linear to +- 0.25, then log scale
     wcontours=np.union1d(np.union1d(2.0**np.arange(-2,6),-1*(2.0**np.arange(-2,6))),np.array([0]))
     
     # Vertical motion on standard colorscale
@@ -410,7 +410,7 @@ def pyrocb(w, u, qc, z, wmean, topog, lat, lon,
                               cbargs={}, # effectively turns off cbar
                               levels = clevs_vertwind, 
                               cmap=plotting._cmaps_['verticalvelocity'],
-                              norm=col.SymLogNorm(0.25), 
+                              norm=col.SymLogNorm(0.25,base=2.), 
                               #cbarform=tick.ScalarFormatter(), 
                               #clabel='m/s',
                               )
@@ -590,7 +590,7 @@ def moving_pyrocb(model_run='waroona_run3', dtimes = None,
                                       cbargs={}, 
                                       levels = clevs_vertwind,
                                       cmap=plotting._cmaps_['verticalvelocity'],
-                                      norm=col.SymLogNorm(0.25), 
+                                      norm=col.SymLogNorm(0.25,base=2.), 
                                       #cbarform=tick.ScalarFormatter(), 
                                       #clabel='m/s',
                                       )
@@ -766,7 +766,7 @@ def examine_metrics(mr,hour,extent=None,HSkip=None):
     levels_wind=[0,-1,15,30,60]
     
     cmap_vort='PRGn' # divergent
-    norm_vort=col.SymLogNorm(.00005,vmin=-.01, vmax=.01)#base=2.0 only works on later matplotlib versions
+    norm_vort=col.SymLogNorm(.00005,vmin=-.01, vmax=.01,base=2.)
     tickform_vort=tick.LogFormatterSciNotation(base=2.0,minor_thresholds=(np.inf,np.inf))
     ticks_vort=[[-.01,-.001,0,.001,.01], ['-1e-2', '-1e-3', '0', '1e-3','1e-2']]
     clevels_vort=np.union1d(np.union1d(-1*np.logspace(-5,-2),0),np.logspace(-5,-2))
