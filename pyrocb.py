@@ -11,7 +11,7 @@ Created on Tue Aug 27 11:09:54 2019
 """
 
 import matplotlib
-matplotlib.use('Agg',warn=False)
+matplotlib.use('Agg')
 
 # plotting stuff
 import matplotlib.pyplot as plt
@@ -344,9 +344,9 @@ def sample_showing_grid(model_run='waroona_run3', extentname=None, HSkip=None):
         f, axes = plt.subplots(3,1,figsize=[12,16],subplot_kw={'projection': ccrs.PlateCarree()})
         for ax, hi in zip(axes,[h1,h2,h3]):
             plt.sca(ax)
-            cs = top_down_vertical_motion(W[0,hi].data,
-                                          FF=FF[0].data, Q=Q[0,hi].data,
-                                          lat=lat,lon=lon,)
+            top_down_vertical_motion(W[0,hi].data,
+                                     FF=FF[0].data, Q=Q[0,hi].data,
+                                     lat=lat,lon=lon,)
             plotting.map_add_locations_extent(extentname,hide_text=True)
             plotting.map_draw_gridlines(ax,)
             #plt.setp(ax.get_xticklabels(), rotation=45)
@@ -402,8 +402,7 @@ def pyrocb(w, u, qc, z, wmean, topog, lat, lon,
     clevs_vertwind = np.union1d(np.union1d(2.0**np.arange(-2,6),
                                            -1*(2.0**np.arange(-2,6))),
                                 np.array([0]))
-    print("DEBUG: calling map_with_transect:")
-    print("     :",np.shape(wmean), len(lat),len(lon),np.shape(ff))
+    
     cs, _ = map_with_transect(wmean, lat, lon, transect1, ff=ff, 
                               extralines=[transect2,transect3],
                               extracolors=['b','teal'],
@@ -758,7 +757,7 @@ def examine_metrics(mr,hour,extent=None,HSkip=None):
     offset_hours=timedelta(hours=fio.run_info[mr]['UTC_offset'])
     
     ## cbar for wind dir
-    cmap_wind='gnuplot2' # continuous
+    cmap_wind='gist_rainbow' # continuous
     norm_wind=col.Normalize(vmin=0,vmax=360)
     tickform_wind=tick.ScalarFormatter()
     ticks_wind=None
@@ -768,29 +767,38 @@ def examine_metrics(mr,hour,extent=None,HSkip=None):
     cmap_vort='PRGn' # divergent
     norm_vort=col.SymLogNorm(.00005,vmin=-.01, vmax=.01,base=2.)
     tickform_vort=tick.LogFormatterSciNotation(base=2.0,minor_thresholds=(np.inf,np.inf))
-    ticks_vort=[[-.01,-.001,0,.001,.01], ['-1e-2', '-1e-3', '0', '1e-3','1e-2']]
+    ticks_vort=[[-.05,-.01,-.001,0,.001,.01,.05], 
+                ['-.05','-.01', '-.001', '0', '.001','.01','.05']]
     clevels_vort=np.union1d(np.union1d(-1*np.logspace(-5,-2),0),np.logspace(-5,-2))
     levels_vort=[0,-1,20,40,60]
     
     cmap_ow='gnuplot2_r' # continuous
-    norm_ow=col.Normalize(vmin=0,vmax=1)
-    tickform_ow=tick.ScalarFormatter()
-    ticks_ow=[[0,.2,.4,.6,.8,1],['0','.2','.4','.6','.8','1']]
-    clevels_ow=np.linspace(0,1,60)
+    norm_ow=norm_vort
+    tickform_ow=tickform_vort
+    ticks_ow=ticks_vort
+    clevels_ow=clevels_vort
     levels_ow=levels_vort
+    
+    cmap_owz='gnuplot2_r' # continuous
+    norm_owz=col.Normalize(vmin=0,vmax=1)
+    tickform_owz=tick.ScalarFormatter()
+    ticks_owz=[[0,.2,.4,.6,.8,1],
+              ['0','.2','.4','.6','.8','1']]
+    clevels_owz=np.linspace(0,1,60)
+    levels_owz=levels_vort
     
     ## loop over levels and times
     for cti, utc in enumerate(ctimes):
         local_time = utc+offset_hours
         metrics={}
         for mname, cmap, norm, tickform, ticks, clevs, levels in zip(
-                ['wind_direction','vorticity','OkuboWeiss'],
-                [cmap_wind,cmap_vort,cmap_ow],
-                [norm_wind,norm_vort,norm_ow],
-                [tickform_wind,tickform_vort,tickform_ow],
-                [ticks_wind,ticks_vort,ticks_ow],
-                [clevels_wind,clevels_vort,clevels_ow],
-                [levels_wind,levels_vort,levels_ow]
+                ['wind_direction','vorticity','OkuboWeiss','OkuboWeissZ'],
+                [cmap_wind,cmap_vort,cmap_ow,cmap_owz],
+                [norm_wind,norm_vort,norm_ow,norm_owz],
+                [tickform_wind,tickform_vort,tickform_ow,tickform_owz],
+                [ticks_wind,ticks_vort,ticks_ow,ticks_owz],
+                [clevels_wind,clevels_vort,clevels_ow,clevels_owz],
+                [levels_wind,levels_vort,levels_ow,levels_owz]
                 ):
         
             # for each time we make a figure
@@ -812,29 +820,25 @@ def examine_metrics(mr,hour,extent=None,HSkip=None):
                     vlev=v[cti,lev,:,:].data
                 
                 wd = utils.wind_dir_from_uv(ulev,vlev)
-                vort, OW, OWZ = utils.vorticity(ulev,vlev,ilats,ilons,nans_to_zeros=True)
+                vort, OW, OWN, OWZ = utils.vorticity(ulev,vlev,ilats,ilons,nans_to_zeros=True)
                 metrics['wind_direction']=wd
                 metrics['vorticity']=vort
                 metrics['OkuboWeiss']=OW
-                metrics['OkuboWeissNormed']=OWZ
+                metrics['OkuboWeissZ']=OWZ
 
                 metric=metrics[mname]
                 # remove mask if it's there
                 if np.ma.is_masked(metric):
                     metric=metric.data
-                # set cbargs to make colorbar within plot
-                #cbargs={'format':tickform,}
-                #wcon1 = wcon(w[k,:,:])
-                #plt.contourf(x*1e-3,y*1e-3,w[k,:,:],wcon1,cmap='RdYlBu_r',norm=col.SymLogNorm(wcon1[-1]/16,base=2.0))
-                #plt.colorbar(format=tick.LogFormatterSciNotation(base=2.0,minor_thresholds=(np.inf,np.inf)))
-                #print("DEBUG: precontourf",mname)
-                #print("     :",np.shape(metric),np.shape(lats),np.shape(lons),np.shape(clevs))
-                #print("     :",np.shape(ilats),np.shape(ilons))
+                
+                print("DEBUG: precontourf",mname)
+                print("     :",cmap, norm)
                 cs,cb=plotting.map_contourf(metric,ilats,ilons,
                                             #cbargs=cbargs,
                                             levels = clevs,
-                                            cmap=cmap, 
-                                            norm=norm,
+                                            cmap = cmap, 
+                                            #cmap = cmap_test,
+                                            norm = norm,
                                             )
                 
                 tstring="~ %5.0f m"%(heights[lev])
@@ -873,12 +877,12 @@ if __name__ == '__main__':
     si_hours = np.array([datetime(2017,2,12,4)+ timedelta(hours=x) for x in range(5)])
     si_runs=['sirivan_run5_hr','sirivan_run7','sirivan_run6_hr']
     # for testing on laptop just up to 2nd hour
-    test_runs=['sirivan_run7_hr'] 
+    test_runs=['sirivan_run4'] 
     test_hours=[datetime(2017,2,11,22),] 
     HSkip=2
     #HSkip=5
     
-    for hour in si_hours:
+    for hour in test_hours:
         for run in test_runs:
             # vorticity, okubo weiss etc...
             if True:    
@@ -889,7 +893,7 @@ if __name__ == '__main__':
                 locname=run.split('_')[0]
                 sample_showing_grid(model_run=run, extentname=locname, HSkip=HSkip)
         
-            if True:
+            if False:
                 # When sample used to put some data in pcb occurrence dict run these
                 pyrocb_model_run(run, dtime=hour,HSkip=HSkip)
                 moving_pyrocb(run, dtimes=[hour], xlen=0.25,HSkip=HSkip)

@@ -513,7 +513,12 @@ def vorticity(u,v,lats,lons,nans_to_zeros=False):
         nans_to_zeros flag to change nans to zero
         
     RETURNS: zeta is transformed from m/s/deg to 1/s
-        zeta, OW_norm, OWZ
+        zeta, OW, OW_norm, OWZ
+        scales: 
+            zeta(vorticity) ~ -0.05 to +.05
+            OW (similar)
+            OW_norm ~ 0 to 1
+            OWZ ~ also 0 to 1?
         
     NOTES:
         derivatives calculated using numpy gradient function
@@ -565,7 +570,7 @@ def vorticity(u,v,lats,lons,nans_to_zeros=False):
     if nans_to_zeros:
         OWZ[np.isnan(OWZ)]=0 
         OW_norm[np.isnan(OW_norm)]=0 
-    return zeta, OW_norm, OWZ
+    return zeta, OW, OW_norm, OWZ
 
 def wind_dir_from_uv(u,v):
     """

@@ -13,7 +13,7 @@ Created on Wed Sep 11 12:28:05 2019
 ## module load conda/analysis3
 
 import matplotlib
-matplotlib.use('Agg',warn=False)
+matplotlib.use('Agg')
 
 from metpy.units import units
 #distance = np.arange(1, 5) * units.meters # easy way to add units (Also units.metre works!)
@@ -39,7 +39,7 @@ from pyrocb import __PCB_occurrences__
 ###
 _sn_ = 'met_profiles'
 
-def hodograph(u,v,latlon,average=0,ax=None,ztop=18000,axlims=[-50,50],**hodoargs):
+def hodograph(u,v,latlon,average=0,ax=None,ztop=18000,axlims=[-50,50],markers=[1000,2000,3000,4000],**hodoargs):
     """
     hodograph plot
     args:
@@ -66,7 +66,21 @@ def hodograph(u,v,latlon,average=0,ax=None,ztop=18000,axlims=[-50,50],**hodoargs
         hodo=Hodograph()
     else:
         hodo=Hodograph(ax)
+    # Default colormap to use to show height
+    if 'cmap' not in hodoargs:
+        hodoargs['cmap']='nipy_spectral'
+    
     cs=hodo.plot_colormapped(u0[zinds],v0[zinds],height[zinds],**hodoargs)
+    # add markers at specified heights
+    if markers is not None:
+        heights = utils.height_from_iris(u) # in metres
+        # indices for nearest points
+        markinds=np.ones(len(markers),dtype=np.int)
+        for mi, mheight in enumerate(markers):
+            markinds[mi] = np.abs(heights - mheight).argmin()
+        # plot markers to show the height clearly
+        hodo.plot(u0[markinds],v0[markinds],
+                  marker='x',color='k', linestyle='None')
     hodo.add_grid(increment=20)
     hodo.ax.set_xlim(axlims[0],axlims[1])
     hodo.ax.set_ylim(axlims[0],axlims[1])
@@ -231,7 +245,8 @@ def model_metpy_hour(dtime=datetime(2016,1,6,7),
         fio.save_fig(model_version,_sn_,utc,plt,subdir=latlon_stamp+'/f160')
         
         ## Plot HODOR GRAPHIC
-        cs=hodograph(u[i,],v[i,],latlon,ztop=ztop,axlims=[-40,40])
+        markers=[1000,2000,4000]
+        cs=hodograph(u[i,],v[i,],latlon,ztop=ztop,axlims=[-40,40],markers=markers)
         plt.title(suptitle)
         
         cbar_ax = plt.gcf().add_axes([0.79, 0.3, 0.03, 0.4])# X Y Width Height
@@ -239,6 +254,9 @@ def model_metpy_hour(dtime=datetime(2016,1,6,7),
                           format=matplotlib.ticker.ScalarFormatter(), 
                           pad=0)
         cb.set_label('Altitude [km]')
+        # add markers to colorbar, axes are 0-1, 0-1
+        cb.ax.plot([0.5]*len(markers), np.array(markers)/ztop, 
+                   marker='x', color='k',linestyle='None')
         
         # Save figure
         fio.save_fig(model_version,_sn_,utc,plt,subdir=latlon_stamp+'/hodo')
@@ -253,11 +271,16 @@ if __name__ == '__main__':
     
     if True: # lets look at sirivan
         si_runs = ['sirivan_run5_hr','sirivan_run6_hr', 'sirivan_run7_hr', 'sirivan_run7']
+        si_runs = ['sirivan_run4']
+        
         for si_run in si_runs:
+            
+            si_hours = fio.run_info[si_run]['filedates'][8:]
+            si_hours = fio.run_info[si_run]['filedates'][:2]
             si_pcb = __PCB_occurrences__[si_run]['latlon'][-1]
             si_upwind = plotting._latlons_['fire_sirivan_upwind']
             si_mid = -32, 149.8 # sirivan middle of burn area
-            si_hours = fio.run_info[si_run]['filedates'][8:]
+            
             for hour in si_hours:
                 for latlon,stamp in zip([si_upwind,si_mid,si_pcb],
                                         ['upwind', 'mid_fire', 'pcb']):

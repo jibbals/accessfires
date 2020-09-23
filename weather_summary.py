@@ -330,9 +330,6 @@ def weather_series(model_run='waroona_run3',
     print("DEBUG: cubes")
     print(qTqc)
     q,T,qc = qTqc
-    #q,T,qc = cubes.extract(['specific_humidity','air_temperature','qc'])
-    
-    #index_500m = np.argmin(np.abs(q.coord('level_height').points - 500))
 
     index_500m = np.argmin(np.abs(utils.height_from_iris(q)-500))
     assert index_500m > 0, "Index500 didn't work = %d"%index_500m
