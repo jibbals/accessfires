@@ -989,7 +989,7 @@ def transect(data, z, lat, lon, start, end, npoints=None,
             else:
                 # 0-50k W/m2 colormap on log scale
                 cmap=plt.cm.cmap_d['plasma']
-                normalize = col.SymLogNorm(vmin=0, vmax=10000, linthresh=100)
+                normalize = col.SymLogNorm(vmin=0, vmax=10000, linthresh=100, base=10.0)
                 
                 shslice,_,_ = utils.transect(sh, lat, lon, start, end, nx=npoints)
                 # colour a sequence of polygons with the value coming from sh
@@ -1061,7 +1061,7 @@ def transect_theta(theta, z, lat, lon, start, end, npoints=100,
     if 'cmap' not in contourfargs:
         contourfargs['cmap'] = _cmaps_['th']
     if 'norm' not in contourfargs:
-        contourfargs['norm'] = col.SymLogNorm(300,np.e)
+        contourfargs['norm'] = col.SymLogNorm(300,base=np.e)
     if 'format' not in cbar_args:
         cbar_args['format']=tick.ScalarFormatter()
     # call transect using some defaults for potential temperature
@@ -1090,7 +1090,7 @@ def transect_w(w, z, lat, lon, start, end, npoints=100,
     if 'cmap' not in contourfargs:
         contourfargs['cmap'] = _cmaps_['verticalvelocity']
     if 'norm' not in contourfargs:
-        contourfargs['norm'] = col.SymLogNorm(0.25)
+        contourfargs['norm'] = col.SymLogNorm(0.25,base=2.0)
     if 'format' not in cbar_args:
         cbar_args['format']=tick.ScalarFormatter()
         
@@ -1121,7 +1121,7 @@ def transect_qc(qc, z, lat, lon, start, end, npoints=100,
     if 'cmap' not in contourfargs:
         contourfargs['cmap'] = _cmaps_['qc']
     if 'norm' not in contourfargs:
-        contourfargs['norm'] = col.SymLogNorm(0.02)
+        contourfargs['norm'] = col.SymLogNorm(0.02, base=2.0)
     if 'format' not in cbar_args:
         cbar_args['format']=tick.ScalarFormatter()
     # call transect using some defaults for vertical velocity w

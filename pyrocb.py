@@ -149,7 +149,8 @@ def pcb_occurrences(model_run, times):
 def transect_plus_stream(w,u,qc,topog,zth,lat,lon,start,end,ztop,contours,
                          sh=None,
                          npoints=None,
-                         showcolorbar=True):
+                         showcolorbar=True,
+                         show_windstream=True):
     '''
     Show latitude following transect with horizontal and vertical winds
     must follow one latitude to allow vertical wind to be accounted for in stream
@@ -157,33 +158,38 @@ def transect_plus_stream(w,u,qc,topog,zth,lat,lon,start,end,ztop,contours,
     if npoints is None:
         npoints = utils.number_of_interp_points(lat,lon,start,end)
     
-    wslice, slicex, slicez = plotting.transect_w(w, zth,
+    slicew, slicex, slicez = plotting.transect_w(w, zth,
                                                  lat, lon, start, end,
                                                  sh=sh,
                                                  npoints=npoints, title='',
                                                  topog=topog, ztop=ztop,
                                                  contours=contours,
                                                  lines=None, colorbar=showcolorbar)
+    print("DEBUG: axes[::5] from vert motion transect (should be metres from bot left):")
+    print("     : slicex:",slicex[0],slicex[:,0])
+    print("     : slicez:",slicez[0],slicez[:,0])
     
     ## add cloud outlines
     ## Add contour where clouds occur
-    qcslice, _,_ = utils.transect(qc, lat, lon, start, end, nx=npoints)
+    sliceqc, _,_ = utils.transect(qc, lat, lon, start, end, nx=npoints)
     
     with warnings.catch_warnings():
         # ignore warning when there are no clouds:
         warnings.simplefilter('ignore')
-        plt.contour(slicex,slicez,qcslice,np.array([__cloud_thresh__]),colors='k')
+        plt.contour(slicex,slicez,sliceqc,np.array([__cloud_thresh__]),colors='k')
 
     ## Add quivers to transect
     # get longitudinal wind speed slice along transect
-    uslice, _,_ = utils.transect(u,lat,lon,start,end,nx=npoints)
+    sliceu, _,_ = utils.transect(u,lat,lon,start,end,nx=npoints)
     
-    # lets cut away the upper levels before making our quiver
-    #ztopirows, ztopicols = np.where(slicez < ztop) # index rows and columns
-    #ztopi = np.max(ztopirows) # highest index with height below ztop
     
     # Add streamplot - needs regularised grid
-    plotting.streamplot_regridded(slicex, slicez, uslice, wslice)
+    print("DEBUG: u, w before adding wind streams:")
+    print("     : sliceu:",sliceu[0], sliceu[:,0])
+    print("     : slicew:",slicew[0], slicew[:,0])
+    
+    if show_windstream:
+        plotting.streamplot_regridded(slicex, slicez, sliceu, slicew)
 
 
 def map_with_transect(data,lat,lon, transect,
@@ -355,11 +361,12 @@ def sample_showing_grid(model_run='waroona_run3', extentname=None, HSkip=None):
         fio.save_fig(model_run,_sn_,hour,plt,subdir="sample_with_grid")
         
 
-def pyrocb(w, u, qc, z, wmean, topog, lat, lon,
+def plot_X_transect(w, u, qc, z, wmean, topog, lat, lon,
            transect1, transect2, transect3,
            ff=None, sh=None,
            wmeantitle='Average vertical motion',
            extentname=None,
+           show_windstream=False,
            ztop=15000,
            cloud_threshold=constants.cloud_threshold,
            ):
@@ -423,21 +430,11 @@ def pyrocb(w, u, qc, z, wmean, topog, lat, lon,
     ###
     ax2=plt.subplot(3,1,2)
     
-    ## Plot vert motion transect
-    #    wslice, xslice, zslice = plotting.transect_w(w, z, lat, lon, start, end,
-    #                                                 title='',
-    #                                                 topog=topog, ztop=ztop,
-    #                                                 lines=None, colorbar=False)
-    #    ## add cloud outlines
-    #    ## Add contour where clouds occur
-    #    qcslice,_,_ = utils.transect(qc, lat, lon, start, end, nx=100)
-    #    with warnings.catch_warnings():
-    #        # ignore warning when there are no clouds:
-    #        warnings.simplefilter('ignore')
-    #        plt.contour(xslice,zslice,qcslice,np.array([cloud_threshold]),colors='k')
     transect_plus_stream(w,u,qc,topog,z,lat,lon,start,end,ztop,
                          contours=clevs_vertwind,
-                         showcolorbar=False) # making our own colorbar
+                         showcolorbar=False, # making our own colorbar
+                         show_windstream=show_windstream,
+                         ) 
     
     plt.ylabel('height (m)')
     plt.xlabel('')
@@ -636,15 +633,15 @@ def moving_pyrocb(model_run='waroona_run3', dtimes = None,
             fio.save_fig(model_run,_sn_,ffdtimes[i],plt,subdir='moving')
         
 
-def pyrocb_model_run(model_run='waroona_run1', dtime=datetime(2016,1,5,15),
-                     localtime=True, HSkip=None,):
+def run_X_transect(model_run='waroona_run1', dtime=datetime(2016,1,5,15),
+                     localtime=True, HSkip=None, show_windstream=False):
     """
     Try to show pyrocb using two figures:
         1: left to right transect showing winds and potential temp
         2: Three transects (forming somewhat of an asterix) of vertical winds
     Makes figures for single hour defined by dtime input argument
     """
-    print("INFO: starting pyrocb_model_run(",model_run,dtime,")")
+    print("INFO: starting run_X_transect(",model_run,dtime,")")
     ### First use datetime and extentname to read correct outputs:
     extentname=model_run.split('_')[0]
     extent = plotting._extents_[extentname]
@@ -692,6 +689,7 @@ def pyrocb_model_run(model_run='waroona_run1', dtime=datetime(2016,1,5,15),
     topogi = topog.data
     # for each timestep:
     for i in range(len(ffdtimes)):
+        ## Pull out data for each time step
         qci = qc[i].data
         wi = w[i].data
         ui = u[i].data
@@ -703,27 +701,22 @@ def pyrocb_model_run(model_run='waroona_run1', dtime=datetime(2016,1,5,15),
         if sh is not None:
             shi = sh[i].data
         
-        ## First make the left to right figure
-        #left_right_slice(qci, ui, wi, zi, topogi, lat, lon, X1)
-        #fio.save_fig(model_run, _sn_, ffdtimes[i], plt, subdir='LR1')
-        
-        ## second make the full pyrocb plot:
-        
         # datetime timestamp for file,title
         labeltime=ffdtimes[i]
         labeltimezone = 'LT' if localtime else 'UTC'
         if localtime:
-            offset=8 if 'waroona' in model_run else 10
+            offset=fio.run_info[model_run]['UTC_offset']
             labeltime = labeltime+timedelta(hours=offset)
             
         stitle = labeltime.strftime("Vertical motion %%Y %%b %%d %%H:%%M (%s)"%labeltimezone)
         wmeantitle='Mean(%3.0fm - %4.0fm)'%(h0,h1)
         
-        pyrocb(w=wi, u=ui, qc=qci, z=zi, wmean=wmeani, topog=topogi,
+        plot_X_transect(w=wi, u=ui, qc=qci, z=zi, wmean=wmeani, topog=topogi,
                lat=lat, lon=lon, transect1=X1, transect2=X2, transect3=X3,
                ff=ffi,sh=shi,
                wmeantitle=wmeantitle,
-               extentname=extentname)
+               extentname=extentname,
+               show_windstream=show_windstream)
         # Save figure into animation folder with numeric identifier
         plt.suptitle(stitle)
         plt.subplots_adjust(hspace=0.08)
@@ -884,7 +877,7 @@ if __name__ == '__main__':
     for hour in test_hours:
         for run in test_runs:
             # vorticity, okubo weiss etc...
-            if True:    
+            if False:    
                 examine_metrics(run,hour=hour,HSkip=HSkip)
 
             ## check to see where pcb are occurring
@@ -892,8 +885,11 @@ if __name__ == '__main__':
                 locname=run.split('_')[0]
                 sample_showing_grid(model_run=run, extentname=locname, HSkip=HSkip)
         
-            if False:
+            if True:
                 # When sample used to put some data in pcb occurrence dict run these
-                pyrocb_model_run(run, dtime=hour,HSkip=HSkip)
+                run_X_transect(run, dtime=hour,HSkip=HSkip)
+                
+            if False:
+                # Transect of vert motion and potential temperature
                 moving_pyrocb(run, dtimes=[hour], xlen=0.25,HSkip=HSkip)
             
