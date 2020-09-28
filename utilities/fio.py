@@ -38,12 +38,14 @@ sim_info={
         'filedates':np.array([datetime(2017,2,11,21) + timedelta(hours=x) for x in range(24)]),
         'topog':'umnsaa_2017021121_slv.nc',
         'WESN':[148.9936, 150.6036, -32.8064, -31.1964],
+        'WESN_laptop':[149.0,150.6,-32.6,-31.3],
         'UTC_offset':11, # utc + 11 in summer, utc+10 for other seasons
         },
     'waroona':{
         'filedates':np.array([datetime(2016,1,5,15) + timedelta(hours=x) for x in list(range(24))+list(range(36,60))]),
         'topog':'umnsaa_2016010515_slv.nc',
         'WESN':[115.2936,116.9036, -33.7064,-32.0964 ],
+        'WESN_laptop':[115.56,116.25,-33.25,-32.68],
         'UTC_offset':8, # utc + 8, no summer daylight savings
         },
     'NYE':{
@@ -1620,36 +1622,38 @@ def AIFS_read_path(path):
     return data
 
 def read_model_timeseries(model_run,latlon,
-                          radial_avg_degrees=None,
+                          horizontal_avg_in_degrees=None,
                           d0=None,dN=None,
                           wind_10m=True,
                           ):
     """
     ARGUMENTS:
-        radial_avg_degrees: instead of interpolating to a lat/lon, average horizontally up to this many degrees away
-            currently this is a square not a circle averaged
+        horizontal_avg_in_degrees: instead of interpolating to a lat/lon, average horizontally up to this many degrees away
+            currently this is a rectangle
         d0,dN: start and end date (optional)
         wind_10m flag tells method to add 10m winds from fire output files
     """
     lat,lon = latlon
     extent = [lon-.02, lon+.02, lat-.02, lat+.02] # just grab real close to latlon
-    if radial_avg_degrees is not None:
-        #assert radial_avg_degrees>0.01, "radial average too small!"
-        extent = [lon-radial_avg_degrees, 
-                  lon+radial_avg_degrees,
-                  lat-radial_avg_degrees, 
-                  lat+radial_avg_degrees]
+    if horizontal_avg_in_degrees is not None:
+        #assert horizontal_avg_in_degrees>0.01, "radial average too small!"
+        extent = [lon-horizontal_avg_in_degrees, 
+                  lon+horizontal_avg_in_degrees,
+                  lat-horizontal_avg_in_degrees, 
+                  lat+horizontal_avg_in_degrees]
     
     umhours = run_info[model_run]['filedates']
     
     # limit hours desired to d0-dN
+    
     if d0 is not None:
-        di=min(utils.date_index(d0,umhours)-1, 0)
+        di=max(utils.date_index(d0,umhours)-1, 0)
         umhours=umhours[di:]
     if dN is not None:
         di=utils.date_index(dN,umhours)
         umhours=umhours[:di+1]
     ## Read Model output:
+    
     cubes = read_model_run(model_run, fdtime=umhours, extent=extent, 
                                  add_topog=True, add_winds=True, 
                                  add_RH=True, add_z=True, 
@@ -1670,23 +1674,23 @@ def read_model_timeseries(model_run,latlon,
         cubes.append(s10)
     
     # remove unwanted times
-    if d0 is not None:
-        di=utils.date_index(d0,ctimes)
-        for ci,cube in enumerate(cubes):
-           if 'time' in cube.coords():
-               cubes[ci] = cube[di:]
-        ctimes=ctimes[di:]
-    if dN is not None:
-        di=utils.date_index(dN,ctimes)
-        for ci,cube in enumerate(cubes):
-           if 'time' in cube.coords():
-               cubes[ci] = cube[:(di+1)]
-        ctimes=ctimes[:di]
+    # if d0 is not None:
+    #     di=utils.date_index(d0,ctimes)
+    #     for ci,cube in enumerate(cubes):
+    #        if 'time' in cube.coords():
+    #            cubes[ci] = cube[di:]
+    #     ctimes=ctimes[di:]
+    # if dN is not None:
+    #     di=utils.date_index(dN,ctimes)
+    #     for ci,cube in enumerate(cubes):
+    #        if 'time' in cube.coords():
+    #            cubes[ci] = cube[:(di+1)]
+    #     ctimes=ctimes[:di]
     # Interpolate or average the horizontal component
     for ci,cube in enumerate(cubes):
         #print("DEBUG: interp step:",ci,cube.name(), cube.shape)
         if 'latitude' in [coord.name() for coord in cube.coords()]:
-            if radial_avg_degrees:
+            if horizontal_avg_in_degrees:
                 # dimensions to collapse will be 'latitude' and 'longitude'
                 cubes[ci] = cube.collapsed(['latitude','longitude'], iris.analysis.MEAN)
             else:
