@@ -61,7 +61,7 @@ run_info = {
     ## run with new fire speed/fuel parameters changed again
     'sirivan_run7_hr':{
         'dir':'data/sirivan/run7/0p1/',
-        'WESN':[149.3616,150.3975,-32.3024,-31.6985],
+        'WESN':[149.3616,150.3966,-32.3024,-31.6985],
         'origdir':'/g/data/en0/hxy548/ACCESS-fire/sirivan/2020-08-19/20170211T2100Z/0p1/atmos/',
         },
     'sirivan_run7':{
@@ -507,6 +507,13 @@ def fire_paths(model_run):
     fspaths.sort()
     v10paths.sort()
     u10paths.sort()
+    # waroona run3 is special case
+    if model_run == "waroona_run3":
+        ffpaths.append(fdir+"firefront.CSIRO_gadi.20160107T0300Z.nc")
+        fluxpaths.append(fdir+"sensible_heat.CSIRO_gadi.20160107T0300Z.nc")
+        fspaths.append(fdir+"fire_speed.CSIRO_gadi.20160107T0300Z.nc")
+        v10paths.append(fdir+"10m_vwind.CSIRO_gadi.20160107T0300Z.nc")
+        u10paths.append(fdir+"10m_uwind.CSIRO_gadi.20160107T0300Z.nc")
     return [ffpaths, fluxpaths, fspaths, u10paths, v10paths]
 
 def read_fire(model_run='waroona_run1',
@@ -551,7 +558,7 @@ def read_fire(model_run='waroona_run1',
         #print("     : model hours 25, 24: ",modelhours[25], modelhours[24])
         #print("     : dtimes 0, -1: ",dtimes[0],dtimes[-1])
         #print("     : day1, day2:", day1, day2)
-    #print("DEBUG: dayflags:",day1,day2)
+    print("DEBUG: dayflags:",day1,day2)
     ## if reading both days, read one at a time and combine
     if day1 and day2:
         cubelist1=read_fire(
@@ -610,6 +617,7 @@ def read_fire(model_run='waroona_run1',
     flags = [firefront, sensibleheat, firespeed, wind, wind]
     units = [None, 'Watts/m2', 'm/s', 'm/s', 'm/s']
     for flag, paths, unit in zip(flags, fpathlists, units):
+        #print("DEBUG: flag, paths, unit",flag,paths,unit)
         if flag:
             if len(paths) < 1:
                 print("ERROR: missing files")
@@ -881,6 +889,15 @@ def read_model_run(model_version, fdtime=None, subdtimes=None, extent=None,
 
     ## Subset spatially
     # based on extent
+    test_air_pressure = allcubes.extract("air_pressure")[0]
+    tap_lats = test_air_pressure.coord('latitude').points
+    tap_lons = test_air_pressure.coord('longitude').points
+    if extent[0] > tap_lons[-1] or extent[1] < tap_lons[0] or extent[2] > tap_lats[-1] or extent[3] < tap_lats[0]:
+        print("ERROR: when reading cubes, extent is outside cube range:")
+        print("     : extent:",extent)
+        print("     : lat range:",tap_lats[0],tap_lats[-1])
+        print("     : lon range:",tap_lons[0],tap_lons[-1])
+
     if extent is not None:
         constraints = _constraints_from_extent_(extent)
         for i in range(len(allcubes)):
@@ -889,7 +906,6 @@ def read_model_run(model_version, fdtime=None, subdtimes=None, extent=None,
     ## extras
     # Rename some stuff in model versions 4 and above (new netcdf)
     # also remove dupes here
-    #print("DEBUG:",allcubes)
     for dupecubes in ["mass_fraction_of_cloud_ice_in_air",
                       "upward_air_velocity",
                       "mass_fraction_of_cloud_liquid_water_in_air",

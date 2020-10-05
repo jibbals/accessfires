@@ -251,6 +251,8 @@ def weather_series(model_run='waroona_run3',
                    showPFT=False,
                    showwsmax=False,
                    showmap=False,
+                   mapname=None,
+                   showfirelines=False,
                    showQC=False,
                    localtime=True,
                    test=False,
@@ -323,9 +325,6 @@ def weather_series(model_run='waroona_run3',
     
     
     ## get temperature, RH, cloud
-    #print("DEBUG: cubes")
-    #print()
-    #print(cubes)
     qTqc = cubes.extract(['specific_humidity','air_temperature','qc'])
     print("DEBUG: cubes")
     print(qTqc)
@@ -379,20 +378,27 @@ def weather_series(model_run='waroona_run3',
     #######################
     
     # figure and multiple y axes for time series
-    fig = plt.figure(figsize=[12,12])
+    fig = plt.figure(figsize=[12,10])
     dx,dy = extent[1]-extent[0], extent[3]-extent[2]
     extentplus = np.array(extent)+np.array([-0.3*dx,0.3*dx,-0.2*dy,0.2*dy])
     if showmap:
         # map with extent shown
-        fig, ax_map = plotting.map_tiff_qgis(fname="%s.tiff"%extentname, 
+        if mapname is None:
+            mapname = "%s.tiff"%extentname
+        fig, ax_map = plotting.map_tiff_qgis(fname=mapname, 
                                              fig=fig,
                                              extent=list(extentplus), 
                                              subplot_row_col_n = [3,1,1],
                                              #locnames=[extentname,]
                                              )
-        plotting.map_add_locations_extent(extentnamez,
-                                          hide_text=False,
-                                          nice=True)
+        if day2:
+            plotting.map_add_locations_extent('waroona_day2',
+                                              hide_text=False,
+                                              nice=True)
+        else:
+            plotting.map_add_locations_extent(extentnamez,
+                                              hide_text=False,
+                                              nice=True)
         # Add rectangle
         botleft = extent[0],extent[2]
         ax_map.add_patch(patches.Rectangle(xy=botleft,
@@ -409,7 +415,7 @@ def weather_series(model_run='waroona_run3',
         # add fire outline
         plt.sca(ax_map)
         # Firefront shown at each hour increment:
-        if not test:
+        if not test and showfirelines:
             for ffhour in fdtimes:
                 ffhind = utils.date_index(ffhour, ctimes)
                 if ffhind is None:
@@ -422,7 +428,6 @@ def weather_series(model_run='waroona_run3',
                 #    # padding so label is readable
                 #    plt.setp(clbls, path_effects=[patheffects.withStroke(linewidth=3, foreground="k")])
         ax_map.set_title("Surface area-average over time")
-        print("DEBUG: ffline done")
     
     ax_fp = plt.subplot(2+showmap,1,1+showmap) # firepower axis
     color_fp = "orange"
@@ -461,7 +466,6 @@ def weather_series(model_run='waroona_run3',
         plt.annotate("ignition",(mdates.date2num(ignition), 0), xytext=(-60, -5), 
                      textcoords='offset points', arrowprops=dict(arrowstyle='-|>'), 
                      color='red')
-    print("DEBUG: 7")
     ## plot temperature on right axis
     plt.sca(ax_T)
     line_T, = plt.plot_date(ctimes_lt, T-273.15, '-',
@@ -503,7 +507,6 @@ def weather_series(model_run='waroona_run3',
     
     # add quartiles
     plt.fill_between(ctimes_lt, ws10_q3, ws10_q1, alpha=0.6, color='grey')
-    print("DEBUG: 8")
     if not test:
         # normalize windspeed for unit length quivers
         wdnorm = np.sqrt(u10_mean**2 + v10_mean**2)
@@ -522,7 +525,6 @@ def weather_series(model_run='waroona_run3',
     line_ws500, = plt.plot_date(ctimes_lt, ws500, '.',
                                 color=color_ws500, 
                                 label="500m wind speed (+IQR)",)
-    print("DEBUG: 9")
     # add quartiles
     plt.fill_between(ctimes_lt, ws500_q3, ws500_q1, alpha=0.4, color=color_ws500)
     
@@ -538,7 +540,6 @@ def weather_series(model_run='waroona_run3',
                    color=color_wd,
                    headwidth=3, headlength=2, headaxislength=2,
                    width=.003)
-    print("DEBUG: 10")
     # top row:
     
     ax_T.set_ylabel("Temperature (C)")
@@ -562,7 +563,9 @@ def weather_series(model_run='waroona_run3',
     if showPFT:
         lines.append(line_pft)
     labels = [l.get_label() for l in lines]
-    ax_fp.legend(lines, labels, loc='upper left')
+    print("PRE LLEGEND")
+    plt.savefig("test1.png")
+    ax_T.legend(lines, labels, loc='center left')
     #plt.suptitle(model_run,y=0.9)
     
     if showwsmax:
@@ -585,7 +588,7 @@ if __name__=='__main__':
     
     
     waroona_run3times = fio.run_info['waroona_run3']['filedates']
-    waroona_day2zoom = [115.7,116.0, -33.18,-32.9]
+    waroona_day2zoom = [115.65,116.03, -33.1,-32.8]
     si_hours=fio.sim_info['sirivan']['filedates']
     
     ## run for all of waroona_run2 datetimes
@@ -596,10 +599,12 @@ if __name__=='__main__':
         # day1 waroona:
         #weather_series('waroona_run3',showmap=True)
         # day2 waroona:
-        #weather_series('waroona_run3', day2=True, showPFT=False, extent=waroona_day2zoom)
-        weather_series('sirivan_run6_hr',showFP=True,showPFT=True,showmap=True,
-                HSkip=10, 
-                test=False)
+        weather_series('waroona_run3', day2=True, showPFT=False, extent=waroona_day2zoom,
+                showQC=True, HSkip=2,
+                showmap=True,mapname='Waroona_day2.tiff')
+        #weather_series('sirivan_run6_hr',showFP=True,showPFT=True,showmap=True,
+        #        HSkip=10, 
+        #        test=False)
     
     ## Run weather summary
     if False:

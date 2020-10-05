@@ -208,22 +208,32 @@ def AIFS_Summary(mr='sirivan_run4',
         # only have subset of data on laptop!
         if laptop:
             WESN=fio.run_info[mr]['WESN_laptop']
-        latlon_model=None
+        latlon_model=np.copy(latlon)
         # if latlon is close to model region, compare nearby
         if latlon[1] < WESN[0]:
             if latlon[1] > WESN[0]-0.7:
                 latlon_model=[latlon[0],WESN[0]+0.075]
+            else:
+                latlon_model=None
         elif latlon[1] > WESN[1]:
             if latlon[1] < WESN[1]+0.7:
                 latlon_model=[latlon[0],WESN[1]-0.075]
+            else:
+                latlon_model=None
         if latlon[0] > WESN[3]:
             if latlon[0] < WESN[3]+0.6:
-                latlon_model=[WESN[3]-0.075, latlon[1]]
+                if latlon_model is not None: 
+                    latlon_model=[WESN[3]-0.075, latlon_model[1]]
+                else:
+                    latlon_model=[WESN[3]-0.075, latlon[1]]
             else:
                 latlon_model=None
             
         if latlon_model is not None:
-        #if False:
+            print("DEBUG: WESN:",WESN)
+            print("DEBUG: latlon, latlon_model:",latlon, latlon_model)
+            print("DEBUG:", mr, d0_model, dN_model)
+            
             cubes=fio.read_model_timeseries(mr,
                                             latlon=latlon_model,
                                             d0=d0_model,
@@ -635,7 +645,7 @@ def HC06D_summary(mr='sirivan_run1'):
 if __name__=='__main__':
     
     ## Examine AIFS time series vs model weather/ffdi
-    si_runs=['sirivan_run4','sirivan_run7_hr','sirivan_run5_hr','sirivan_run6_hr']
+    si_runs=['sirivan_run7_hr','sirivan_run5_hr','sirivan_run6_hr']
     
     #df = fio.AIFS_read_path(_AWS_['moree_airport']['path_AIFS'])
     #print(df)
@@ -645,6 +655,7 @@ if __name__=='__main__':
     dN=datetime(2017,2,11,22)#None
     if True:
         for run in si_runs:
+            ## Test with dN so it doesn't take forever to read data
             #AIFS_Summary(run,d0=d0,dN_model=dN,laptop=True)
             AIFS_Summary(run)
     

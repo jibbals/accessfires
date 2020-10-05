@@ -32,6 +32,7 @@ def fireplan(ff, fire_contour_map = 'autumn',
              show_cbar=True, cbar_XYWH= [0.65, 0.63, .2, .02],
              extentname=None,
              color_by_day=None,
+             last_hour=None,
              **kwtiffargs):
 #             fig=None,subplot_row_col_n=None,
 #             draw_grid=False,gridlines=None):
@@ -82,11 +83,15 @@ def fireplan(ff, fire_contour_map = 'autumn',
         **kwtiffargs,
         )
     plotting.map_add_locations_extent(extentname, hide_text=False, nice=True)
-    
+    plt.xlabel('latitude')
+    plt.ylabel('longitude')
     # plot contours at each hour
     tstamp=[]
     for ii,dt in enumerate(ftimes[hourinds]):
-        offset = 8 if "waroona" in extentname else 10
+        if last_hour is not None:
+            if dt > last_hour+timedelta(minutes=5):
+                break
+        offset = 8 if "waroona" in extentname else 11
         LT = dt + timedelta(hours=offset)
         color=[rgba[ii]]
         # Colour waroona by day of firefront
@@ -101,12 +106,13 @@ def fireplan(ff, fire_contour_map = 'autumn',
         
         linewidth=1 + (ii == nt-1) # make final hour thicker
         plotting.map_fire(ffdata,lat,lon,
-                          linewidth=linewidth,
+                          linewidths=linewidth,
                           colors=color)
         #fire_line = plt.contour(lon, lat, ffdata, np.array([0]),
         #                        colors=color, linewidths=linewidth,
         #                        )
-    if color is not None:
+        print("INFO:Contour for ",LT,"(local time) plotted")
+    if (color is not None) and (last_hour is None):
         # final contour gets bonus blue line
         final_line=plt.contour(lon,lat,ff_f[-1].data.data, np.array([0]), 
                                linestyles='dotted',
@@ -345,8 +351,8 @@ if __name__=='__main__':
     ext_sirivan=plotting._extents_['sirivan']
     ##fireplan comparison
     if False:
-        fireplan_comparison(model_runs=["sirivan_run4","sirivan_run5","sirivan_run5_hr"],
-                colors=['k','orange','teal','magenta'],
+        fireplan_comparison(model_runs=["sirivan_run5_hr","sirivan_run6_hr","sirivan_run7_hr"],
+                colors=['k','orange','teal'],
                 extent=ext_sirivan,
                 mapname='sirivan.tiff',
                 figname='sirivan_fireplan_comparison',
@@ -360,7 +366,7 @@ if __name__=='__main__':
         fireplan_vs_isochrones()
     
     ## Create sensible heat flux outlines
-    if True:
+    if False:
         runs=['sirivan_run5_hr']
         locs=['sirivanz']*len(runs)
         for mr,extentname in zip(runs,locs):
@@ -368,8 +374,8 @@ if __name__=='__main__':
             
     
     ## Just create a fireplan figure:
-    if False:
-        fireplanruns = ['sirivan_run5_hr',]#'sirivan_run6_hr','sirivan_run7_hr','sirivan_run4','sirivan_run5','sirivan_run6','sirivan_run7']
+    if True:
+        fireplanruns = ['sirivan_run5_hr','sirivan_run6_hr',]#'sirivan_run7_hr','sirivan_run5','sirivan_run6','sirivan_run7'a]
         for mr in fireplanruns:
             extentname=mr.split('_')[0]+'z'
             extent = plotting._extents_[extentname]
@@ -381,7 +387,8 @@ if __name__=='__main__':
                             HSkip=None)
             
             fig,ax = fireplan(ff, show_cbar=False, cbar_XYWH=[.18,.3,.2,.02],
-                        extentname=extentname)
+                        extentname=extentname,
+                        last_hour=datetime(2017,2,12,10))
             fio.save_fig(mr, _sn_, 'fireplan.png', plt)
         
 

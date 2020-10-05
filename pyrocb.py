@@ -750,12 +750,13 @@ def examine_metrics(mr,hour,extent=None,HSkip=None):
     offset_hours=timedelta(hours=fio.run_info[mr]['UTC_offset'])
     
     ## cbar for wind dir
-    cmap_wind='gist_rainbow' # continuous
+    #cmap_wind='gist_rainbow' # continuous
+    cmap_wind='gist_ncar_r'
     norm_wind=col.Normalize(vmin=0,vmax=360)
     tickform_wind=tick.ScalarFormatter()
-    ticks_wind=None
+    ticks_wind=[range(0,361,45),["%d"%windtick for windtick in range(0,361,45)]]
     clevels_wind=np.arange(361)
-    levels_wind=[0,-1,15,30,60]
+    levels_wind=[-1,15,30,60,75]
     
     cmap_vort='PRGn' # divergent
     norm_vort=col.SymLogNorm(.00005,vmin=-.01, vmax=.01,base=2.)
@@ -763,7 +764,7 @@ def examine_metrics(mr,hour,extent=None,HSkip=None):
     ticks_vort=[[-.05,-.01,-.001,0,.001,.01,.05], 
                 ['-.05','-.01', '-.001', '0', '.001','.01','.05']]
     clevels_vort=np.union1d(np.union1d(-5*np.logspace(-5,-2),0),5*np.logspace(-5,-2))
-    levels_vort=[0,-1,20,40,60]
+    levels_vort=[-1,20,40,60,75]
     
     cmap_ow='gnuplot2_r' # continuous
     norm_ow=norm_vort
@@ -846,6 +847,8 @@ def examine_metrics(mr,hour,extent=None,HSkip=None):
                 plotting.map_fire(ff[cti].data,fflats,fflons,
                                   alpha=0.5 + 0.5*(levi==0), 
                                   )
+                # Add winds streams?
+                # 
     
             # add colour bar
             axes=[0.87, 0.20, 0.04, 0.6] 
@@ -866,18 +869,19 @@ def examine_metrics(mr,hour,extent=None,HSkip=None):
 if __name__ == '__main__':
     
     waroona_second_half = np.array([datetime(2016,1,5,15)+ timedelta(hours=12+x) for x in range(12)])
-    si_hours = np.array([datetime(2017,2,12,4)+ timedelta(hours=x) for x in range(5)])
-    si_runs=['sirivan_run5_hr','sirivan_run7','sirivan_run6_hr']
+    si_hours = np.array([datetime(2017,2,12,4)+ timedelta(hours=x) for x in range(6)])
+    si_runs=['sirivan_run5_hr','sirivan_run7_hr','sirivan_run6_hr']
+    si_runs=['sirivan_run5','sirivan_run7','sirivan_run6']
     # for testing on laptop just up to 2nd hour
     test_runs=['sirivan_run4'] 
     test_hours=[datetime(2017,2,11,22),] 
-    HSkip=2
+    HSkip=None
     #HSkip=5
     
-    for hour in test_hours:
-        for run in test_runs:
+    for hour in si_hours:
+        for run in si_runs:
             # vorticity, okubo weiss etc...
-            if False:    
+            if True:    
                 examine_metrics(run,hour=hour,HSkip=HSkip)
 
             ## check to see where pcb are occurring
@@ -885,7 +889,7 @@ if __name__ == '__main__':
                 locname=run.split('_')[0]
                 sample_showing_grid(model_run=run, extentname=locname, HSkip=HSkip)
         
-            if True:
+            if False:
                 # When sample used to put some data in pcb occurrence dict run these
                 run_X_transect(run, dtime=hour,HSkip=HSkip)
                 

@@ -83,7 +83,7 @@ _latlons_['pyrocb_waroona2'] = 0,0 # 1100-1400 second day
 # Sir Ivan locations
 _extents_['sirivan']    = [149.2, 150.4, -32.4, -31.6]
 _extents_['sirivan_linescan']   = [149.48, 150.04, -32.18, -31.85]
-_extents_['sirivanz']   = [149.4, 150.15, -32.2, -31.8]
+_extents_['sirivanz']   = [149.4, 150.19, -32.2, -31.8]
 _extents_['sirivans']   = [147,154, -34, -29] # synoptic
 _extents_['sirivan_pcb']= [149.675, 150.1, -32.08,-31.9]
 
@@ -277,6 +277,7 @@ def map_add_locations_extent(extentname,
     locstrings = {'waroona':['waroona','yarloop'],
                   'waroonaz':['waroona','hamel'],
                   'waroonaf':['waroona','yarloop'],
+                  'waroona_day2':['waroona','hamel','yarloop'],
                   'sirivan':['dunedoo','cassillis','leadville','merotherie','turill',],
                   'sirivanz':['cassillis','leadville','merotherie','turill'],
                   'sirivans':['dunedoo','cassillis','uarbry'],

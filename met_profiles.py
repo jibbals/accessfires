@@ -270,13 +270,10 @@ if __name__ == '__main__':
     
     
     if True: # lets look at sirivan
-        si_runs = ['sirivan_run5_hr','sirivan_run6_hr', 'sirivan_run7_hr', 'sirivan_run7']
-        si_runs = ['sirivan_run4']
-        
+        si_runs = ['sirivan_run6_hr',]#'sirivan_run6_hr', ]#'sirivan_run7_hr', 'sirivan_run7']
         for si_run in si_runs:
             
             si_hours = fio.run_info[si_run]['filedates'][8:]
-            si_hours = fio.run_info[si_run]['filedates'][:2]
             si_pcb = __PCB_occurrences__[si_run]['latlon'][-1]
             si_upwind = plotting._latlons_['fire_sirivan_upwind']
             si_mid = -32, 149.8 # sirivan middle of burn area
