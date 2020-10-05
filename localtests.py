@@ -9,52 +9,76 @@ Created on Mon Aug  5 13:55:32 2019
 """
 
 
-# IMPORTS
+### IMPORTS
 
 import numpy as np
-from matplotlib import pyplot as plt
-from matplotlib import patches, colors, cm
-import matplotlib.dates as mdates
-from matplotlib.collections import LineCollection
-from datetime import datetime, timedelta
-import iris # so we can add level number constraint
-import iris.analysis
-import iris.quickplot as qplt
-
-# read tiff file
-from osgeo import gdal, osr
+import xarray as xr
+import pandas as pd
 import cartopy.crs as ccrs
+import matplotlib.pyplot as plt
 
-from utilities import utils, plotting, fio, constants
+from utilities import utils, fio
 
-from scipy import interpolate
-
-import pandas
-
+### GLOBALS
 _sn_='localtests'
 
 
-mr='waroona_run3'
-day1=fio.run_info[mr]['filedates'][:24]
-cubes1=fio.read_model_run(mr,extent=plotting._extents_['waroona'],
-                         fdtime=day1,
-                         #HSkip=5,
-                         )
-print(cubes1)
 
-w1 = cubes1.extract('upward_air_velocity')[0]
-wmax1 = w1.collapsed(['time','model_level_number','longitude', 'latitude'], iris.analysis.MAX)
+### CODE
 
-print("MAXIMUM:",wmax1.data)
+## create netcdf 
+# make sure group="/foo/bar", mode="a" to save group foo, subgroup bar, with append mode set to not destroy the file
 
-day2=fio.run_info[mr]['filedates'][24:]
-cubes2=fio.read_model_run(mr,extent=plotting._extents_['waroona'],
-                         fdtime=day2,
-                         #HSkip=5,
-                         )
-print(cubes2)
+sirivan_10minute_dates = pd.date_range(start="2017-02-11 11:10",end="2017-02-12 11:00",periods=144)
+sicoords = {
+    "time": sirivan_10minute_dates,
+    "level": np.arange(10),
+    "pctl":np.arange(5),
+}
 
-w2 = cubes2.extract('upward_air_velocity')[0]
-wmax2 = w2.collapsed(['time','model_level_number','longitude', 'latitude'], iris.analysis.MAX)
+ds = xr.Dataset(
+    {
+         "T_mean": (("time","level"), np.zeros([144,10])+np.NaN),
+         "T_5ns": (("time","level","pctl"), np.zeros([144,10,5])+np.NaN)
+     },
+    coords= sicoords,
+    )
 
-print("MAXIMUM:",wmax2.data)
+# save to file under sirivanz group
+# mode="w" destroys any existing data
+ds.to_netcdf("data/test_file.nc",group="sirivanz",mode="w")
+ds.close()
+
+# make another group in same file...
+ds = xr.Dataset({
+         "T_mean": (("time","level"), np.zeros([144,10])+np.NaN),
+     },
+    coords= sicoords,
+    )
+ds.to_netcdf("data/test_file.nc",group="sirivanf",mode="a")
+ds.close()
+
+# read file
+print(" ===  from disk === ")
+with xr.open_dataset("data/test_file.nc",group="sirivanz") as ds_sirivanz:
+    print(" sirivanz group:")
+    print(ds_sirivanz)
+with xr.open_dataset("data/test_file.nc",group="sirivanf") as ds_sirivanf:
+    print(" sirivanf group:")
+    print(ds_sirivanf)
+
+
+### Next: figure out how to update values for a specific time window
+
+print(" === setting first 6 values === ")
+# if file,group,variable already exist then append along the time dimension
+with xr.open_dataset("data/test_file.nc",group="sirivanz") as ds_sirivanz:
+    # load data so we can overwrite it
+    ds_sirivanz.load()
+    
+    print("T_mean:",ds_sirivanz.T_mean)
+    
+print(" === after closing dataset: reading from file === ")
+with xr.open_dataset("data/test_file.nc",group="sirivanz") as ds:
+    print(ds)
+# else create file,group,variable
