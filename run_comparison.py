@@ -55,7 +55,7 @@ def compare_winds(mr1='waroona_run2', mr2='waroona_run2uc',
     """
     extentname = mr1.split('_')[0]
     if extent is None:
-        extent = plotting._extents_[extentname]
+        extent = constants.extents[extentname]
     
 
     cubes1 = fio.read_model_run(mr1, hour, extent=extent, add_winds=True)
@@ -294,7 +294,7 @@ def compare_clouds(mr1='waroona_run2', mr2='waroona_run2uc',
     
     extentname = mr1.split('_')[0]
     if extent is None:
-        extent = plotting._extents_[extentname]
+        extent = constants.extents[extentname]
     
     ## Read a model run
     cubes1 = fio.read_model_run(mr1, hour, extent=extent)
@@ -423,7 +423,7 @@ def compare_fire_spread(mrlist, mrcolors=None, extent=None,
     '''
     extentname = mrlist[0].split('_')[0]
     if extent is None:
-        extent = plotting._extents_[extentname]
+        extent = constants.extents[extentname]
     
     ## Plot fireplan for high res run
     # read all the fire data
@@ -467,7 +467,7 @@ def compare_transects(run1, run2, hours=[12,], extent=None, ztop=1000,
     Transect lines roughly spread based on extent middle + 50% of the distance to extent edges
     """
     if extent is None:
-        extent = plotting._extents_[run1.split('_')[0]]
+        extent = constants.extents[run1.split('_')[0]]
     
     # transects = extent centre +- frac of extent width/height
     y0,x0 = (extent[2]+extent[3])/2.0, (extent[0]+extent[1])/2.0
@@ -617,7 +617,7 @@ def compare_transects(run1, run2, hours=[12,], extent=None, ztop=1000,
 
 if __name__=='__main__':
     
-    ext_pcb=plotting._extents_['waroonaz']
+    ext_pcb=constants.extents['waroonaz']
     ext_es1=emberstorm._emberstorm_centres_['waroona_run3']['first']['extent']
     ext_es2=emberstorm._emberstorm_centres_['waroona_run3']['second']['extent']
     hrs_pcb=range(9,19)

@@ -30,14 +30,33 @@ from utilities import plotting, utils, fio, constants
 ###
 _sn_ = 'wind_outline'
 
+_transects_             = {} 
+__x0__,__x1__ = 115.8, 116.19
+
+_transects_['waroona1'] = [-32.79   , __x0__], [-32.92   , __x1__]
+_transects_['waroona2'] = [-32.82   , __x0__], [-32.93   , __x1__]
+_transects_['waroona3'] = [-32.86   , __x0__], [-32.88   , __x1__]
+# again but start more southerly and end more northerly
+_transects_['waroona4'] = [-32.92   , __x0__], [-32.82   , __x1__]
+_transects_['waroona5'] = [-32.96   , __x0__], [-32.85   , __x1__] 
+_transects_['waroona6'] = [-32.87   , __x0__], [-32.89   , __x1__]
+
+# looking at sir ivan
+#_extents_['sirivan']    = [149.2, 150.4, -32.4, -31.6]
+_transects_['sirivan1'] = [-32.05, 149.4  ], [-32.0  , 150.3 ]
+_transects_['sirivan2'] = [-32.0 , 149.4  ], [-31.95 , 150.3 ]
+_transects_['sirivan3'] = [-32.1 , 149.4  ], [-32.15 , 150.3 ]
+_transects_['sirivan4'] = [-31.8 , 149.45 ], [-32.15 , 150.2 ]
+_transects_['sirivan5'] = [-31.95, 149.4  ], [-31.80 , 150.2 ]
+_transects_['sirivan6'] = [-31.7 , 149.5  ], [-32.1  , 150.3 ]
+
+
 def show_transects():
     """
     For sirivan and waroona show the transects on a contour map with final fire outline as well
     """
     
     # Show transects
-    
-    transects = plotting._transects_
     waroona_xticks = np.arange(115.8, 116.21, .1)
     waroona_yticks = np.arange(-33, -32.701, .05)
     sirivan_xticks = np.arange(149.2, 150.4, .2) #149.2, 150.4
@@ -45,7 +64,7 @@ def show_transects():
     for extentname, xticks, yticks in zip(['waroona','sirivan'],
                                           [waroona_xticks,sirivan_xticks],
                                           [waroona_yticks,sirivan_yticks]):
-        extent = plotting._extents_[extentname]
+        extent = constants.extents[extentname]
         mr = '%s_run1'%extentname
         
         # read topog, fire
@@ -62,7 +81,7 @@ def show_transects():
         
         ## plot each transect 
         for transect in range(6):
-            start,end = transects["%s%d"%(extentname,transect+1)]
+            start,end = _transects_["%s%d"%(extentname,transect+1)]
             plt.plot([start[1],end[1]],[start[0],end[0], ], '--',
                      linewidth=2, label='X%d'%(transect+1),
                      marker='X', markersize=7,markerfacecolor='white')
@@ -172,7 +191,7 @@ def outline_model_winds(model_run='sirivan_run1', hours=None, dpi=200):
     """
     
     extentname=model_run.split('_')[0]
-    extent=plotting._extents_[extentname]
+    extent=constants.extents[extentname]
     
     ## Read the cubes
     cubes = fio.read_model_run(model_run, fdtime=hours, extent=extent,
@@ -201,7 +220,7 @@ def outline_model_winds(model_run='sirivan_run1', hours=None, dpi=200):
 
         ## loop over different transects
         for ii in range(6):
-            transect = plotting._transects_["%s%d"%(extentname,ii+1)]
+            transect = _transects_["%s%d"%(extentname,ii+1)]
             plt = wind_outline(si, ui, vi, wi, qci, topogi, zthi, lat, lon,
                                transect=transect,
                                ff = ffi,
@@ -221,7 +240,7 @@ def vorticity_layers(model_run="waroona_run2", hour=16, levels=[3,5,10,20,30,40]
     extentname=None
     if extent is None:
         extentname=model_run.split('_')[0]
-        extent = plotting._extents_[extentname]
+        extent = constants.extents[extentname]
         
     fdtime = fio.run_info[model_run]['filedates'][hour]
     
@@ -345,7 +364,7 @@ def transects_hwinds(model_run, hour=18, transects=None, extent=None, ztop=4000,
     """
     extentname=model_run.split('_')[0]
     if extent is None:
-        extent=plotting._extents_[extentname]
+        extent=constants.extents[extentname]
     nrows=len(transects)+1
     model_hours = fio.run_info[model_run]['filedates']
     dt = model_hours[hour]
@@ -412,14 +431,13 @@ def transects_hwinds(model_run, hour=18, transects=None, extent=None, ztop=4000,
                      subdir=subdir)
  
 
-
 def vertical_vortex(mr='waroona_run3',
                     zlevels=[5,10,15,25,35,45],
                     hours=[12,13,14],
                     extent=None,
                     HSkip=None,
                     minimap=True,
-                    **map_tiff_args,
+                    **map_tiff_args
                     ):
     """
     show horizontal slices of horizontal wind streamplots 
@@ -433,7 +451,7 @@ def vertical_vortex(mr='waroona_run3',
     ##### set up extent, colormap, streamplot linewidths
     extentname=mr.split('_')[0]
     if extent is None:
-        extent = plotting._extents_[extentname]
+        extent = constants.extents[extentname]
     dtimes = fio.run_info[mr]['filedates'][hours]
     # vertical wind colourbar is constant
     wcmap=plotting._cmaps_['verticalvelocity']
@@ -576,7 +594,7 @@ if __name__ == '__main__':
     if False:
         extent=None
         SI_PCB = [149.5,150.2,-32.15,-31.95] # lon0,lon1,lat0,lat1
-        Waroona = plotting._extents_['waroona']
+        Waroona = constants.extents['waroona']
         for hour in np.arange(16,18):
             vorticity_layers("waroona_run1",
                              hour=hour,
@@ -594,5 +612,5 @@ if __name__ == '__main__':
     if True:
         vertical_vortex(
             mr='sirivan_run1',
-            extent=plotting._extents_['sirivanz'],
+            extent=constants.extents['sirivanz'],
             hours=range(5,24))

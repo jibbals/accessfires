@@ -36,7 +36,7 @@ if "g/data" not in sys.prefix:
     pio.orca.status
 
 # local modules
-from utilities import plotting, utils, fio
+from utilities import plotting, utils, fio, constants
 
 ###
 ## GLOBALS
@@ -134,7 +134,7 @@ def cloud_system(model_run='waroona_run2', hour=20,
     dtime=hours[hour]
     if extent is None:
         extentname = model_run.split('_')[0]
-        extent = plotting._extents_[extentname]
+        extent = constants.extents[extentname]
     
     cubes = fio.read_model_run(model_run, 
                                fdtime=dtime, 
@@ -335,7 +335,7 @@ def cloud_system(model_run='waroona_run2', hour=20,
         create_figure(surface_list, filename=figname, camera_eye=camera_eye, **layoutargs)
 
 if __name__=='__main__':
-    wider_waroona = plotting._extents_['waroona']
+    wider_waroona = constants.extents['waroona']
     wider_waroona[0] -= .4 # move west edge west
     wider_waroona[1] += .2 # move east edge east
     wider_waroona[2] -= .1 # move south edge south

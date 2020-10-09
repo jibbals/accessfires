@@ -20,7 +20,7 @@ from scipy import interpolate
 import cartopy.crs as ccrs
 
 # local modules
-from utilities import plotting, utils, fio
+from utilities import plotting, utils, fio, constants
 
 ###
 ## GLOBALS
@@ -310,7 +310,7 @@ def topdown_emberstorm(fig=None, subplot_row_col_n=None, ax=None,
             
             ## Add waroona, hamel, yarloop if possible
             for txt in ['Waroona','Hamel','Yarloop']:
-                ax.annotate(txt, xy=np.array(plotting._latlons_[str.lower(txt)])[::-1],
+                ax.annotate(txt, xy=np.array(constants.latlons[str.lower(txt)])[::-1],
                             xycoords="data", # lat lon xy as coords are platecarree
                             fontsize=12, ha="center",
                             color='k',
@@ -397,7 +397,7 @@ def explore_emberstorm(model_run='waroona_run3',
         ztop=800, how high to do transect?
     """
     if extent is None:
-        extent = plotting._extents_['waroona']
+        extent = constants.extents['waroona']
     # read topog
     topog=fio.read_topog(model_run,extent=extent)
     lat = topog.coord('latitude').points
@@ -735,7 +735,6 @@ if __name__ == '__main__':
     #extent1,extent2 = _emberstorm_extents_
     extent1 = _emberstorm_centres_['waroona_run3']['first']['extent']
     extent2 = _emberstorm_centres_['waroona_run3']['second']['extent']
-    #transect1 = _transects_[0]
     
     hours=fio.run_info[mr]['filedates']
     testhours = [datetime(2016,1,6,7)]

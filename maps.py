@@ -65,8 +65,8 @@ def outline_waroona():
     """
     
     extentname='waroonas'
-    extent = plotting._extents_[extentname]
-    inner = plotting._extents_['waroona']
+    extent = constants.extents[extentname]
+    inner = constants.extents['waroona']
     
     plotting.init_plots()
     
@@ -127,7 +127,7 @@ def show_nests(model_run='waroona_run1', annotate_res=False, title=''):
     """
     show nested grids on stock image of australia, resolution annotated
     """
-    #f, ax, gproj = plotting.map_google(plotting._extents_['waroona'], zoom=11)
+    #f, ax, gproj = plotting.map_google(constants.extents['waroona'], zoom=11)
     locname=model_run.split('_')[0]
     nest=__NESTS__[model_run]
     tiffname = __NESTS__[model_run]['tiffname']

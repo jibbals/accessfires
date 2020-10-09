@@ -13,7 +13,7 @@ import numpy as np
 from timeit import default_timer as timer
 import iris
 
-from utilities import fio,plotting,utils
+from utilities import fio,plotting,utils, constants
 
 
 ## PFT is my port of Kevin's proprietry fortran code
@@ -230,7 +230,7 @@ if __name__=='__main__':
         # let's time how long it takes
         start = timer()
         extentname=mr.split('_')[0]
-        extent=plotting._extents_[extentname]
+        extent=constants.extents[extentname]
         hours = fio.run_info[mr]['filedates']
         PFT_full=[]
         dtimes=[]

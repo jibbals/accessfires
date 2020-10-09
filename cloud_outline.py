@@ -67,7 +67,7 @@ def clouds_2panel(topog,s,u,v,
     
     # get plot extent, and transect
     extent = [lon[0],lon[-1],lat[0],lat[-1]]
-    #extent = plotting._extents_[extentname]
+    #extent = constants.extents[extentname]
     start,end = transect
     
     plt.figure(figsize=[7,10])
@@ -140,7 +140,7 @@ def cloud_outline_model(model_run = 'waroona_run1', dtime=datetime(2016,1,5,15),
     Read model run, send good bits to be plotted over our 6 transects
     '''
     extentname=model_run.split("_")[0]
-    extent=plotting._extents_[extentname]
+    extent=constants.extents[extentname]
     
     # Read the cubes
     cubes = fio.read_model_run(model_run, fdtime=dtime, 

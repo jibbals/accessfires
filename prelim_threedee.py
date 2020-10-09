@@ -17,7 +17,7 @@ from scipy.stats import gaussian_kde, cumfreq
 
 from datetime import datetime, timedelta
 
-from utilities import fio, plotting, utils
+from utilities import fio, plotting, utils, constants
 
 _sn_ = 'localtests'
 
@@ -45,7 +45,7 @@ hours=fio.model_outputs[mr]['filedates']
 hour=hours[0]
 hour = datetime(2016,1,6,10)
 extentname = mr.split('_')[0]
-extent = plotting._extents_[extentname]
+extent = constants.extents[extentname]
 northerly_view = dict(scene_camera_eye=dict(x=0,y=-1,z=1.5))
 standard_view = dict(scene_camera_eye=dict(x=1.3,y=-1.3,z=.6))
 

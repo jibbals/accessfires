@@ -20,7 +20,7 @@ import iris
 
 from cartopy import crs as ccrs
 
-from utilities import plotting, utils, fio
+from utilities import plotting, utils, fio, constants
 
 ###
 ## GLOBALS
@@ -149,7 +149,7 @@ def fireplan_summary(model_run='waroona_run1',
     # Read fire output
     extentname1 = model_run.split('_')[0]
     extentname = extentname1+'f' # area affected by fire
-    extent = plotting._extents_[extentname]
+    extent = constants.extents[extentname]
     
     fpathlists=fio.fire_paths(model_run)
     if len(fpathlists[0])<2:
@@ -208,7 +208,7 @@ def fireplan_summary(model_run='waroona_run1',
     
 def fireplan_comparison(model_runs=['waroona_old','waroona_run1','waroona_run2','waroona_run3'],
                         colors = ['red','orange','teal','magenta'],
-                        extent=plotting._extents_['waroona'],
+                        extent=constants.extents['waroona'],
                         mapname='waroona.tiff',
                         figname='waroona_firespread'):
     """
@@ -250,7 +250,7 @@ def fireplan_comparison(model_runs=['waroona_old','waroona_run1','waroona_run2',
     
     if 'waroona' in model_runs[0]:
         plotting.map_add_nice_text(ax,
-                                   [plotting._latlons_['waroona'],plotting._latlons_['yarloop']],
+                                   [constants.latlons['waroona'],constants.latlons['yarloop']],
                                    texts=['Waroona','Yarloop'], fontsizes=14)
     else:
         plotting.map_add_locations_extent('sirivan',nice=True)
@@ -306,7 +306,7 @@ def heatmap(mr,extentname=None,winds=False):
     if extentname is None:
         extentname=mr.split('_')[0]
     
-    extent=plotting._extents_[extentname]
+    extent=constants.extents[extentname]
     sh,u10,v10 = fio.read_fire(mr,extent=extent,firefront=False,sensibleheat=True,wind=True)
     #print("DEBUG: u10")
     #print(u10)
@@ -348,7 +348,7 @@ def heatmap(mr,extentname=None,winds=False):
 
 if __name__=='__main__':
     ### Run the stuff
-    ext_sirivan=plotting._extents_['sirivan']
+    ext_sirivan=constants.extents['sirivan']
     ##fireplan comparison
     if False:
         fireplan_comparison(model_runs=["sirivan_run5_hr","sirivan_run6_hr","sirivan_run7_hr"],
@@ -378,7 +378,7 @@ if __name__=='__main__':
         fireplanruns = ['sirivan_run5_hr','sirivan_run6_hr',]#'sirivan_run7_hr','sirivan_run5','sirivan_run6','sirivan_run7'a]
         for mr in fireplanruns:
             extentname=mr.split('_')[0]+'z'
-            extent = plotting._extents_[extentname]
+            extent = constants.extents[extentname]
     
             ## Plot fireplan for high res run
             # read all the fire data

@@ -189,7 +189,7 @@ def weather_summary_model(model_version='waroona_run1',
     plotting.init_plots()
     
     extentname = model_version.split('_')[0]
-    extent = plotting._extents_[extentname]
+    extent = constants.extents[extentname]
     if zoom_in is not None:
         extentname=None
         extent = zoom_in
@@ -265,7 +265,7 @@ def weather_series(model_run='waroona_run3',
     # zoomed extent for analysis
     extentnamez = extentname + 'z'
     if extent is None:
-        extent=plotting._extents_[extentnamez]
+        extent=constants.extents[extentnamez]
     
     qc_thresh = constants.cloud_threshold
     
@@ -611,7 +611,7 @@ if __name__=='__main__':
         for mr,exname in zip(['sirivan_run7_hr','sirivan_run7'],['sirivanz','sirivanz']):
             fdt = fio.run_info[mr]['filedates']
 
-            zoom_in = plotting._extents_[exname]
+            zoom_in = constants.extents[exname]
 
             weather_summary_model(
                 mr,
@@ -626,7 +626,7 @@ if __name__=='__main__':
     if False:
         # Make a helper figure to show where the summary is located
         for name,zoom in zip(["day1_extent.png","day2_extent.png"],
-                             [plotting._extents_['waroona'],plotting._extents_['waroonaf']]):
+                             [constants.extents['waroona'],constants.extents['waroonaf']]):
             
             f,ax = plotting.map_tiff_qgis("waroonas.tiff",)
             ## Add box around zoomed in area

@@ -48,87 +48,12 @@ _cmaps_['windspeed']        = 'YlGnBu' # jeff likes this for wind speeds
 _cmaps_['qc']               = 'BuPu' # white through to purple for water+ice content in air
 _cmaps_['topog']            = 'terrain'
 _cmaps_['th']               = 'plasma' # potential temperature
+
+## useful locations and extents
 # Extents: EWSN
-_extents_               = {}
-_latlons_               = {}
-
-# Waroona locations
-_extents_['waroona']    = [115.76,116.2, -33.05,-32.7] # local (first day of burn, escarp covered)
-_extents_['waroonaf']    = [115.6,116.21, -33.2,-32.75] # full fire area + a little bit
-_extents_['waroonas']   = [112,120,-34.5,-31] # synoptic
-_extents_['waroonaz']    = [115.88, 116.19, -32.92,-32.83] # zoom in on fire
-## Nests centre: -32.9, 116.1
-## Nests resolution: 0.036 384x384, 0.01, 0.0028 (~300m)
-
-
-_latlons_['waroona']    = -32.84, 115.93  # suburb centre: -32.8430, 115.8526
-_latlons_['hamel']      = -32.8725, 115.92 # just south of waroona
-_latlons_['yarloop']    = -32.96, 115.90  # suburb centre: -32.9534, 115.9124
-_latlons_['wagerup']    = -32.92, 115.91  # wagerup
-_latlons_['AWS_wagerup']    = -32.92, 115.91  # AWS at wagerup, 40 m asl
-_latlons_['perth']      = -31.9505, 115.8605
-_latlons_['fire_waroona'] = -32.89, 116.17
-_latlons_['fire_waroona_upwind'] = -32.89 -0.004, 116.17+0.009 # ~ 1km from fire
-
-## Extra locs
-_latlons_['sydney']    = -33.8688, 151.2093
-_latlons_['brisbane']  = -27.4698, 153.0251
-_latlons_['canberra']  = -35.2809, 149.1300
-_latlons_['melbourne'] = -37.8136, 144.9631
-
-# two PyroCB
-_latlons_['pyrocb_waroona1'] = -32.87,116.1 # ~4pm first day
-_latlons_['pyrocb_waroona2'] = 0,0 # 1100-1400 second day
-
-# Sir Ivan locations
-_extents_['sirivan']    = [149.2, 150.4, -32.4, -31.6]
-_extents_['sirivan_linescan']   = [149.48, 150.04, -32.18, -31.85]
-_extents_['sirivanz']   = [149.4, 150.19, -32.2, -31.8]
-_extents_['sirivans']   = [147,154, -34, -29] # synoptic
-_extents_['sirivan_pcb']= [149.675, 150.1, -32.08,-31.9]
-
-_latlons_['dunedoo']    = -32.019, 149.39
-_latlons_['borambil']   = -32.0367, 150.00
-_latlons_['uarbry']     = -32.047280, 149.71
-_latlons_['coolah']     = -31.8234,149.722
-_latlons_['sirivan']    = _latlons_['uarbry'] # no idea where sir ivan is..
-_latlons_['cassillis']      = -32.01, 150.0
-_latlons_['leadville'] = -32.0383, 149.5779
-_latlons_['merotherie'] = -32.1586, 149.5696
-_latlons_['turill'] = -32.1692, 149.8360
-_latlons_['fire_sirivan'] = -32.05, 149.59
-_latlons_['fire_sirivan_upwind'] = -32.01, 149.5
-# one pyrocb
-_latlons_['pyrocb_sirivan'] = 0,0 # 0530UTC=XXXX local time
-# The pycb over Sir Ivan was around 0530 UTC on Sunday 12 Feb (or a bit after).
-# The exact location is a bit tricky, because the pycb would be downstream of 
-# the actual fire front, but around the location of Uarbry 
-# (which was burned over) is probably a good place to start. 
-# You'll probably have to move the cross section around a bit to see what 
-# lat/longs get the most interesting picture.
-
-
-_extents_['NYE'] = [149.2,150.05, -36.5, -35.85]
-
-_transects_             = {} 
-__x0__,__x1__ = 115.8, 116.19
-
-_transects_['waroona1'] = [-32.79   , __x0__], [-32.92   , __x1__]
-_transects_['waroona2'] = [-32.82   , __x0__], [-32.93   , __x1__]
-_transects_['waroona3'] = [-32.86   , __x0__], [-32.88   , __x1__]
-# again but start more southerly and end more northerly
-_transects_['waroona4'] = [-32.92   , __x0__], [-32.82   , __x1__]
-_transects_['waroona5'] = [-32.96   , __x0__], [-32.85   , __x1__] 
-_transects_['waroona6'] = [-32.87   , __x0__], [-32.89   , __x1__]
-
-# looking at sir ivan
-#_extents_['sirivan']    = [149.2, 150.4, -32.4, -31.6]
-_transects_['sirivan1'] = [-32.05, 149.4  ], [-32.0  , 150.3 ]
-_transects_['sirivan2'] = [-32.0 , 149.4  ], [-31.95 , 150.3 ]
-_transects_['sirivan3'] = [-32.1 , 149.4  ], [-32.15 , 150.3 ]
-_transects_['sirivan4'] = [-31.8 , 149.45 ], [-32.15 , 150.2 ]
-_transects_['sirivan5'] = [-31.95, 149.4  ], [-31.80 , 150.2 ]
-_transects_['sirivan6'] = [-31.7 , 149.5  ], [-32.1  , 150.3 ]
+# latlons: [lat,lon] 
+_extents_               = constants.extents
+_latlons_               = constants.latlons 
 
 
 def init_plots():

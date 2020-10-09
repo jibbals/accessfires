@@ -16,7 +16,7 @@ import iris
 from copy import deepcopy
 from datetime import datetime, timedelta
 
-from utilities import fio, plotting, utils
+from utilities import fio, plotting, utils, constants
 
 _sn_='AWS'
 
@@ -375,7 +375,7 @@ def combine_site_and_model(AWS='wagerup', model_run='waroona_run1',
             df: dataframe
             subplots: dictionary of metadata for plotting 
     """
-    lat,lon = plotting._latlons_[AWS]
+    lat,lon = constants.latlons[AWS]
     extent = [lon-.02, lon+.02, lat-.02, lat+.02] # just grab real close to latlon
     heights=[1,10,30] # look at model heights 1m, 10m and 30m
     

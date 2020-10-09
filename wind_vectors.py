@@ -12,7 +12,7 @@ import matplotlib.ticker as tick
 import numpy as np
 from datetime import datetime
 
-from utilities import fio, plotting
+from utilities import fio, plotting, constants
 
 def transect_vector_projection():
     '''
@@ -21,7 +21,7 @@ def transect_vector_projection():
     '''
     # get plot extent, and transect
     extentname='waroona'
-    extent = plotting._extents_[extentname]
+    extent = constants.extents[extentname]
     transect=3
     start,end = plotting._transects_["%s%d"%(extentname,transect)]
     
@@ -159,7 +159,7 @@ def try_3d():
     '''
     Show topography and wind vectors in a 3d framework
     '''
-    slv, ro1, th1, th2 = fio.read_waroona(dtime= datetime(2016,1,6,9),extent=plotting._extents_['waroona'], add_winds=True)
+    slv, ro1, th1, th2 = fio.read_waroona(dtime= datetime(2016,1,6,9),extent=constants.extents['waroona'], add_winds=True)
     
     topog, = slv.extract(['topog'])
     u,v = ro1.extract(['u','v'])

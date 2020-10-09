@@ -28,7 +28,7 @@ def linescan_vs_firefront(model_run='sirivan_run1'):
     compares with tiff image as background, brightened as I don't know the actual wavelengths of the tiff I have...
     """
     # sirivan linescan figures extent (eyeballed using google map + matplotlib gridlines)
-    linescan_extent =  plotting._extents_['sirivan_linescan']
+    linescan_extent =  constants.extents['sirivan_linescan']
     latlon_CRS = ccrs.PlateCarree()
         
     # read fire front (all datetimes)

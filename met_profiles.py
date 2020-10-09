@@ -30,7 +30,7 @@ import numpy as np
 from datetime import datetime,timedelta
 
 # local modules
-from utilities import plotting, utils, fio
+from utilities import plotting, utils, fio, constants
 from pyrocb import __PCB_occurrences__
 
 
@@ -182,7 +182,7 @@ def f160(press,Temp,Tempd, latlon,
     return skew
 
 def model_metpy_hour(dtime=datetime(2016,1,6,7), 
-                     latlon=plotting._latlons_['pyrocb_waroona1'],
+                     latlon=constants.latlons['pyrocb_waroona1'],
                      latlon_stamp=None,
                      model_version='waroona_run1',
                      nearby=2,
@@ -275,7 +275,7 @@ if __name__ == '__main__':
             
             si_hours = fio.run_info[si_run]['filedates'][8:]
             si_pcb = __PCB_occurrences__[si_run]['latlon'][-1]
-            si_upwind = plotting._latlons_['fire_sirivan_upwind']
+            si_upwind = constants.latlons['fire_sirivan_upwind']
             si_mid = -32, 149.8 # sirivan middle of burn area
             
             for hour in si_hours:

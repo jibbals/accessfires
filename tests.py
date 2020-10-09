@@ -12,7 +12,7 @@ import iris
 import iris.quickplot as qplt
 import timeit
 
-from utilities import fio, utils, plotting
+from utilities import fio, utils, plotting, constants
 
 def check_outputs_access():
     cubes = iris.load("/g/data/en0/jwg574/iris_convert/converted_data/RA2M_astart.nc")
@@ -99,7 +99,7 @@ def latlon_comparison_from_extent_subsetting():
         fire and waroona_old runs were returning differently spaced arrays after subsetting
         fixed in fio._constraints_from_extent_()
     """
-    for mr, extent, dt in zip(['waroona_old','sirivan_run1'], [plotting._extents_['waroona'],plotting._extents_['sirivan']], [datetime(2016,1,6,1),datetime(2017,2,12,1)]):
+    for mr, extent, dt in zip(['waroona_old','sirivan_run1'], [constants.extents['waroona'],constants.extents['sirivan']], [datetime(2016,1,6,1),datetime(2017,2,12,1)]):
     
         ff, = fio.read_fire(mr,dtimes=[dt],extent=extent)
         cubes = fio.read_model_run(mr,fdtime=dt, extent=extent)
@@ -159,7 +159,7 @@ def check_height():
     um_hour=datetime(dtime.year,dtime.month,dtime.day,dtime.hour)
     
     # Constraints on dimensions
-    West,East,South,North = plotting._extents_['waroona']
+    West,East,South,North = constants.extents['waroona']
     constr_z = iris.Constraint(model_level_number=lambda cell: cell < 60)
     constr_lons = iris.Constraint(longitude = lambda cell: West <= cell <= East )
     constr_lats = iris.Constraint(latitude = lambda cell: South <= cell <= North )
@@ -189,7 +189,7 @@ def check_interp():
     
     dtime = um_dtimes[0]
     # Constraints on dimensions
-    West,East,South,North = plotting._extents_['waroona']
+    West,East,South,North = constants.extents['waroona']
     constr_z = iris.Constraint(model_level_number=lambda cell: cell < 60)
     constr_lons = iris.Constraint(longitude = lambda cell: West <= cell <= East )
     constr_lats = iris.Constraint(latitude = lambda cell: South <= cell <= North )

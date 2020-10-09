@@ -23,7 +23,7 @@ import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 from matplotlib import colors, ticker
 
-from utilities import fio, utils, plotting
+from utilities import fio, utils, plotting, constants
 
 
 ###
@@ -47,7 +47,7 @@ PFT = {'waroona_run2':{'data':None, # manually calculated PFT
                                         datetime(2016,1,6,6,10),
                                         datetime(2016,1,6,8,10),
                                         datetime(2016,1,6,12,10)]), # calculated at these times in UTC
-                       'latlon':plotting._latlons_['fire_waroona_upwind'], # ~ 1km from fire
+                       'latlon':constants.latlons['fire_waroona_upwind'], # ~ 1km from fire
                        'latlon_stamp':'fire_waroona_upwind',
                        'style':'--',
                        'color':'k',
@@ -58,7 +58,7 @@ PFT = {'waroona_run2':{'data':None, # manually calculated PFT
                                        datetime(2016,1,6,5,1),
                                        datetime(2016,1,6,6),
                                        datetime(2016,1,6,8,1),]), # calculated at these times in UTC
-                      'latlon':plotting._latlons_['fire_waroona_upwind'], # ~ 1km from fire
+                      'latlon':constants.latlons['fire_waroona_upwind'], # ~ 1km from fire
                       'latlon_stamp':'fire_waroona_upwind',
                       'style':'--',
                       'color':'g',
@@ -66,7 +66,7 @@ PFT = {'waroona_run2':{'data':None, # manually calculated PFT
        'sirivan_run1':{'data':None, # manually calculated PFT
                        'units':'Gigawatts',
                        'time':None, # calculated at these times in UTC
-                       'latlon':plotting._latlons_['fire_sirivan_upwind'], # ~ 1km from fire
+                       'latlon':constants.latlons['fire_sirivan_upwind'], # ~ 1km from fire
                        'latlon_stamp':'fire_sirivan_upwind',
                        'style':'--',
                        'color':'k',
@@ -78,9 +78,9 @@ if False:
         if mr not in PFT.keys():
             PFT[mr] = PFT['waroona_run2']
         if 'waroona' in mr:
-            PFT[mr]['latlon'] = plotting._latlons_['fire_waroona_upwind']
+            PFT[mr]['latlon'] = constants.latlons['fire_waroona_upwind']
         else:
-            PFT[mr]['latlon'] = plotting._latlons_['fire_sirivan_upwind']
+            PFT[mr]['latlon'] = constants.latlons['fire_sirivan_upwind']
 
 ## Manual Calculations for PFT:
 ## YYYYMMDDhhmmrun: 
@@ -93,14 +93,14 @@ if False:
 
 ## 201601061210NEW: q_ML=7.2, th_ML=35.5, z_fc = 695mbar=4km, dth=4.5, U=15.4m/s ::: PFt = .3*4**2*4.5*15.4 = 332.6GW
 
-def pft_altitude_vs_pressure(model_run='waroona_run1', latlon=plotting._latlons_['fire_waroona_upwind'],
+def pft_altitude_vs_pressure(model_run='waroona_run1', latlon=constants.latlons['fire_waroona_upwind'],
                              mbar_to_watch=700, datetimes=[datetime(2016,1,5,15)]):
     """
     Retrieve altitudes around 800-600 mbar over a specific lat lon over time.
     This is to calculate z_fc for manual PFT calculation
     """
     ## First read the hourly z and
-    extent = plotting._extents_[model_run.split('_')[0]]
+    extent = constants.extents[model_run.split('_')[0]]
     cubes = fio.read_model_run(model_run, fdtime=datetimes, extent=extent, add_topog=False,add_z=True)
     z,p = cubes.extract(['z_th','air_pressure'])
     p.convert_units('mbar')
@@ -147,7 +147,7 @@ def firepower_comparison(runs=['waroona_run1','waroona_old','waroona_run2','waro
     """
     
     lat,lon = PFT[runs[0]]['latlon']
-    fpextent = plotting._extents_[runs[0].split('_')[0]]
+    fpextent = constants.extents[runs[0].split('_')[0]]
     
     offset = timedelta(hours=fio.run_info['UTC_offset'])
     
@@ -247,7 +247,7 @@ def model_run_PFT_summary(model_run='waroona_run1', hour=datetime(2016,1,5,15)):
     Show PFT map, underneath topography overlaid with curly surface wind map
     '''
     extentname=model_run.split('_')[0]+'z'
-    extent = plotting._extents_[extentname]
+    extent = constants.extents[extentname]
     
     cubes = fio.read_model_run(model_run,[hour],extent=extent, 
                                add_topog=True,add_winds=True)

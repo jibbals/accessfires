@@ -41,7 +41,7 @@ def weather_summary_model(model_version='NYE_run1',
     plotting.init_plots()
     
     extentname = model_version.split('_')[0]
-    extent = plotting._extents_[extentname]
+    extent = constants.extents[extentname]
     if zoom_in is not None:
         extentname=None
         extent = zoom_in

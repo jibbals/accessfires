@@ -103,7 +103,7 @@ def vert_motion_hour(dtime=datetime(2016,1,6,7),
     dpi=200
     if extentname is None:
         extentname=model_run.split('_')[0]
-    extent=plotting._extents_[extentname]
+    extent=constants.extents[extentname]
     
     # Read vert motion, clouds
     cubes = fio.read_model_run(model_run, 

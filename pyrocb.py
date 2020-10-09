@@ -324,7 +324,7 @@ def sample_showing_grid(model_run='waroona_run3', extentname=None, HSkip=None):
     if extentname is None:
         extentname=model_run.split('_')[0]
     
-    extent=plotting._extents_[extentname]
+    extent=constants.extents[extentname]
     
     for di,hour in enumerate(all_hours):
         ## Read hour of output
@@ -501,7 +501,7 @@ def moving_pyrocb(model_run='waroona_run3', dtimes = None,
     """
     
     extentname=model_run.split('_')[0]
-    extent = plotting._extents_[extentname]
+    extent = constants.extents[extentname]
     clevs_vertwind = np.union1d(np.union1d(2.0**np.arange(-2,6),
                                            -1*(2.0**np.arange(-2,6))),
                                 np.array([0]))
@@ -644,7 +644,7 @@ def run_X_transect(model_run='waroona_run1', dtime=datetime(2016,1,5,15),
     print("INFO: starting run_X_transect(",model_run,dtime,")")
     ### First use datetime and extentname to read correct outputs:
     extentname=model_run.split('_')[0]
-    extent = plotting._extents_[extentname]
+    extent = constants.extents[extentname]
     
     ## read um output over extent [t, lev, lat, lon]
     cubes = fio.read_model_run(model_run, fdtime=[dtime], extent=extent,
@@ -732,7 +732,7 @@ def examine_metrics(mr,hour,extent=None,HSkip=None):
     locname=mr.split('_')[0]
     extentname=locname+'_pcb'
     if extent is None:
-        extent=plotting._extents_[extentname]
+        extent=constants.extents[extentname]
     #model_hour = fio.sim_info[locname]['filedates'][hour]
     model_hour=hour
     cubes=fio.read_model_run(mr, fdtime=model_hour,extent=extent,HSkip=HSkip,
