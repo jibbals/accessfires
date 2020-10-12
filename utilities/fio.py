@@ -1050,7 +1050,7 @@ def read_model_run(model_version, fdtime=None, subdtimes=None, extent=None,
         # compute RH from specific and T in kelvin
         orig_Tunits=T.units
         T.convert_units('K')
-        RH = utils.relative_humidity_from_specific(q.data.data, T.data.data)
+        RH = utils.relative_humidity_from_specific(q.data, T.data)
         # restore T units (just in case)
         T.convert_units(orig_Tunits)
         # turn RH into a cube and add to return list
