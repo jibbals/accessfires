@@ -124,6 +124,36 @@ def latslons_axes_along_transect(lats,lons,start,end,nx):
     lats_axis = lat0 + (lat1-lat0)*x_factor
     return lats_axis,lons_axis
 
+def interp_cube_to_altitudes(cube, altitudes, model_heights=None, closest=False):
+    """
+    take cube, interpolate to altitude using approximated "level_height" coordinate
+    if that fails (or if closest is True), use closest indices from model_heights
+    """
+    coord_names=[coord.name() for coord in cube.coords()]
+    height_coord_name = None
+    if 'level_height' in coord_names:
+        height_coord_name='level_height'
+    elif 'atmosphere_hybrid_height_coordinate' in coord_names:
+        height_coord_name='atmosphere_hybrid_height_coordinate'
+    
+    if (height_coord_name is None) or closest:
+        # get closest height indices
+        hinds=np.zeros(len(altitudes)).astype(int)
+        for i,wanted_height in enumerate(altitudes):
+            hind = np.argmin(np.abs(model_heights-wanted_height))
+            hinds[i]=hind
+        #print("DEBUG: closest indices:",hinds)
+        # subset to height indices
+        ret_cube  = cube[:,hinds,:,:]
+    else:
+        ret_cube = iris.util.squeeze(
+            cube.interpolate(
+                [(height_coord_name, altitudes)],
+                iris.analysis.Linear()
+                )
+            )
+    return ret_cube
+
 def transect_slicex(lats,lons,start,end,nx=None, nz=1,
                     latlons=False):
     """

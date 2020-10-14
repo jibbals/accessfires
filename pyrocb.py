@@ -751,7 +751,8 @@ def examine_metrics(mr,hour,extent=None,HSkip=None):
     
     ## cbar for wind dir
     #cmap_wind='gist_rainbow' # continuous
-    cmap_wind='hsv'
+    # circular continuous colourmap
+    cmap_wind = 'hsv'
     norm_wind=col.Normalize(vmin=0,vmax=360)
     tickform_wind=tick.ScalarFormatter()
     ticks_wind=[range(0,361,45),["%d"%windtick for windtick in range(0,361,45)]]
@@ -878,8 +879,8 @@ if __name__ == '__main__':
     HSkip=None
     #HSkip=5
     
-    for hour in si_hours:
-        for run in si_runs:
+    for hour in test_hours:
+        for run in test_runs:
             # vorticity, okubo weiss etc...
             if True:    
                 examine_metrics(run,hour=hour,HSkip=HSkip)
