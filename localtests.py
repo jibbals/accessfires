@@ -92,8 +92,8 @@ def metric_file_variables(ntimes=144):
     return dimarraypairs
 
 def make_empty_metrics_file(mr="sirivan_run4",
-                              extentname=None, 
-                              **to_netcdf_args):
+                            extentname=None, 
+                            **to_netcdf_args):
     """
     create metrics file, can be filled using other method
     ARGS:
@@ -104,7 +104,7 @@ def make_empty_metrics_file(mr="sirivan_run4",
             filename="data/metrics/<mr>_<extentname>.nc"
     
     Data array: variables with _mean and _5ns as follows
-        "T", # temperature (C)
+        "T", # temperature (K)
         "P", # pressure (hPa)
         "WD", # wind direction (meteorological degrees)
         "WS", # wind speed (m/s)
@@ -120,6 +120,9 @@ def make_empty_metrics_file(mr="sirivan_run4",
     Returns:
         path of created file
     """
+    if extentname is None:
+        extentname=mr.split("_")[0]+"z"
+    
     ## Set up coordinates to be used
     sirivan_10minute_dates = pd.date_range(start="2017-02-11 11:10",end="2017-02-12 11:00",periods=144)
     waroona_10minute_dates = pd.date_range(start="2016-01-05 15:10",end="2016-01-06 15:00",periods=144)
@@ -132,18 +135,34 @@ def make_empty_metrics_file(mr="sirivan_run4",
     ## Set up variables to be used
     arrays=metric_file_variables(144)
     
-    
+    global_attrs={
+        "description":"Time series at several model levels (closest index to level_height) created by collapsing horizontally on a subset (bound by [West,East,South,North]) of the model output",
+        "WESN":constants.extents[extentname],
+        }
     ##  Create dataset using variables and coords
     ds = xr.Dataset(
         data_vars=arrays,
         coords=coords,
+        attrs=global_attrs,
         )
-    
-    ## Attributes to be added!!! #TODO
+
+    ## Attributes
+    key_unit = {"air_temperature":"K",
+                "air_pressure":"hPa",
+                "s":"m s-1",
+                "firespeed":"m s-1",
+                "firespeed_nonzero":"m s-1",
+                "wind_direction":"degrees",
+                }
+    for key,unit in key_unit.items():
+        ds[key+"_mean"].attrs["units"]=unit
+        ds[key+"_5ns"].attrs["units"]=unit
+    ds["wind_direction_mean"].attrs["long_name"]="degrees clockwise from due north"
+    ds["wind_direction_5ns"].attrs["long_name"]="degrees clockwise from due north"
+    ds["FFDI_mean"].attrs["description"]="ffdi=2*np.exp(-0.45 + 0.987*np.log(DF) - .0345*RH+.0338*T+.0234*v): where v is 10 metre wind speed, others are at surface"
+    ds["FFDI_5ns"].attrs["description"]="ffdi=2*np.exp(-0.45 + 0.987*np.log(DF) - .0345*RH+.0338*T+.0234*v): where v is 10 metre wind speed, others are at surface"
     
     ## Default arguments to save the netcdf file
-    if extentname is None:
-        extentname=mr.split("_")[0]+"z"
     #if "group" not in to_netcdf_args:
     #    to_netcdf_args["group"]=extentname
     if "mode" not in to_netcdf_args:
@@ -355,12 +374,12 @@ def add_to_metrics_file(mr, hour=0, extentname=None,):
     shutil.copy(fpath_tmp,fpath) # overwrite original with updated
 
 
-mr = "sirivan_run5"
+mr = "sirivan_run4"
 extent="sirivanz"
 fpath=metric_file_path(mr, extent)
 fpath = make_empty_metrics_file(mr,extentname=extent)
-for hour in range(24):
-    add_to_metrics_file(mr, hour=1, extentname=extent)
+#for hour in range(24):
+#    add_to_metrics_file(mr, hour=1, extentname=extent)
 
 with xr.open_dataset(fpath) as ds:
     
@@ -368,8 +387,8 @@ with xr.open_dataset(fpath) as ds:
     print(" === Reading file       === ")
     print(" ===                    === ")
     print(ds.keys())
-    for key in ['firespeed','s','firespeed_nonzero']:
-        plt.plot(ds[key+"_mean"], label=key,)
-    plt.save_fig("test_metric.png")
+#    for key in ['firespeed','s','firespeed_nonzero']:
+#        plt.plot(ds[key+"_mean"], label=key,)
+#    plt.save_fig("test_metric.png")
 
         
