@@ -18,6 +18,7 @@ import os, shutil
 import cartopy.crs as ccrs
 import matplotlib.pyplot as plt
 import iris # interpolation etc
+import time # check performance
 
 from utilities import utils, fio, constants
 
@@ -78,10 +79,16 @@ def metric_file_variables(ntimes=144):
     # height coordinate
     dimarraypairs["level_height"]=("level",
                  np.array([0,10, 100, 500, 1000, 2000, 4000, 6000, 10000, 15000]))
-    # FFDI is single leve, based on 10m winds and surface T,RH
-    dimarraypairs["FFDI_mean"]=("time",np.zeros([ntimes])+np.NaN)
-    dimarraypairs["FFDI_5ns"]=(("time","pctl"),np.zeros([ntimes,5])+np.NaN)
-
+    
+    # some have no level dim:
+    for varname in [
+            "firespeed", # velocity of fire front? m/s
+            "firespeed_nonzero", # with any zeros removed
+            "FFDI", # FFDI is single leve, based on 10m winds and surface T,RH
+            ]:
+        dimarraypairs[varname+"_mean"]=("time",np.zeros([ntimes])+np.NaN)
+        dimarraypairs[varname+"_5ns"]=(("time","pctl"),np.zeros([ntimes,5])+np.NaN)
+    
     return dimarraypairs
 
 def make_empty_metrics_file(mr="sirivan_run4",
@@ -103,6 +110,8 @@ def make_empty_metrics_file(mr="sirivan_run4",
         "WS", # wind speed (m/s)
         "RH", # rel humidity (frac?)
         "FFDI", # forest fire danger index
+        "firespeed", # fire speed (m/s?)
+        "firespeed_nonzero", # zeros removed
         Coords:
             "time": time
             "level": model level 0, 10m, 100m, 500m, 1000m, 2000m, 4000m, 6000m, 10000m, 15000m
@@ -173,48 +182,110 @@ def make_metrics_from_model(mr,hour=0,extentname=None,):
     
     # Read model data for extentname
     cubes=fio.read_model_run(mr, fdtime=dthour, extent=extent,
-                   add_topog=True, add_z=False, add_winds=True, add_theta=False,
-                   add_dewpoint=False, add_RH=True, HSkip=None, constraints=None)
-    
+                             add_topog=False)
+    # we subset then add wind/rel humidity fields
+    #print("DEBUG: read model cubes:",cubes)
+    ctimes = utils.dates_from_iris(cubes.extract('air_temperature')[0])
     model_heights = utils.height_from_iris(cubes.extract("air_temperature")[0])
     
     return_dict = {}
+    
+    ## Get wind speed and direction (after subsetting hopefully)
+    u1, v1 = cubes.extract(['x_wind','y_wind']) #staggered but shouldn't matter for timeseries
+    #t0 = time.perf_counter()
+    u0 = utils.interp_cube_to_altitudes(u1,heights,model_heights, closest=True)
+    #t1 = time.perf_counter()
+    v0 = utils.interp_cube_to_altitudes(v1,heights,model_heights,closest=True)
+    #t2 = time.perf_counter()
+    # destagger
+    u = u0.interpolate([('longitude',v0.coord('longitude').points)],
+                       iris.analysis.Linear())
+    v = v0.interpolate([('latitude',u0.coord('latitude').points)],
+                       iris.analysis.Linear())
+    #print("DEBUG: time with interpolation: %.5f seconds"%(t1-t0))
+    #print("DEBUG: time without interpolation: %.5f seconds"%(t2-t1))
+    # Get wind speed cube using hypotenuse of u,v
+    firespeed,u10,v10=fio.read_fire(mr, extent=extent, dtimes=ctimes,
+                          firefront=False, wind=True, firespeed=True)
+    s10=utils.wind_speed_from_uv_cubes(u10,v10)
+    
+    s0 = utils.wind_speed_from_uv_cubes(u,v)
+    s=s0.data
+    s[:,1,:,:] = s10.data
+    cubews = iris.cube.Cube(s,
+                            var_name='wind_speed',
+                            dim_coords_and_dims=[(s0.coord('time'),0),
+                                                 (s0.coord('model_level_number'),1),
+                                                 (s0.coord('latitude'),2),
+                                                 (s0.coord('longitude'),3)]
+                            )
+    
+    # Get wind direction using arctan of y/x
+    wd = utils.wind_dir_from_uv(u.data,v.data)
+    wd[:,1,:,:] = utils.wind_dir_from_uv(u10.data,v10.data)
+    cubewd = iris.cube.Cube(wd,
+                            var_name='wind_direction',
+                            units='degrees',
+                            dim_coords_and_dims=[(s0.coord('time'),0),
+                                                 (s0.coord('model_level_number'),1),
+                                                 (s0.coord('latitude'),2),
+                                                 (s0.coord('longitude'),3)])
+    
+    # calculate rel humidity
+    q1,T1 = cubes.extract(['specific_humidity','air_temperature'])
+    # compute RH from specific and T in kelvin
+    q = utils.interp_cube_to_altitudes(q1,heights,model_heights, closest=True)
+    T = utils.interp_cube_to_altitudes(T1,heights,model_heights, closest=True)
+    RH = utils.relative_humidity_from_specific(q.data, T.data)
+    iris.std_names.STD_NAMES['relative_humidity'] = {'canonical_units': '1'}
+    cubeRH = iris.cube.Cube(RH, standard_name="relative_humidity",
+                               var_name="RH", units="1",
+                               dim_coords_and_dims=[(q.coord('time'),0),
+                                                    (q.coord('model_level_number'),1),
+                                                    (q.coord('latitude'),2),
+                                                    (q.coord('longitude'),3)])
+    
+    # also wind speed at 10m for FFDI calc
+    WS_10m=np.squeeze(s[:,1,:,:]) # 10m wind speed
+    # Surface RH as %
+    RH_surf=100*np.squeeze(RH[:,0,:,:])
+    
+    # also make nonzero firespeed metric
+    fs_nz = np.copy(firespeed.data)
+    fs_nz[fs_nz<0.001] = np.NaN
+    cubefsnz = iris.cube.Cube(fs_nz, 
+                               var_name="firespeed_nonzero", 
+                               units="m s-1",
+                               dim_coords_and_dims=[(firespeed.coord('time'),0),
+                                                    (firespeed.coord('latitude'),1),
+                                                    (firespeed.coord('longitude'),2)])
+    
+    cubes_subset={
+        "wind_direction":cubewd,
+        "s":cubews,
+        "relative_humidity":cubeRH,
+        "firespeed":firespeed,
+        "firespeed_nonzero":cubefsnz,
+        }
+    
+    for varname in ["air_temperature","air_pressure"]:
+        cube0 = cubes.extract(varname)[0]
+        # interp to level heights
+        cube = utils.interp_cube_to_altitudes(cube0,heights,model_heights=model_heights)
+        cubes_subset[varname] = cube
+    
     for varname in [
         "air_temperature", # temperature
         "air_pressure", # pressure
         "wind_direction", # wind direction
         "s", # wind speed
         "relative_humidity", # rel humidity
+        "firespeed", # fire speed
+        "firespeed_nonzero",
         ]:
         print("INFO: collating ",varname)
-
-        cube0 = cubes.extract(varname)[0]
-        # interp to level heights
-        coord_names=[coord.name() for coord in cube0.coords()]
-        height_coord_name = None
-        if 'level_height' in coord_names:
-            height_coord_name='level_height'
-        elif 'atmosphere_hybrid_height_coordinate' in coord_names:
-            height_coord_name='atmosphere_hybrid_height_coordinate'
         
-        if height_coord_name is None:
-            # get closest height indices
-            hinds=np.zeros(len(heights)).astype(int)
-            for i,wanted_height in enumerate(heights):
-                hind = np.argmin(np.abs(model_heights-wanted_height))
-                hinds[i]=hind
-            #print("DEBUG: closest indices:",hinds)
-            # subset to height indices
-            cube  = cube0[:,hinds,:,:]
-        else:
-            cube = iris.util.squeeze(
-                cube0.interpolate(
-                    [(height_coord_name, heights)],
-                    iris.analysis.Linear()
-                    )
-                )
-        if varname=="s":
-            WS_10m=np.squeeze(cube[:,1,:,:].data) # 10m wind speed
+        cube = cubes_subset[varname]
         
         ## horizontal aggregation
         cube_mean = cube.collapsed(['latitude','longitude'], 
@@ -228,19 +299,14 @@ def make_metrics_from_model(mr,hour=0,extentname=None,):
         # make pctl dimension the last one
         return_dict[varname+"_5ns"]=np.moveaxis(cube_5ns.data, 0, -1)
     
+    
     DF=10.0
     print("INFO: collating FFDI (assume DF = %.1f)"%DF)
-    # Surface RH as %
-    RH=100*np.squeeze(cubes.extract('relative_humidity')[0][:,0,:,:].data)
     # Surface T in Celcius
     T=np.squeeze(cubes.extract('air_temperature')[0][:,0,:,:].data) - 273.15
     # WS in km/h
-    FFDI=utils.FFDI(DF,RH,T,WS_10m*3.6)
-    #print("DEBUG: FFDI params:")
-    #print(np.mean(RH))
-    #print(np.mean(T))
-    #print(np.mean(WS_10m*3.6))
-    #print(np.mean(FFDI))
+    FFDI=utils.FFDI(DF,RH_surf,T,WS_10m*3.6)
+    
     return_dict["FFDI_mean"]=np.mean(FFDI,axis=(1,2)) # mean over latlon
     return_dict["FFDI_5ns"]=np.moveaxis(np.percentile(FFDI,[0,25,50,75,100],
                                                       axis=(1,2)),
@@ -268,7 +334,7 @@ def add_to_metrics_file(mr, hour=0, extentname=None,):
     nsteps=np.shape(arrays["air_temperature_mean"])[0]
     if nsteps != 6:
         print("WARNING: %d timesteps in output hour!"%nsteps)
-        
+    
     # indices for inserting new data
     insertinds=slice(hour*6,hour*6+nsteps)
     
@@ -279,7 +345,7 @@ def add_to_metrics_file(mr, hour=0, extentname=None,):
         
         # move metrics into file!
         for varname in arrays.keys():
-            print("DEBUG: updating ",varname)
+            print("INFO: updating ",varname)
             # time, level, [pctl]
             ds[varname][insertinds] = arrays[varname]
         
@@ -288,11 +354,11 @@ def add_to_metrics_file(mr, hour=0, extentname=None,):
     print("INFO: overwriting file path ",fpath)
     shutil.copy(fpath_tmp,fpath) # overwrite original with updated
     
-mr = "sirivan_run7"
+mr = "sirivan_run4"
 extent="sirivanz"
 fpath=metric_file_path(mr, extent)
-#fpath = make_empty_metrics_file(mr,extentname=extent)
-add_to_metrics_file(mr, hour=1, extentname=extent)
+fpath = make_empty_metrics_file(mr,extentname=extent)
+add_to_metrics_file(mr, hour=0, extentname=extent)
 with xr.open_dataset(fpath) as ds:
     
     print(" ===                    === ")
