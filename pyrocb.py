@@ -751,7 +751,7 @@ def examine_metrics(mr,hour,extent=None,HSkip=None):
     
     ## cbar for wind dir
     #cmap_wind='gist_rainbow' # continuous
-    cmap_wind='gist_ncar_r'
+    cmap_wind='hsv'
     norm_wind=col.Normalize(vmin=0,vmax=360)
     tickform_wind=tick.ScalarFormatter()
     ticks_wind=[range(0,361,45),["%d"%windtick for windtick in range(0,361,45)]]

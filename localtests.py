@@ -288,18 +288,23 @@ def add_to_metrics_file(mr, hour=0, extentname=None,):
     print("INFO: overwriting file path ",fpath)
     shutil.copy(fpath_tmp,fpath) # overwrite original with updated
     
-mr = "sirivan_run7"
+
+
+mr = "sirivan_run5"
 extent="sirivanz"
 fpath=metric_file_path(mr, extent)
-#fpath = make_empty_metrics_file(mr,extentname=extent)
-add_to_metrics_file(mr, hour=1, extentname=extent)
+fpath = make_empty_metrics_file(mr,extentname=extent)
+for hour in range(24):
+    add_to_metrics_file(mr, hour=1, extentname=extent)
+
 with xr.open_dataset(fpath) as ds:
     
     print(" ===                    === ")
     print(" === Reading file       === ")
     print(" ===                    === ")
     print(ds.keys())
-    print(ds["FFDI_mean"][:10])
-    print(ds["FFDI_5ns"][:10])
-    
+    for key in ['firespeed','s','firespeed_nonzero']:
+        plt.plot(ds[key], label=key,)
+    plt.save_fig("test_metric.png")
+
         
