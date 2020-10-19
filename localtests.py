@@ -374,12 +374,12 @@ def add_to_metrics_file(mr, hour=0, extentname=None,):
     shutil.copy(fpath_tmp,fpath) # overwrite original with updated
 
 
-mr = "sirivan_run4"
 extent="sirivanz"
-fpath=metric_file_path(mr, extent)
-fpath = make_empty_metrics_file(mr,extentname=extent)
-#for hour in range(24):
-#    add_to_metrics_file(mr, hour=1, extentname=extent)
+for mr in ["sirivan_run5_hr"]:
+    fpath=metric_file_path(mr, extent)
+    fpath = make_empty_metrics_file(mr,extentname=extent)
+    for hour in range(24):
+        add_to_metrics_file(mr, hour=hour, extentname=extent)
 
 with xr.open_dataset(fpath) as ds:
     
@@ -387,8 +387,8 @@ with xr.open_dataset(fpath) as ds:
     print(" === Reading file       === ")
     print(" ===                    === ")
     print(ds.keys())
-#    for key in ['firespeed','s','firespeed_nonzero']:
-#        plt.plot(ds[key+"_mean"], label=key,)
-#    plt.save_fig("test_metric.png")
+    for key in ['firespeed','s','firespeed_nonzero']:
+        plt.plot(ds[key+"_mean"], label=key,)
+    plt.savefig("test_metric.png")
 
         
