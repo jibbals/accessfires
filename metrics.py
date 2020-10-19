@@ -105,11 +105,11 @@ def make_empty_metrics_file(mr="sirivan_run4",
             filename="data/metrics/<mr>_<extentname>.nc"
     
     Data array: variables with _mean and _5ns as follows
-        "T", # temperature (K)
-        "P", # pressure (hPa)
-        "WD", # wind direction (meteorological degrees)
-        "WS", # wind speed (m/s)
-        "RH", # rel humidity (frac?)
+        "air_temperature", # temperature (K)
+        "air_pressure", # pressure (hPa)
+        "wind_direction", # wind direction (meteorological degrees)
+        "s", # wind speed (m/s)
+        "relative_humidity", # rel humidity (frac?)
         "FFDI", # forest fire danger index
         "firespeed", # fire speed (m/s?)
         "firespeed_nonzero", # zeros removed
@@ -393,6 +393,83 @@ def add_to_metrics_file(mr, hour=0, extentname=None,):
     print("INFO: overwriting file path ",fpath)
     shutil.copy(fpath_tmp,fpath) # overwrite original with updated
     
+def compare_metrics(mrs=["sirivan_run5",],extent="sirivanz",):
+    """
+    Look at some metrics side by side for a list of model runs
+    """
+    
+    # colours for each model run:
+    eight_paired_colours=['#a6cee3','#1f78b4',
+                          '#b2df8a','#33a02c',
+                          '#fb9a99','#e31a1c',
+                          '#fdbf6f','#ff7f00']
+    colors = {"sirivan_run3":eight_paired_colours[6],
+              "sirivan_run4":eight_paired_colours[7],
+              "sirivan_run5":eight_paired_colours[0],
+              "sirivan_run5_hr":eight_paired_colours[1],
+              "sirivan_run6":eight_paired_colours[2],
+              "sirivan_run6_hr":eight_paired_colours[3],
+              "sirivan_run7":eight_paired_colours[4],
+              "sirivan_run7_hr":eight_paired_colours[5],
+              }
+    
+    
+    fig,axes = plt.subplots(5,1,figsize=[12,12])
+    
+    
+    ## loop over runs, adding the data to premade figure axes
+    for mr in mrs:
+        color=colors[mr]
+        fpath=metric_file_path(mr,extent)
+        with xr.open_dataset(fpath) as ds:
+            print("INFO: reading/plotting ",fpath)
+            kwargs={"label":mr,"color":color}
+            
+            ## temperature
+            plt.sca(axes[1])
+            plt.plot(ds["air_temperature"][:,0], **kwargs)
+            
+            ## 10m windspeed
+            plt.sca(axes[1])
+            plt.plot(ds["s_mean"][:,1], **kwargs)
+            plt.plot(ds["s_5ns"][:,1,4], 
+                     marker="^", linestyle="None", color=color,
+                     #label=mr+" maximum"
+                     )
+            
+            plt.sca(axes[2])
+            plt.plot(ds["firespeed_mean"], **kwargs)
+            # max firespeed
+            plt.plot(ds["firespeed_5ns"][:,4], 
+                     marker="^", linestyle="None", color=color,
+                     #label="max firespeed"
+                     )
+            
+            plt.sca(axes[3])
+            plt.plot(ds["heatflux_mean"], **kwargs)
+            plt.plot(ds["heatflux_5ns"][:,4], 
+                     marker="^", linestyle="None", color=color,
+                     #label="max heatflux"
+                     )
+            
+            plt.sca(axes[4])
+            plt.plot(ds["firepower"], **kwargs)
+            
+    
+    for ax,title,ylabel in zip(
+            axes,
+            ["surface air-temperature", "10m wind speed", "firespeed", 
+             "heatflux", "firepower"],
+            ["Celcius", "ms$^{-1}$", "ms$^{-1}$", 
+             "Watts m$^{-2}$", "Gigawatts"]):
+        plt.sca(ax)
+        plt.title(title)
+        plt.ylabel(ylabel)
+        plt.legend()
+    plt.xlabel("time")
+    fio.save_fig("comparison",_sn_,"metrics_%s.png"%extent,plt)
+    
+
 if __name__=="__main__":
     import matplotlib.pyplot as plt
     
@@ -404,27 +481,7 @@ if __name__=="__main__":
         for hour in range(2):
             add_to_metrics_file(mr, hour=hour, extentname=extent)
         
-        with xr.open_dataset(fpath) as ds:
-    
-            print(" ===                    === ")
-            print(" === Reading file       === ")
-            print(" ===                    === ")
-            print(ds.keys())
         
-            plt.figure()
-            plt.subplot(2,2,1)
-            for key in ['firespeed','firespeed_nonzero']:
-                plt.plot(ds[key+"_mean"], label=key,)
-            plt.legend()
-            plt.subplot(2,2,2)
-            plt.plot(ds["firepower"], label="firepower",)
-            plt.title("firepower")
-            plt.legend()
-            plt.subplot(2,2,3)
-            for key in ['sensibleheat',"sensibleheat_nonzero"]:
-                plt.plot(ds[key+"_mean"], label=key,)
-            plt.legend()
-            plt.savefig("test_metric.png")    
             
     if False:
         mr = "sirivan_run6_hr"
