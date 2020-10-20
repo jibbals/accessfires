@@ -31,35 +31,42 @@ def metric_file_path(mr, extentname):
 
 def metric_file_variables(ntimes=144):
     """
-        Set up variables to be used by metric files
-        Where possible names match model output named variables
-        "air_temperature", # temperature
-        "air_pressure", # pressure
-        "wind_direction", # wind direction
-        "s", # wind speed
-        "relative_humidity", # rel humidity
-        "FFDI", # forest fire danger index
-        "level_height", # level coordinate
-        "firespeed",
-        "firespeed_nonzero",
-        "sensibleheat",
-        "sensibleheat_nonzero",
-        "firepower",
+    Set up variables to be used by metric files
+    EXAMPLE FILE:
+        INFO: reading/plotting  data/metrics/sirivan_run4_sirivanz.nc
+        DEBUG: <xarray.Dataset>
+        Dimensions:                    (level: 10, pctl: 5, time: 144)
+        Coordinates:
+          * time                       (time) datetime64[ns] 2017-02-11T11:10:00 ... ...
+          * level                      (level) int64 0 1 2 3 4 5 6 7 8 9
+          * pctl                       (pctl) int64 0 1 2 3 4
+        Data variables:
+            air_temperature_mean       (time, level) float64 ...
+            air_temperature_5ns        (time, level, pctl) float64 ...
+            air_pressure_mean          (time, level) float64 ...
+            air_pressure_5ns           (time, level, pctl) float64 ...
+            wind_direction_mean        (time, level) float64 ...
+            wind_direction_5ns         (time, level, pctl) float64 ...
+            s_mean                     (time, level) float64 ...
+            s_5ns                      (time, level, pctl) float64 ...
+            relative_humidity_mean     (time, level) float64 ...
+            relative_humidity_5ns      (time, level, pctl) float64 ...
+            level_height               (level) int64 ...
+            firespeed_mean             (time) float64 ...
+            firespeed_5ns              (time, pctl) float64 ...
+            firespeed_nonzero_mean     (time) float64 ...
+            firespeed_nonzero_5ns      (time, pctl) float64 ...
+            FFDI_mean                  (time) float64 ...
+            FFDI_5ns                   (time, pctl) float64 ...
+            sensibleheat_mean          (time) float64 ...
+            sensibleheat_5ns           (time, pctl) float64 ...
+            sensibleheat_nonzero_mean  (time) float64 ...
+            sensibleheat_nonzero_5ns   (time, pctl) float64 ...
+            firepower                  (time) float64 ...
+        Attributes:
+            description:  Time series at several model levels (closest index to level...
+            WESN:         [149.4  150.19 -32.2  -31.8 ]
     """
-    
-    #     0: air_pressure / (Pa)                 (time: 6; model_level_number: 140; latitude: 14; longitude: 14)
-    #    3: air_temperature / (K)               (time: 6; model_level_number: 140; latitude: 14; longitude: 14)
-    #    6: specific_humidity / (kg kg-1)       (time: 6; model_level_number: 140; latitude: 14; longitude: 14)
-    #    9: upward_air_velocity / (m s-1)       (time: 6; model_level_number: 140; latitude: 14; longitude: 14)
-    #      : qc / (g kg-1)                       (time: 2; model_level_number: 140; latitude: 88; longitude: 106)
-    #      : z_th / (m)                         (time: 2; model_level_number: 140; latitude: 88; longitude: 106)
-    #      : u / (m s-1)                    (time: 2; model_level_number: 140; latitude: 88; longitude: 106)
-    #      : v / (m s-1)                    (time: 2; model_level_number: 140; latitude: 88; longitude: 106)
-    #      : s / (m s-1)                    (time: 2; model_level_number: 140; latitude: 88; longitude: 106)
-    #      : wind_direction / (degrees)          (time: 6; model_level_number: 140; latitude: 14; longitude: 14)
-    #      : vapour_pressure / (100 Pa)     (time: 2; model_level_number: 140; latitude: 88; longitude: 106)
-    #      : dewpoint_temperature / (K)     (time: 2; model_level_number: 140; latitude: 88; longitude: 106)
-    #      : relative_humidity / (1)  
     
     dimarraypairs={}
     for varnames in [
@@ -423,34 +430,32 @@ def compare_metrics(mrs=["sirivan_run5",],extent="sirivanz",):
         fpath=metric_file_path(mr,extent)
         with xr.open_dataset(fpath) as ds:
             print("INFO: reading/plotting ",fpath)
+            #print("DEBUG:",ds)
             kwargs={"label":mr,"color":color}
-            
+            kwargs_maximums={
+                "marker":"^",
+                "linestyle":"None",
+                "color":color,
+                "alpha":0.6,
+                #label="max firespeed",
+                }
             ## temperature
-            plt.sca(axes[1])
-            plt.plot(ds["air_temperature"][:,0], **kwargs)
+            plt.sca(axes[0])
+            plt.plot(ds["air_temperature_mean"][:,0]-273.15, **kwargs)
             
             ## 10m windspeed
             plt.sca(axes[1])
             plt.plot(ds["s_mean"][:,1], **kwargs)
-            plt.plot(ds["s_5ns"][:,1,4], 
-                     marker="^", linestyle="None", color=color,
-                     #label=mr+" maximum"
-                     )
+            plt.plot(ds["s_5ns"][:,1,4], **kwargs_maximums)
             
             plt.sca(axes[2])
             plt.plot(ds["firespeed_mean"], **kwargs)
             # max firespeed
-            plt.plot(ds["firespeed_5ns"][:,4], 
-                     marker="^", linestyle="None", color=color,
-                     #label="max firespeed"
-                     )
+            plt.plot(ds["firespeed_5ns"][:,4], **kwargs_maximums)
             
             plt.sca(axes[3])
-            plt.plot(ds["heatflux_mean"], **kwargs)
-            plt.plot(ds["heatflux_5ns"][:,4], 
-                     marker="^", linestyle="None", color=color,
-                     #label="max heatflux"
-                     )
+            plt.plot(ds["sensibleheat_mean"], **kwargs)
+            plt.plot(ds["sensibleheat_5ns"][:,4], **kwargs_maximums)
             
             plt.sca(axes[4])
             plt.plot(ds["firepower"], **kwargs)
@@ -473,16 +478,11 @@ def compare_metrics(mrs=["sirivan_run5",],extent="sirivanz",):
 if __name__=="__main__":
     import matplotlib.pyplot as plt
     
-    ## Test creation of metric file
+    ## Check plots
     if True:
-        mr = "sirivan_run4"
-        extent="sirivanz"
-        fpath = make_empty_metrics_file(mr,extentname=extent)
-        for hour in range(2):
-            add_to_metrics_file(mr, hour=hour, extentname=extent)
-        
-        
-            
+        compare_metrics(mrs=["sirivan_run4","sirivan_run6_hr"])
+    
+    ## metric file creation/population ~ 90GB RAM and 1:20:00 CPU time
     if False:
         mr = "sirivan_run6_hr"
         extent="sirivanz"
