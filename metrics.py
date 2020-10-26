@@ -437,7 +437,7 @@ def compare_metrics(mrs=["sirivan_run5",],extent="sirivanz",):
                 "linestyle":"None",
                 "color":color,
                 "alpha":0.6,
-                #label="max firespeed",
+                "label":'_nolegend_',#no label for maximums
                 }
             ## temperature
             plt.sca(axes[0])
@@ -449,9 +449,9 @@ def compare_metrics(mrs=["sirivan_run5",],extent="sirivanz",):
             plt.plot(ds["s_5ns"][:,1,4], **kwargs_maximums)
             
             plt.sca(axes[2])
-            plt.plot(ds["firespeed_mean"], **kwargs)
+            plt.plot(ds["firespeed_nonzero_mean"], **kwargs)
             # max firespeed
-            plt.plot(ds["firespeed_5ns"][:,4], **kwargs_maximums)
+            plt.plot(ds["firespeed_nonzero_5ns"][:,4], **kwargs_maximums)
             
             plt.sca(axes[3])
             plt.plot(ds["sensibleheat_mean"], **kwargs)
@@ -460,7 +460,7 @@ def compare_metrics(mrs=["sirivan_run5",],extent="sirivanz",):
             plt.sca(axes[4])
             plt.plot(ds["firepower"], **kwargs)
             
-    
+    legflag=False
     for ax,title,ylabel in zip(
             axes,
             ["surface air-temperature", "10m wind speed", "firespeed", 
@@ -470,7 +470,9 @@ def compare_metrics(mrs=["sirivan_run5",],extent="sirivanz",):
         plt.sca(ax)
         plt.title(title)
         plt.ylabel(ylabel)
-        plt.legend()
+        if not legflag:
+            plt.legend() 
+            legflag=True
     plt.xlabel("time")
     fio.save_fig("comparison",_sn_,"metrics_%s.png"%extent,plt)
     
@@ -478,9 +480,13 @@ def compare_metrics(mrs=["sirivan_run5",],extent="sirivanz",):
 if __name__=="__main__":
     import matplotlib.pyplot as plt
     
+    siruns=["sirivan_run4","sirivan_run5","sirivan_run5_hr",
+            "sirivan_run6","sirivan_run6_hr",
+            "sirivan_run7","sirivan_run7_hr"]
+    
     ## Check plots
     if True:
-        compare_metrics(mrs=["sirivan_run4","sirivan_run6_hr"])
+        compare_metrics(mrs=siruns)
     
     ## metric file creation/population ~ 90GB RAM and 1:20:00 CPU time
     if False:
