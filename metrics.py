@@ -15,6 +15,7 @@ import pandas as pd
 import iris, os, shutil
 
 from utilities import constants,fio,utils
+from fireplan import show_fire_outlines
 
 ###########
 ### GLOBALS
@@ -485,13 +486,18 @@ if __name__=="__main__":
             "sirivan_run7","sirivan_run7_hr"]
     
     ## Check plots
-    if True:
+    if False:
         compare_metrics(mrs=siruns)
     
     ## metric file creation/population ~ 90GB RAM and 1:20:00 CPU time
-    if False:
-        mr = "sirivan_run6_hr"
-        extent="sirivanz"
+    if True:
+        mr = "waroona_run3"
+        extent="waroona"
         fpath = make_empty_metrics_file(mr,extentname=extent)
         for hour in range(24):
             add_to_metrics_file(mr, hour=hour, extentname=extent)
+    
+    if True:
+        for mr, extentname in zip(['waroona_run3','sirivan_run6_hr'],['waroonaz','sirivanz']):
+            fig,ax = show_fire_outlines(mr, extentname)
+            fio.save_fig("comparison", _sn_, extentname+'_'+mr+'_extent.png', plt)

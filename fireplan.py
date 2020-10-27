@@ -346,6 +346,25 @@ def heatmap(mr,extentname=None,winds=False):
     #                 xycoords='axes fraction', 
     #                 fontsize=10)
 
+
+def show_fire_outlines(mr, extentname=None,):
+    
+    if extentname is None:
+        extentname=mr.split('_')[0]+'z'
+    
+    extent = constants.extents[extentname]
+    
+    ## Plot fireplan for high res run
+    # read all the fire data
+    ff, = fio.read_fire(model_run=mr, dtimes=None,
+                    extent=extent, firefront=True,
+                    HSkip=None)
+    
+    fig,ax = fireplan(ff, show_cbar=False, cbar_XYWH=[.18,.3,.2,.02],
+                extentname=extentname,
+                last_hour=datetime(2017,2,12,10))
+    return fig,ax
+
 if __name__=='__main__':
     ### Run the stuff
     ext_sirivan=constants.extents['sirivan']
@@ -377,20 +396,8 @@ if __name__=='__main__':
     if True:
         fireplanruns = ['sirivan_run5_hr','sirivan_run6_hr',]#'sirivan_run7_hr','sirivan_run5','sirivan_run6','sirivan_run7'a]
         for mr in fireplanruns:
-            extentname=mr.split('_')[0]+'z'
-            extent = constants.extents[extentname]
-    
-            ## Plot fireplan for high res run
-            # read all the fire data
-            ff, = fio.read_fire(model_run=mr, dtimes=None,
-                            extent=extent, firefront=True,
-                            HSkip=None)
-            
-            fig,ax = fireplan(ff, show_cbar=False, cbar_XYWH=[.18,.3,.2,.02],
-                        extentname=extentname,
-                        last_hour=datetime(2017,2,12,10))
+            fig,ax = show_fire_outlines(mr)
             fio.save_fig(mr, _sn_, 'fireplan.png', plt)
-        
 
     if False:
         mr = "waroona_run3"

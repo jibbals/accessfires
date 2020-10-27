@@ -199,9 +199,40 @@ def show_nests(model_run='waroona_run1', annotate_res=False, title=''):
     ## Add zoom of nest 3?
     fio.save_fig('maps',locname,'nested_grid',plt)
     
+## Plot tiff to show where summary is taking place
+def show_named_regions():
+    # Make a helper figure to show where summary zones are located
+    # First load tiff image, then draw rectangles showing each named area
+    
+    outermaps="waroonaf","sirivans"
+    namedregions=[["waroona","waroonaz"],
+                  ["sirivan","sirivanz"]]
+    
+    
+    for outermap in outermaps:
+        f,ax = plotting.map_tiff_qgis(outermap+".tiff")
+        for region in namedregions:
+            zoom = constants.extents[region]
+            ## Add box around zoomed in area
+            xy = [zoom[0], zoom[2]] # bottom left
+            width = zoom[1]-zoom[0]
+            height = zoom[3]-zoom[2]
+            ax.add_patch(patches.Rectangle(xy=xy,
+                                           width=width,
+                                           height=height,
+                                           #facecolor=None,
+                                           fill=False,
+                                           edgecolor='blue',
+                                           linewidth=2,
+                                           #linestyle='-',
+                                           alpha=.7, 
+                                           ))
+            ## add label:
+            #ax.add_text()
+        fio.save_fig("comparison",_sn_,outermap,plt=plt)
+    
 if __name__=='__main__':
     
     #outline_waroona()
     
-    for mr in ['sirivan_run1']:
-        show_nests(mr)
+    show_named_regions()
