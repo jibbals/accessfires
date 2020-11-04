@@ -558,7 +558,7 @@ def read_fire(model_run='waroona_run1',
         #print("     : model hours 25, 24: ",modelhours[25], modelhours[24])
         #print("     : dtimes 0, -1: ",dtimes[0],dtimes[-1])
         #print("     : day1, day2:", day1, day2)
-    print("DEBUG: dayflags:",day1,day2)
+    #print("DEBUG: dayflags:",day1,day2)
     ## if reading both days, read one at a time and combine
     if day1 and day2:
         cubelist1=read_fire(

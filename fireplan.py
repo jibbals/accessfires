@@ -8,7 +8,7 @@ Created on Thu Sep 19 16:28:18 2019
 
 
 import matplotlib
-matplotlib.use('Agg',warn=False)
+matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 from matplotlib import patheffects, colors, image, ticker
 import numpy as np

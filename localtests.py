@@ -32,19 +32,4 @@ _sn_='localtests'
 
 import metrics
 
-mr = "sirivan_run5"
-extname="sirivanz"
-fpath = metrics.metric_file_path(mr,extname)
-with xr.open_dataset(fpath) as ds:
-    
-    print(" ===                    === ")
-    print(" === Reading file       === ")
-    print(" ===                    === ")
-    print(ds.keys())
-    for key in ['firespeed','firespeed_nonzero']:
-        plt.plot(ds[key+"_mean"], label=key,)
-    plt.legend()
-    #plt.savefig("test_metric.png")
-    plt.show()
-
-        
+metrics.compare_metrics(mrs=["sirivan_run4","sirivan_run5","sirivan_run6", "sirivan_run5_hr", "sirivan_run6_hr"])

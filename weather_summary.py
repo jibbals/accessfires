@@ -6,7 +6,7 @@ Created on Mon Sep 16 08:45:14 2019
 @author: jesse
 """
 import matplotlib
-matplotlib.use("Agg",warn=False)
+matplotlib.use("Agg")
 
 from matplotlib import colors, ticker, patches
 from matplotlib import patheffects, gridspec
@@ -253,6 +253,7 @@ def weather_series(model_run='waroona_run3',
                    showmap=False,
                    mapname=None,
                    showfirelines=False,
+                   showfirelinehour=None,
                    showQC=False,
                    localtime=True,
                    test=False,
@@ -427,6 +428,17 @@ def weather_series(model_run='waroona_run3',
                 #                       inline=True, colors='wheat')
                 #    # padding so label is readable
                 #    plt.setp(clbls, path_effects=[patheffects.withStroke(linewidth=3, foreground="k")])
+        if showfirelinehour is not None:
+            ffsample,= fio.read_fire(model_run=model_run, dtimes=[showfirelinehour],
+                           extent=list(extentplus), HSkip=HSkip,
+                           firefront=True, 
+                           day2=day2, day1=(not day2),)
+            ffsample_lats = ffsample.coord('latitude').points
+            ffsample_lons = ffsample.coord('longitude').points
+            print("DEBUG: ffsample info:")
+            print(ffsample)
+            ffline = plotting.map_fire(ffsample[0].data, ffsample_lats,ffsample_lons, alpha=0.4)
+
         ax_map.set_title("Surface area-average over time")
     
     ax_fp = plt.subplot(2+showmap,1,1+showmap) # firepower axis
@@ -544,7 +556,7 @@ def weather_series(model_run='waroona_run3',
     
     ax_T.set_ylabel("Temperature (C)")
     ax_T.yaxis.label.set_color(color_T)
-    ax_RH.set_ylabel("RH and rain (frac)")
+    ax_RH.set_ylabel("RH and cloud (frac)")
     ax_RH.yaxis.label.set_color(color_RH)
     
     # bottom row:
@@ -601,7 +613,8 @@ if __name__=='__main__':
         # day2 waroona:
         weather_series('waroona_run3', day2=True, showPFT=False, extent=waroona_day2zoom,
                 showQC=True, HSkip=2,
-                showmap=True,mapname='Waroona_day2.tiff')
+                showfirelinehour=datetime(2016,1,7,16),
+                showmap=True, mapname='Waroona_day2.tiff')
         #weather_series('sirivan_run6_hr',showFP=True,showPFT=True,showmap=True,
         #        HSkip=10, 
         #        test=False)

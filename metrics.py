@@ -400,12 +400,16 @@ def add_to_metrics_file(mr, hour=0, extentname=None,):
         ds.to_netcdf(path=fpath_tmp,mode="w")# write to temporary path
     print("INFO: overwriting file path ",fpath)
     shutil.copy(fpath_tmp,fpath) # overwrite original with updated
+    os.remove(fpath_tmp) # delete temp file
     
-def compare_metrics(mrs=["sirivan_run5",],extent="sirivanz",):
+def compare_metrics(mrs=["sirivan_run5",],extent=None,):
     """
     Look at some metrics side by side for a list of model runs
     """
     
+    if extent is None:
+        extent=mrs[0].split('_')[0]+"z"
+
     # colours for each model run:
     eight_paired_colours=['#a6cee3','#1f78b4',
                           '#b2df8a','#33a02c',
@@ -419,6 +423,7 @@ def compare_metrics(mrs=["sirivan_run5",],extent="sirivanz",):
               "sirivan_run6_hr":eight_paired_colours[3],
               "sirivan_run7":eight_paired_colours[4],
               "sirivan_run7_hr":eight_paired_colours[5],
+              "waroona_run3":eight_paired_colours[3],
               }
     
     
@@ -429,6 +434,7 @@ def compare_metrics(mrs=["sirivan_run5",],extent="sirivanz",):
     for mr in mrs:
         color=colors[mr]
         fpath=metric_file_path(mr,extent)
+
         with xr.open_dataset(fpath) as ds:
             print("INFO: reading/plotting ",fpath)
             #print("DEBUG:",ds)
@@ -455,8 +461,8 @@ def compare_metrics(mrs=["sirivan_run5",],extent="sirivanz",):
             plt.plot(ds["firespeed_nonzero_5ns"][:,4], **kwargs_maximums)
             
             plt.sca(axes[3])
-            plt.plot(ds["sensibleheat_mean"], **kwargs)
-            plt.plot(ds["sensibleheat_5ns"][:,4], **kwargs_maximums)
+            plt.plot(ds["sensibleheat_nonzero_mean"], **kwargs)
+            plt.plot(ds["sensibleheat_nonzero_5ns"][:,4], **kwargs_maximums)
             
             plt.sca(axes[4])
             plt.plot(ds["firepower"], **kwargs)
@@ -484,20 +490,22 @@ if __name__=="__main__":
     siruns=["sirivan_run4","sirivan_run5","sirivan_run5_hr",
             "sirivan_run6","sirivan_run6_hr",
             "sirivan_run7","sirivan_run7_hr"]
-    
+    wruns=["waroona_run3",]
+
     ## Check plots
-    if False:
-        compare_metrics(mrs=siruns)
+    if True:
+        compare_metrics(mrs=wruns)
     
     ## metric file creation/population ~ 90GB RAM and 1:20:00 CPU time
-    if True:
+    if False:
         mr = "waroona_run3"
-        extent="waroona"
+        extent="waroonaz"
         fpath = make_empty_metrics_file(mr,extentname=extent)
         for hour in range(24):
             add_to_metrics_file(mr, hour=hour, extentname=extent)
     
-    if True:
+    ## Show area where metrics are averaged
+    if False:
         for mr, extentname in zip(['waroona_run3','sirivan_run6_hr'],['waroonaz','sirivanz']):
             fig,ax = show_fire_outlines(mr, extentname)
             fio.save_fig("comparison", _sn_, extentname+'_'+mr+'_extent.png', plt)
