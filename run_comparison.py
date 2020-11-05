@@ -9,7 +9,7 @@ Created on Fri Dec 20 15:45:40 2019
 """
 
 import matplotlib
-matplotlib.use("Agg",warn=False)
+matplotlib.use("Agg")
 
 from matplotlib import colors, ticker, patheffects
 
@@ -458,17 +458,21 @@ def compare_fire_spread(mrlist, mrcolors=None, extent=None,
 
 def compare_transects(run1, run2, hours=[12,], extent=None, ztop=1000,
                       columntitles=['coupled','uncoupled'],
-                      subsubdir=None):
+                      subsubdir=None,
+                      third_transect=False):
     """
     examine some transects side by side for two runs
-    PLOTS: 2 columns: one for each run, 4 rows:
-        top row: topdown topog+winds+fire+3 transect lines
-        3 more rows: transect views of wind (emberstorm_transect method)
+    PLOTS: 2 columns: one for each run, 3-4 rows:
+        top row: topdown topog+winds+fire+ 2 to 3 transect lines
+        2-3 more rows: transect views of wind (emberstorm_transect method)
     Transect lines roughly spread based on extent middle + 50% of the distance to extent edges
+    ARGUMENTS:
+        run1, run2: model run names
+        third_transect=False : add 3rd transect below middle
     """
     if extent is None:
         extent = constants.extents[run1.split('_')[0]]
-    
+    nrows=3+third_transect
     # transects = extent centre +- frac of extent width/height
     y0,x0 = (extent[2]+extent[3])/2.0, (extent[0]+extent[1])/2.0
     # do middle point +- 1/3 of distance to extent edge
@@ -477,9 +481,12 @@ def compare_transects(run1, run2, hours=[12,], extent=None, ztop=1000,
     # transects: [[[lat,lon],[lat,lon]],...]
     transects = [[[y0+dy,x0-dx], [y0+dy, x0+dx]],
                  [[y0,x0-dx], [y0, x0+dx]],
-                 [[y0-dy,x0-dx], [y0-dy, x0+dx]],
                  ]
-    tcolors = ['teal','blue','magenta']
+    tcolors = ['teal','blue',]
+    if third_transect:
+        transects.append([[y0-dy,x0-dx], [y0-dy, x0+dx]])
+        tcolors.append('magenta')
+    
     
     dtimes=fio.run_info[run1]['filedates'][np.array(hours)]
     
@@ -543,7 +550,7 @@ def compare_transects(run1, run2, hours=[12,], extent=None, ztop=1000,
                 
                 #plt.subplot(4,2,1+runi) # top row
                 _,ax = emberstorm.topdown_emberstorm(
-                    fig=fig, subplot_row_col_n=(4,2,1+runi),
+                    fig=fig, subplot_row_col_n=(nrows,2,1+runi),
                     extent=extent, lats=lats, lons=lons,
                     ff=ffd, sh=shd, u10=u10d, v10=v10d,
                     topog=topog,
@@ -570,7 +577,7 @@ def compare_transects(run1, run2, hours=[12,], extent=None, ztop=1000,
                 
                 # Transect plots
                 for trani,transect in enumerate(transects):
-                    ax=plt.subplot(4,2,3+runi+2*trani)
+                    ax=plt.subplot(nrows,2,3+runi+2*trani)
                     
                     trets = emberstorm.transect_emberstorm(
                         u[cti].data.data,
@@ -623,16 +630,18 @@ if __name__=='__main__':
     hrs_pcb=range(9,19)
     hrs_es1=range(16,24)
     hrs_es2=range(26,35)
+    hrs_test=[0,1]
     ## Compare transects
-    if False:
+    if True:
         # Look at some different spots for es2
         ext_es2s=[[115.7, 116.0, -33.02, -32.84], # nearly like std one
                 [115.72,115.95, -33.0, -32.87], # zoomed in
                 [115.72,115.91, -33.0, -32.9], # zoomed in further
                 ]
         ssd_es2s=['test1','test2','test3']
-        #for extent, hours, subsubdir in zip([ext_pcb,ext_es1,ext_es2],[hrs_pcb,hrs_es1,hrs_es2],['pcb','es1','es2']):
-        for extent, hours, subsubdir in zip(ext_es2s,[hrs_es2,hrs_es2,hrs_es2],ssd_es2s):
+        for extent, hours, subsubdir in zip([ext_pcb,ext_es1,ext_es2],[hrs_pcb,hrs_es1,hrs_es2],['pcb','es1','es2']):
+        #for extent, hours, subsubdir in zip(ext_es2s,[hrs_es2,hrs_es2,hrs_es2],ssd_es2s):
+            hours=hrs_test
             compare_transects('waroona_run3','waroona_run3uc', 
                               extent=extent,
                               hours=hours, 
@@ -664,7 +673,7 @@ if __name__=='__main__':
         
     ## look at overall burn area
     # Lets loop over and compare run3 with it's uncoupled brother
-    if True:
+    if False:
         mr1,mr2 = ['sirivan_run4','sirivan_run5_hr']
         extent=None # default extent applied
         extent=[149.6,150,-32.1,-31.9]

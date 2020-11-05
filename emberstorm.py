@@ -16,8 +16,8 @@ import matplotlib.patheffects as PathEffects
 import numpy as np
 import warnings
 from datetime import datetime,timedelta
-from scipy import interpolate
-import cartopy.crs as ccrs
+#from scipy import interpolate
+#import cartopy.crs as ccrs
 
 # local modules
 from utilities import plotting, utils, fio, constants
@@ -339,8 +339,9 @@ def topdown_emberstorm(fig=None, subplot_row_col_n=None, ax=None,
     if u10 is not None:
         # winds, assume v10 is also not None
         s10 = np.hypot(u10,v10)
-        speedmax=20
-        lw10 = utils.wind_speed_to_linewidth(s10, lwmax=7, speedmax=speedmax)
+        speedmax=20 # what speed for thickest wind streams
+        lwmax_winds=5 # how thick can the wind streams become
+        lw10 = utils.wind_speed_to_linewidth(s10, lwmax=lwmax_winds, speedmax=speedmax)
         # higher density if using topography instead of OSM
         density=(0.6,0.5) if topog is None else (0.75,0.7)
         plt.streamplot(lons,lats,u10,v10, 
