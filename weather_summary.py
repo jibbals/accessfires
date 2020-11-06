@@ -235,7 +235,7 @@ def weather_summary_model(model_version='waroona_run1',
                                  topog=topog.data,
                                  )
             
-            offsethours=8 if np.min(lon)<120 else 10
+            offsethours = fio.run_info[model_version]['UTC_offset']
             ltime=dtime+timedelta(hours=offsethours)
             plt.suptitle("%s weather "%model_version + ltime.strftime("%Y %b %d %H:%M (LT)"))
             

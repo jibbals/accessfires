@@ -135,10 +135,10 @@ def annotate_max_winds(winds, upto=None, **annotateargs):
     ymax,xmax = np.shape(winds)
     annotateargs['xy'] = [1-(xmax - mloc[1])/xmax,1-(ymax - mloc[0])/ymax]
     
-    if 's' not in annotateargs:
-        annotateargs['s'] = "wind max = %5.1f ms$^{-1}$"%(winds[:upto,:][mloc])
+    if 'text' not in annotateargs:
+        annotateargs['text'] = "wind max = %5.1f ms$^{-1}$"%(winds[:upto,:][mloc])
     else:
-        annotateargs['s'] = annotateargs['s']%(winds[:upto,:][mloc])
+        annotateargs['text'] = annotateargs['text']%(winds[:upto,:][mloc])
     
     plt.annotate(**annotateargs)
 
@@ -317,7 +317,6 @@ def map_contourf(data, lat,lon, title="",
     '''
     Show topography map matching extents
     '''
-    
     cs = plt.contourf(lon,lat,data, **contourfargs)
     cb = None
     
@@ -764,11 +763,22 @@ def map_topography(extent, topog,lat,lon,title="Topography", cbar=True, **contou
             contourfargs['levels'] = np.linspace(100,800,50,endpoint=True)
     if 'cmap' not in contourfargs:
         contourfargs['cmap'] = plt.cm.get_cmap("terrain")
-        
-    return map_contourf(extent, topog, lat, lon, 
-                        title=title, clabel="m", cbar=cbar, 
-                        cbar_args={'format':tick.ScalarFormatter()},
-                        **contourfargs)
+    # set colorbar arguments
+    cbar_args={
+        'format':tick.ScalarFormatter(),
+        'label':'m',
+        }
+    if not cbar:
+        cbar_args={}
+
+    return map_contourf(topog, lat, lon, 
+            title=title, cbargs=cbar_args,
+            **contourfargs)
+    
+    #return map_contourf(extent, topog, lat, lon, 
+    #                    title=title, clabel="m", cbar=cbar, 
+    #                    cbar_args={'format':tick.ScalarFormatter()},
+    #                    **contourfargs)
 
 def make_patch_spines_invisible(ax):
     ax.set_frame_on(True)

@@ -470,6 +470,7 @@ def compare_transects(run1, run2, hours=[12,], extent=None, ztop=1000,
         run1, run2: model run names
         third_transect=False : add 3rd transect below middle
     """
+    ltoffset=fio.run_info[run1]['UTC_offset']
     if extent is None:
         extent = constants.extents[run1.split('_')[0]]
     nrows=3+third_transect
@@ -482,7 +483,7 @@ def compare_transects(run1, run2, hours=[12,], extent=None, ztop=1000,
     transects = [[[y0+dy,x0-dx], [y0+dy, x0+dx]],
                  [[y0,x0-dx], [y0, x0+dx]],
                  ]
-    tcolors = ['teal','blue',]
+    tcolors = ['yellow','blue',]
     if third_transect:
         transects.append([[y0-dy,x0-dx], [y0-dy, x0+dx]])
         tcolors.append('magenta')
@@ -537,11 +538,8 @@ def compare_transects(run1, run2, hours=[12,], extent=None, ztop=1000,
                 lats = ff.coord('latitude').points
                 lons = ff.coord('longitude').points
                 
-                print("DEBUG:",cti, ct)
-                print("     :",sh)
-                print("     :",w)
                 shd = sh[cti].data.data
-                LT = ct + timedelta(hours=8)
+                LT = ct + timedelta(hours=ltoffset)
                 
                 ffd = ff[cti].data.data
                 u10d = u10[cti].data.data
@@ -557,6 +555,7 @@ def compare_transects(run1, run2, hours=[12,], extent=None, ztop=1000,
                     annotate=False,
                     sh_kwargs={'colorbar':False}
                     )
+                ax.set_aspect('equal')
                 if runi==1:
                     plt.yticks([],[])
                 plt.title(columntitles[runi])
@@ -564,16 +563,17 @@ def compare_transects(run1, run2, hours=[12,], extent=None, ztop=1000,
                     ## Add dashed line to show where transect will be
                     start,end = transect
                     # outline the dashed line
-                    line_effects=[patheffects.Stroke(linewidth=4, foreground='darkgrey'), patheffects.Normal()]
+                    line_effects=[patheffects.Stroke(linewidth=5, foreground='darkgrey'), patheffects.Normal()]
                     plt.plot([start[1],end[1]],[start[0],end[0], ], 
                             linestyle='--',
                             color=tcolor,
-                            linewidth=2, 
+                            linewidth=3, 
                             path_effects=line_effects,
-                            alpha=0.9)
+                            #alpha=0.9,
+                            )
                 
                 ## Plot title
-                plt.suptitle(LT.strftime('%b %d, %H%M (UTC+8)'))
+                plt.suptitle(LT.strftime('%b %d, %H%M (LT)'),fontsize=28)
                 
                 # Transect plots
                 for trani,transect in enumerate(transects):
@@ -639,9 +639,11 @@ if __name__=='__main__':
                 [115.72,115.91, -33.0, -32.9], # zoomed in further
                 ]
         ssd_es2s=['test1','test2','test3']
-        for extent, hours, subsubdir in zip([ext_pcb,ext_es1,ext_es2],[hrs_pcb,hrs_es1,hrs_es2],['pcb','es1','es2']):
+        for extent,hours,subsubdir in zip([ext_es1,],[hrs_es1,],['es1',]):
+        #for extent, hours, subsubdir in zip([ext_pcb,ext_es1,ext_es2],[hrs_pcb,hrs_es1,hrs_es2],['pcb','es1','es2']):
         #for extent, hours, subsubdir in zip(ext_es2s,[hrs_es2,hrs_es2,hrs_es2],ssd_es2s):
-            hours=hrs_test
+            #hours=hrs_test
+            hours=[22,]
             compare_transects('waroona_run3','waroona_run3uc', 
                               extent=extent,
                               hours=hours, 

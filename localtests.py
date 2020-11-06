@@ -19,8 +19,8 @@ import cartopy.crs as ccrs
 import matplotlib.pyplot as plt
 import iris # interpolation etc
 import time # check performance
-
-from utilities import utils, fio, constants
+from datetime import datetime
+from utilities import utils, fio, constants, plotting
 
 
 ### GLOBALS
@@ -29,7 +29,13 @@ _sn_='localtests'
 
 
 ### CODE
-
-import metrics
-
-metrics.compare_metrics(mrs=["sirivan_run4","sirivan_run5","sirivan_run6", "sirivan_run5_hr", "sirivan_run6_hr"])
+run1="waroona_run3"
+dt=datetime(2016,1,5,15)
+extent=constants.extents['waroonaz']
+cubes = fio.read_model_run(run1, fdtime=[dt], extent=extent, 
+                            add_topog=True)                
+topog=cubes.extract("surface_altitude")[0]
+lats=topog.coord('latitude').points
+lons=topog.coord('longitude').points
+plotting.map_topography(extent,topog.data,lats,lons,cbar=False)
+fio.save_fig_to_path("test.png",plt,)
