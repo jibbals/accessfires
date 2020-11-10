@@ -509,11 +509,12 @@ def fire_paths(model_run):
     u10paths.sort()
     # waroona run3 is special case
     if model_run == "waroona_run3":
-        ffpaths.append(fdir+"firefront.CSIRO_gadi.20160107T0300Z.nc")
-        fluxpaths.append(fdir+"sensible_heat.CSIRO_gadi.20160107T0300Z.nc")
-        fspaths.append(fdir+"fire_speed.CSIRO_gadi.20160107T0300Z.nc")
-        v10paths.append(fdir+"10m_vwind.CSIRO_gadi.20160107T0300Z.nc")
-        u10paths.append(fdir+"10m_uwind.CSIRO_gadi.20160107T0300Z.nc")
+        if len(glob(fdir+"*CSIRO_gadi.20160107T0300Z.nc")) > 0:
+            ffpaths.append(fdir+"firefront.CSIRO_gadi.20160107T0300Z.nc")
+            fluxpaths.append(fdir+"sensible_heat.CSIRO_gadi.20160107T0300Z.nc")
+            fspaths.append(fdir+"fire_speed.CSIRO_gadi.20160107T0300Z.nc")
+            v10paths.append(fdir+"10m_vwind.CSIRO_gadi.20160107T0300Z.nc")
+            u10paths.append(fdir+"10m_uwind.CSIRO_gadi.20160107T0300Z.nc")
     return [ffpaths, fluxpaths, fspaths, u10paths, v10paths]
 
 def read_fire(model_run='waroona_run1',
@@ -530,6 +531,9 @@ def read_fire(model_run='waroona_run1',
     output is transposed from [time,lon,lat] -> [time, lat, lon] to match model output
     ARGUMENTS:
     '''
+    #print("DEBUG: read_fire() args:")
+    #print("     : model_run, dtimes, day1,day2")
+    #print("     :", model_run, dtimes, day1,day2 )
     ## If no fire exists for model run, return None
     fdir = run_info[model_run]['dir']+'fire/'
     if not os.path.exists(fdir):
@@ -1063,6 +1067,18 @@ def read_model_run(model_version, fdtime=None, subdtimes=None, extent=None,
                                                         (q.coord('longitude'),3)])
         allcubes.append(cubeRH)
     
+    # Finally make all latitude/longitude contiguous
+    for cube in allcubes:
+        cubecoords = [coord.name() for coord in cube.coords()]
+        #print("DEBUG: checking coords for cube:",cube.name())
+        #print("     : coords: ", cubecoords)
+        for coordname in ['longitude','latitude']:
+            if coordname in cubecoords:
+                #print("     : cube has ",coordname)
+                if not cube.coord(coordname).has_bounds():
+                    #print("     : guessing bounds")
+                    cube.coord(coordname).guess_bounds()
+        
     return allcubes
 
 

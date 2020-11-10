@@ -22,7 +22,13 @@ from fireplan import show_fire_outlines
 ###########
 _sn_="metrics"
 
-
+# altitudes used in metrics file
+_level_height_=("level",
+                 np.array([0,10, 100, 200, 300, 400, 500, 600, 700, 800, 900, 
+                           1000, 1200, 1400, 1600, 1800, 2000, 2500, 3000, 
+                           3500, 4000, 4500, 5000, 6000, 7000, 8000, 9000,
+                           10000, 11000, 12000, 13000, 14000]))
+_naltitudes_= len(_level_height_[1]) 
 
 ###########
 ### METHODS
@@ -39,7 +45,7 @@ def metric_file_variables(ntimes=144):
         Dimensions:                    (level: 10, pctl: 5, time: 144)
         Coordinates:
           * time                       (time) datetime64[ns] 2017-02-11T11:10:00 ... ...
-          * level                      (level) int64 0 1 2 3 4 5 6 7 8 9
+          * level                      (level) int64 0 1 2 ... 
           * pctl                       (pctl) int64 0 1 2 3 4
         Data variables:
             air_temperature_mean       (time, level) float64 ...
@@ -48,8 +54,8 @@ def metric_file_variables(ntimes=144):
             air_pressure_5ns           (time, level, pctl) float64 ...
             wind_direction_mean        (time, level) float64 ...
             wind_direction_5ns         (time, level, pctl) float64 ...
-            s_mean                     (time, level) float64 ...
-            s_5ns                      (time, level, pctl) float64 ...
+            windspeed_mean             (time, level) float64 ...
+            windspeed_5ns              (time, level, pctl) float64 ...
             relative_humidity_mean     (time, level) float64 ...
             relative_humidity_5ns      (time, level, pctl) float64 ...
             level_height               (level) int64 ...
@@ -74,17 +80,17 @@ def metric_file_variables(ntimes=144):
             "air_temperature", # temperature
             "air_pressure", # pressure
             "wind_direction", # wind direction
-            "s", # wind speed
+            "windspeed", # wind speed
             "relative_humidity", # rel humidity
+            "specific_humidity",
             ]:
         # variable holding mean value
-        dimarraypairs[varnames+"_mean"]=(("time","level"),np.zeros([ntimes,10])+np.NaN)
+        dimarraypairs[varnames+"_mean"]=(("time","level"),np.zeros([ntimes,_naltitudes_])+np.NaN)
         # variable holding min, Q1, Q2, Q3, max (5 number summary)
-        dimarraypairs[varnames+"_5ns"]=(("time","level","pctl"),np.zeros([ntimes,10,5])+np.NaN)
+        dimarraypairs[varnames+"_5ns"]=(("time","level","pctl"),np.zeros([ntimes,_naltitudes_,5])+np.NaN)
     
     # height coordinate
-    dimarraypairs["level_height"]=("level",
-                 np.array([0,10, 100, 500, 1000, 2000, 4000, 6000, 10000, 15000]))
+    dimarraypairs["level_height"]=_level_height_
     
     # some have no level dim:
     for varname in [
@@ -116,7 +122,7 @@ def make_empty_metrics_file(mr="sirivan_run4",
         "air_temperature", # temperature (K)
         "air_pressure", # pressure (hPa)
         "wind_direction", # wind direction (meteorological degrees)
-        "s", # wind speed (m/s)
+        "windspeed", # wind speed (m/s)
         "relative_humidity", # rel humidity (frac?)
         "FFDI", # forest fire danger index
         "firespeed", # fire speed (m/s?)
@@ -139,7 +145,7 @@ def make_empty_metrics_file(mr="sirivan_run4",
     datecoord = waroona_10minute_dates if "waroona" in mr else sirivan_10minute_dates
     coords = {
         "time": datecoord,
-        "level": np.arange(10),
+        "level": np.arange(_naltitudes_),
         "pctl":np.arange(5),
     }
     ## Set up variables to be used
@@ -159,12 +165,13 @@ def make_empty_metrics_file(mr="sirivan_run4",
     ## Attributes
     key_unit = {"air_temperature":"K",
                 "air_pressure":"hPa",
-                "s":"m s-1",
+                "windspeed":"m s-1",
                 "firespeed":"m s-1",
                 "firespeed_nonzero":"m s-1",
                 "wind_direction":"degrees",
                 "sensibleheat":"Watts m-2",
                 "sensibleheat_nonzero":"Watts m-2",
+                "specific_humidity":"kg kg-1",
                 }
     for key,unit in key_unit.items():
         ds[key+"_mean"].attrs["units"]=unit
@@ -189,13 +196,13 @@ def make_empty_metrics_file(mr="sirivan_run4",
     ds.close()
     return to_netcdf_args["path"]
 
-def make_metrics_from_model(mr,hour=0,extentname=None,):
+def make_metrics_from_model(mr,hour=0,extentname=None,HSkip=None):
     """
     return dict of arrays [6, 10, [5]] with _mean and _5ns as follows:
        "air_temperature", # temperature
         "air_pressure", # pressure
         "wind_direction", # wind direction
-        "s", # wind speed
+        "windspeed", # wind speed
         "relative_humidity", # rel humidity
         "FFDI", # forest fire danger index (based on 10m winds and surface T,RH)
         "firepower",
@@ -216,7 +223,7 @@ def make_metrics_from_model(mr,hour=0,extentname=None,):
     
     # Read model data for extentname
     cubes=fio.read_model_run(mr, fdtime=dthour, extent=extent,
-                             add_topog=False)
+                             add_topog=False, HSkip=HSkip)
     # we subset then add wind/rel humidity fields
     #print("DEBUG: read model cubes:",cubes)
     ctimes = utils.dates_from_iris(cubes.extract('air_temperature')[0])
@@ -241,7 +248,8 @@ def make_metrics_from_model(mr,hour=0,extentname=None,):
     # Get wind speed cube using hypotenuse of u,v
     firesh,firespeed,u10,v10=fio.read_fire(mr, extent=extent, dtimes=ctimes, 
                                              sensibleheat=True, firefront=False, 
-                                             wind=True, firespeed=True)
+                                             wind=True, firespeed=True,
+                                             HSkip=HSkip)
     
     s10=utils.wind_speed_from_uv_cubes(u10,v10)
     
@@ -269,10 +277,11 @@ def make_metrics_from_model(mr,hour=0,extentname=None,):
                                                  (s0.coord('longitude'),3)])
     
     # calculate rel humidity
-    q1,T1 = cubes.extract(['specific_humidity','air_temperature'])
+    q1,T1,Pa1 = cubes.extract(['specific_humidity','air_temperature','air_pressure'])
     # compute RH from specific and T in kelvin
     q = utils.interp_cube_to_altitudes(q1,heights,model_heights, closest=True)
     T = utils.interp_cube_to_altitudes(T1,heights,model_heights, closest=True)
+    Pa = utils.interp_cube_to_altitudes(Pa1,heights,model_heights, closest=True)
     RH = utils.relative_humidity_from_specific(q.data, T.data)
     iris.std_names.STD_NAMES['relative_humidity'] = {'canonical_units': '1'}
     cubeRH = iris.cube.Cube(RH, standard_name="relative_humidity",
@@ -289,10 +298,13 @@ def make_metrics_from_model(mr,hour=0,extentname=None,):
         
     cubes_subset={
         "wind_direction":cubewd,
-        "s":cubews,
+        "windspeed":cubews,
         "relative_humidity":cubeRH,
         "firespeed":firespeed,
         "sensibleheat":firesh,
+        "specific_humidity":q,
+        "air_temperature":T,
+        "air_pressure":Pa,
         }
     # also make nonzero metrics from some fire fields
     for cube, varname, units in zip([firespeed,firesh],
@@ -308,19 +320,13 @@ def make_metrics_from_model(mr,hour=0,extentname=None,):
                                                       (firespeed.coord('longitude'),2)])
         cubes_subset[varname+"_nonzero"]=cube_nz
     
-    # 
-    for varname in ["air_temperature","air_pressure"]:
-        cube0 = cubes.extract(varname)[0]
-        # interp to level heights
-        cube = utils.interp_cube_to_altitudes(cube0,heights,model_heights=model_heights, closest=True)
-        cubes_subset[varname] = cube
-    
     for varname in [
         "air_temperature", # temperature
         "air_pressure", # pressure
         "wind_direction", # wind direction
-        "s", # wind speed
+        "windspeed", # wind speed
         "relative_humidity", # rel humidity
+        "specific_humidity",
         "firespeed", # fire speed
         "firespeed_nonzero",
         "sensibleheat",
@@ -329,6 +335,11 @@ def make_metrics_from_model(mr,hour=0,extentname=None,):
         print("INFO: collating ",varname)
         
         cube = cubes_subset[varname]
+        
+        # make contiguous to evade warning
+        for coordname in ['latitude','longitude']:
+            if not cube.coord(coordname).has_bounds():
+                cube.coord(coordname).guess_bounds()
         
         ## horizontal aggregation
         cube_mean = cube.collapsed(['latitude','longitude'], 
@@ -361,7 +372,7 @@ def make_metrics_from_model(mr,hour=0,extentname=None,):
     return return_dict
         
 
-def add_to_metrics_file(mr, hour=0, extentname=None,):
+def add_to_metrics_file(mr, hour=0, extentname=None, HSkip=2):
     """
     take one hour of model run, get 10 minutely aggregates, update metrics file
     """
@@ -377,7 +388,7 @@ def add_to_metrics_file(mr, hour=0, extentname=None,):
     fpath_tmp = fpath.split(".")[0] + "_tmp.nc"
     
     ## Now we read in the model and create our timeseries
-    arrays = make_metrics_from_model(mr,hour=hour,extentname=extentname)
+    arrays = make_metrics_from_model(mr,hour=hour,extentname=extentname,HSkip=HSkip)
     nsteps=np.shape(arrays["air_temperature_mean"])[0]
     if nsteps != 6:
         print("WARNING: %d timesteps in output hour!"%nsteps)
@@ -493,16 +504,16 @@ if __name__=="__main__":
     wruns=["waroona_run3",]
 
     ## Check plots
-    if True:
+    if False:
         compare_metrics(mrs=wruns)
     
     ## metric file creation/population ~ 90GB RAM and 1:20:00 CPU time
-    if False:
+    if True:
         mr = "waroona_run3"
         extent="waroonaz"
         fpath = make_empty_metrics_file(mr,extentname=extent)
-        for hour in range(24):
-            add_to_metrics_file(mr, hour=hour, extentname=extent)
+        for hour in range(1):
+            add_to_metrics_file(mr, hour=hour, extentname=extent, HSkip=2)
     
     ## Show area where metrics are averaged
     if False:

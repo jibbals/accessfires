@@ -17,6 +17,7 @@ import pandas as pd
 import os, shutil
 import cartopy.crs as ccrs
 import matplotlib.pyplot as plt
+
 import iris # interpolation etc
 import time # check performance
 from datetime import datetime
@@ -29,13 +30,26 @@ _sn_='localtests'
 
 
 ### CODE
-run1="waroona_run3"
-dt=datetime(2016,1,5,15)
-extent=constants.extents['waroonaz']
-cubes = fio.read_model_run(run1, fdtime=[dt], extent=extent, 
-                            add_topog=True)                
-topog=cubes.extract("surface_altitude")[0]
-lats=topog.coord('latitude').points
-lons=topog.coord('longitude').points
-plotting.map_topography(extent,topog.data,lats,lons,cbar=False)
-fio.save_fig_to_path("test.png",plt,)
+from metrics import metric_file_path
+
+
+mr="waroona_run3"
+extent="waroonaz"
+fpath=metric_file_path(mr,extent)
+
+ds = xr.open_dataset(fpath)
+print("INFO: reading/plotting ",fpath)
+print("DEBUG:",ds)
+plt.subplot(3,1,1)
+ds.s_mean.isel(level=0).plot()
+plt.subplot(3,1,2)
+ds.firespeed_mean.plot.line("b--^")
+#plt.subplot(3,1,5)
+ds.firespeed_nonzero_mean.plot(color='r',linewidth=5)
+print(ds.firespeed_nonzero_mean)
+plt.subplot(3,1,3)
+ds.sensibleheat_mean.plot.line("b--^")
+print(ds.sensibleheat_nonzero_mean)
+#plt.subplot(3,2,6)
+ds.sensibleheat_nonzero_mean.plot(color='r',linewidth=5)
+fio.save_fig_to_path("test.png",plt)
