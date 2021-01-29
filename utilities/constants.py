@@ -77,3 +77,9 @@ latlons['fire_sirivan_upwind'] = -32.01, 149.5
 # lat/longs get the most interesting picture.
 
 extents['NYE'] = [149.2,150.05, -36.5, -35.85]
+
+
+extents['KI'] = [136.56,137,-36,-35.66]
+extents['KIz'] = [136.56,137,-36,-35.66]
+latlons['parndana'] = -35.79, 137.262
+latlons['fire_KI'] = -35.72, 136.92

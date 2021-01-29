@@ -91,7 +91,13 @@ def fireplan(ff, fire_contour_map = 'autumn',
         if last_hour is not None:
             if dt > last_hour+timedelta(minutes=5):
                 break
-        offset = 8 if "waroona" in extentname else 11
+        if 'sirivan' in extentname:
+            mr='sirivan_run3'
+        elif 'waroona' in extentname:
+            mr='waroona_run3'
+        else:
+            mr='KI_run0'
+        offset=fio.run_info[mr]['UTC_offset']
         LT = dt + timedelta(hours=offset)
         color=[rgba[ii]]
         # Colour waroona by day of firefront
@@ -347,7 +353,7 @@ def heatmap(mr,extentname=None,winds=False):
     #                 fontsize=10)
 
 
-def show_fire_outlines(mr, extentname=None,):
+def show_fire_outlines(mr, extentname=None):
     
     if extentname is None:
         extentname=mr.split('_')[0]+'z'
@@ -360,13 +366,23 @@ def show_fire_outlines(mr, extentname=None,):
                     extent=extent, firefront=True,
                     HSkip=None)
     
+    last_hour=None
+    if 'sirivan' in mr:
+        last_hour=datetime(2017,2,12,10)
     fig,ax = fireplan(ff, show_cbar=False, cbar_XYWH=[.18,.3,.2,.02],
                 extentname=extentname,
-                last_hour=datetime(2017,2,12,10))
+                last_hour=last_hour)
     return fig,ax
 
 if __name__=='__main__':
+    
+    ## Check KI output
+    fig,ax = show_fire_outlines('KI_run0')
+    fio.save_fig_to_path('check.png',plt)
+    
+    
     ### Run the stuff
+    
     ext_sirivan=constants.extents['sirivan']
     ##fireplan comparison
     if False:
@@ -393,7 +409,7 @@ if __name__=='__main__':
             
     
     ## Just create a fireplan figure:
-    if True:
+    if False:
         fireplanruns = ['sirivan_run5_hr','sirivan_run6_hr',]#'sirivan_run7_hr','sirivan_run5','sirivan_run6','sirivan_run7'a]
         for mr in fireplanruns:
             fig,ax = show_fire_outlines(mr)

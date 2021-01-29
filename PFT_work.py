@@ -10,7 +10,7 @@ Created on Wed Oct  9 21:04:13 2019
 import matplotlib
 # don't plot on screen, send straight to file
 # this is for lack of NCI display
-matplotlib.use('Agg',warn=False)
+matplotlib.use('Agg')
 
 import numpy as np
 from datetime import datetime, timedelta
@@ -145,11 +145,13 @@ def firepower_comparison(runs=['waroona_run1','waroona_old','waroona_run2','waro
     """
     Plot overlaid time series of two model runs fire power from integral of intensity
     """
-    
-    lat,lon = PFT[runs[0]]['latlon']
+    lat,lon = constants.latlons['fire_waroona_upwind']
+    if 'sirivan' in runs[0]:
+        lat,lon = constants.latlons['fire_sirivan_upwind']
+        
     fpextent = constants.extents[runs[0].split('_')[0]]
     
-    offset = timedelta(hours=fio.run_info['UTC_offset'])
+    offset = timedelta(hours=fio.run_info[runs[0]]['UTC_offset'])
     
     labels = runs
     #labels = ['new','orig'] # just for poster
@@ -303,7 +305,7 @@ if __name__ == '__main__':
     #firepower_comparison()
 
     ## Summary figure for PFT at a site for one output hour
-    if True:
+    if False:
         for mr in ['sirivan_run4','sirivan_run6_hr','sirivan_run6','sirivan_run5_hr','sirivan_run5']:
             #['waroona_run3', 'waroona_run1']:
             dtimes = fio.run_info[mr]['filedates']
@@ -312,5 +314,5 @@ if __name__ == '__main__':
     
     
     if True:
-        firepower_comparison(['sirivan_run1',])
+        firepower_comparison(['sirivan_run6_hr',])
     

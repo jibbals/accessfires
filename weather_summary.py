@@ -86,7 +86,7 @@ def plot_weather_summary(U,V,W, height, lat, lon, extentname,
         # wind speed contourf
         if hwind_limits is None:
             csh = plt.contourf(lon, lat, Sr, hcontours)
-            lax.colorbar(ticklocation=ticker.MaxNLocator(5),pad=0)
+            plt.colorbar(ticklocation=ticker.MaxNLocator(5),pad=0)
         else:
             csh = lax.contourf(lon, lat, Sr, 
                                levels=hcontours,
@@ -598,7 +598,9 @@ def weather_series(model_run='waroona_run3',
 
 if __name__=='__main__':
     
+    weather_summary_model('KI_run0',HSkip=8,)
     
+
     waroona_run3times = fio.run_info['waroona_run3']['filedates']
     waroona_day2zoom = [115.65,116.03, -33.1,-32.8]
     si_hours=fio.sim_info['sirivan']['filedates']
@@ -607,7 +609,7 @@ if __name__=='__main__':
     #weather_summary_model(model_version='waroona_run3')
     
     ## Run timeseries
-    if True:
+    if False:
         # day1 waroona:
         #weather_series('waroona_run3',showmap=True)
         # day2 waroona:

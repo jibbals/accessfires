@@ -52,12 +52,22 @@ sim_info={
         'topog':'umnsaa_2019123009_slv.nc',
         'filedates':np.array([datetime(2019,12,30,9) + timedelta(hours=x) for x in range(24)]),
         'UTC_offset':11, # utc + 11 in summer
+        },
+    'KI':{
+        'topog':'umnsaa_2020010215_slv.nc',
+        'filedates':np.array([datetime(2020,1,2,15) + timedelta(hours=x) for x in range(24)]),
+        'UTC_offset':10.5, # utc + 10.5 in summer
         }
     }
 
 
 ## Where are model outputs located, and run specific info
 run_info = {
+    'KI_run0':{
+        'dir':'data/KI/run0/',
+        'WESN':[136.1922,137.8036,-36.1774,-35.5054],
+        'origdir':'/g/data/en0/jwg574/ACCESS-fire/KangerooIsland/...',
+        },
     ## run with new fire speed/fuel parameters changed again
     'sirivan_run7_hr':{
         'dir':'data/sirivan/run7/0p1/',

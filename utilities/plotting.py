@@ -207,6 +207,8 @@ def map_add_locations_extent(extentname,
                   'sirivanz':['cassillis','leadville','merotherie','turill'],
                   'sirivans':['dunedoo','cassillis','uarbry'],
                   'sirivan_pcb':['cassillis','uarbry'],
+                  'KIz':['parndana',],
+                  'KI':['parndana',],
                   }
     dx=.025
     dxfire = .025
