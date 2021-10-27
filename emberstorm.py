@@ -105,7 +105,8 @@ def emberstorm_centres(model_run, key, times, dx=0.07):
 
 def add_vertical_contours(w,lat,lon,
                           wmap_height=300, wmap_levels=[1,3],
-                          annotate=True, xy0=[.7,-.02], xy1=None):
+                          annotate=True, xy0=[.7,-.02], xy1=None,
+                          annotate_font_size=13):
     '''
     ARGS:
         w [lat,lon] : map of vertical motion
@@ -121,25 +122,28 @@ def add_vertical_contours(w,lat,lon,
         # downward motion in blueish
         plt.contour(lon, lat, -1*w, levels=wmap_levels, 
                     linestyles=['dashed','solid'],
-                    colors=('aquamarine',))
+                    colors=('aquamarine',),
+                    linewidths=[3],)
         # upward motion in pink
         plt.contour(lon, lat, w, levels=wmap_levels, 
                     linestyles=['dashed','solid'],
-                    colors=('pink',))
+                    colors=('pink',),
+                    linewidths=[3],)
     if xy1 is None:
         xy1=[xy0[0], xy0[1]-.03]
-    plt.annotate(
-        'vertical motion at %dm altitude'%wmap_height, 
-        xy=xy0, 
-        xycoords='axes fraction', 
-        fontsize=9
-        )
-    plt.annotate(
-        'dashed is %.1fm/s, solid is %.1fm/s'%(wmap_levels[0],wmap_levels[1]), 
-        xy=xy1, 
-        xycoords='axes fraction', 
-        fontsize=9
-        )
+    if annotate:
+        plt.annotate(
+            'vertical motion at %dm altitude'%wmap_height, 
+            xy=xy0, 
+            xycoords='axes fraction', 
+            fontsize=annotate_font_size,
+            )
+        plt.annotate(
+            'dashed is %.1fm/s, solid is %.1fm/s'%(wmap_levels[0],wmap_levels[1]), 
+            xy=xy1, 
+            xycoords='axes fraction', 
+            fontsize=annotate_font_size,
+            )
 
 def transect_emberstorm(u,v,w,z,
                         lats,lons,
@@ -272,6 +276,7 @@ def topdown_emberstorm(fig=None, subplot_row_col_n=None, ax=None,
     RETURNS:
         fig, ax
     """
+    annotate_font_size=13
     # if we already have an axis, assume the backdrop is provided
     if ax is None:
         if fig is None:
@@ -308,11 +313,11 @@ def topdown_emberstorm(fig=None, subplot_row_col_n=None, ax=None,
             ax=plt.gca()
             ax.set_aspect('equal')
             
-            ## Add waroona, hamel, yarloop if possible
-            for txt in ['Waroona','Hamel','Yarloop']:
+            ## Add waroona, yarloop if possible
+            for txt in ['Waroona','Yarloop']:
                 ax.annotate(txt, xy=np.array(constants.latlons[str.lower(txt)])[::-1],
                             xycoords="data", # lat lon xy as coords are platecarree
-                            fontsize=12, ha="center",
+                            fontsize=14, ha="center",
                             color='k',
                             path_effects=[PathEffects.withStroke(linewidth=2,
                                                                  foreground="w")])
@@ -322,20 +327,20 @@ def topdown_emberstorm(fig=None, subplot_row_col_n=None, ax=None,
     
     if ff is not None:
         # add firefront
-        cs_ff = plotting.map_fire(ff,lats,lons)
+        cs_ff = plotting.map_fire(ff,lats,lons,colors=['orange'],linewidths=[2])
     if sh is not None:
         # add hot spots for heat flux
         # default kwargs for sh plot
         if 'alpha' not in sh_kwargs:
-            sh_kwargs['alpha']=0.6
+            sh_kwargs['alpha']=1.0
         if 'cbar_kwargs' not in sh_kwargs:
             sh_kwargs['cbar_kwargs'] = {'label':"Wm$^{-2}$"}
-        cs_sh, cb_sh = plotting.map_sensibleheat(sh,lats,lons,**sh_kwargs)
+        cs_sh, cb_sh = plotting.map_sensibleheat(sh,lats,lons,colorbar=False,**sh_kwargs)
         if annotate:
-            plt.annotate(s="max heat flux = %6.1e W/m2"%np.max(sh),
+            plt.annotate(text="max heat flux = %6.1e W/m2"%np.max(sh),
                          xy=[0,1.06],
                          xycoords='axes fraction', 
-                         fontsize=10)
+                         fontsize=annotate_font_size)
     if u10 is not None:
         # winds, assume v10 is also not None
         s10 = np.hypot(u10,v10)
@@ -350,20 +355,21 @@ def topdown_emberstorm(fig=None, subplot_row_col_n=None, ax=None,
                        density=density,
                        )
         if annotate:
-            plt.annotate("10m wind linewidth increases up to %dms$^{-1}$"%(speedmax),
-                         xy=[0,1.09], 
-                         xycoords="axes fraction", 
-                         fontsize=10)
-        if annotate:
-            plotting.annotate_max_winds(s10, s="10m wind max = %5.1f m/s",
-                                        xytext=[0,1.025])
+            #plt.annotate("10m wind linewidth increases up to %dms$^{-1}$"%(speedmax),
+            #             xy=[0,1.09], 
+            #             xycoords="axes fraction", 
+            #             fontsize=10)
+            plotting.annotate_max_winds(s10, text="10m wind max = %5.1f m/s",
+                                        xytext=[0,1.025],
+                                        fontsize=annotate_font_size)
     
     if wmap is not None:
         add_vertical_contours(wmap,lats,lons,
                               wmap_height=wmap_height,
                               wmap_levels=[1,3],
                               annotate=True,
-                              xy0=[0.73,1.07])
+                              xy0=[0.73,1.07],
+                              annotate_font_size=annotate_font_size)
         
     # set limits back to latlon limits
     ax.set_ylim(ylims[0],ylims[1])

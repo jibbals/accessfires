@@ -11,7 +11,7 @@
 #module load python3/3.7.2
 # access module has conda environment with jupyter, cartopy, and lots of stuff
 module use /g/data3/hh5/public/modules
-module load conda/analysis3
+module load conda/analysis3-21.04
 
 # module for some threedee stuff (warnings are thrown otherwise)
 #module load gtk

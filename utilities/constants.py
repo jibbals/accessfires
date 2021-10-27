@@ -30,7 +30,7 @@ extents['waroonaz']    = [115.88, 116.19, -32.92,-32.83] # zoom in on fire
 
 
 latlons['waroona']    = -32.84, 115.93  # suburb centre: -32.8430, 115.8526
-latlons['hamel']      = -32.8725, 115.92 # just south of waroona
+#latlons['hamel']      = -32.8725, 115.92 # just south of waroona
 latlons['yarloop']    = -32.96, 115.90  # suburb centre: -32.9534, 115.9124
 latlons['wagerup']    = -32.92, 115.91  # wagerup
 latlons['AWS_wagerup']    = -32.92, 115.91  # AWS at wagerup, 40 m asl

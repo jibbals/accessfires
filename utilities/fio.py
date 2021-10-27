@@ -154,6 +154,7 @@ run_info = {
     'waroona_run3_day2_early':{
         'dir':'data/waroona/run3_day2_early/',
         'filedates':np.array([datetime(2016,1,6,15) + timedelta(hours=x) for x in list(range(24))]),
+        'topog':'umnsaa_2016010615_slv.nc',
         'fire_affix':'CSIRO_gadi',
         'run':'Run 13 July 2020',
         'origdir':'/scratch/en0/hxy548/cylc-run/au-aa876/share/cycle/20160106T1500Z/waroona/0p3/ukv_os38/um/',
@@ -990,24 +991,23 @@ def read_model_run(model_version, fdtime=None, subdtimes=None, extent=None,
         s.var_name='s' # s doesn't come from a var with a std name so can just use var_name
         
         # Get wind direction using arctan of y/x
-        wind_dir = utils.wind_dir_from_uv(u.data,v.data)
-        
-        wdcube = iris.cube.Cube(wind_dir,
-                                var_name='wind_direction',
-                                units='degrees',
-                                #long_name='degrees clockwise from due North',
-                                dim_coords_and_dims=[(s.coord('time'),0),
-                                                     (s.coord('model_level_number'),1),
-                                                     (s.coord('latitude'),2),
-                                                     (s.coord('longitude'),3)])
-        wdcube.units = 'degrees'
-        wdcube.var_name='wind_direction'
+        #wind_dir = utils.wind_dir_from_uv(u.data,v.data)
+        #wdcube = iris.cube.Cube(wind_dir,
+        #                        var_name='wind_direction',
+        #                        units='degrees',
+        #                        #long_name='degrees clockwise from due North',
+        #                        dim_coords_and_dims=[(s.coord('time'),0),
+        #                                             (s.coord('model_level_number'),1),
+        #                                             (s.coord('latitude'),2),
+        #                                             (s.coord('longitude'),3)])
+        #wdcube.units = 'degrees'
+        #wdcube.var_name='wind_direction'
+        #allcubes.append(wdcube)
         
         # add cubes to list
         allcubes.append(u)
         allcubes.append(v)
         allcubes.append(s)
-        allcubes.append(wdcube)
 
     if add_dewpoint:
         # Take pressure and relative humidity
@@ -1423,8 +1423,6 @@ def save_fig_to_path(pname,plt, **savefigargs):
 
     '''
     # Defaults:
-    if 'dpi' not in savefigargs:
-        savefigargs['dpi']=150
     if 'transparent' not in savefigargs:
         savefigargs['transparent']=False
         

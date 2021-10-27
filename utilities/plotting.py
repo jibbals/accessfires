@@ -139,7 +139,7 @@ def annotate_max_winds(winds, upto=None, **annotateargs):
         annotateargs['text'] = "wind max = %5.1f ms$^{-1}$"%(winds[:upto,:][mloc])
     else:
         annotateargs['text'] = annotateargs['text']%(winds[:upto,:][mloc])
-    
+
     plt.annotate(**annotateargs)
 
 import matplotlib.colors as col
@@ -194,15 +194,19 @@ def map_add_grid(ax, **gridargs):
 
 def map_add_locations_extent(extentname, 
                              hide_text=False,
-                             color='grey', nice=False):
+                             color='grey', 
+                             nice=False,
+                             abbr=False,
+                             fontsize=None,
+                             ):
     '''
     wrapper for map_add_locations that adds all the points for that extent
     '''
     
     locstrings = {'waroona':['waroona','yarloop'],
-                  'waroonaz':['waroona','hamel'],
+                  'waroonaz':['waroona',],
                   'waroonaf':['waroona','yarloop'],
-                  'waroona_day2':['waroona','hamel','yarloop'],
+                  'waroona_day2':['waroona','yarloop'],
                   'sirivan':['dunedoo','cassillis','leadville','merotherie','turill',],
                   'sirivanz':['cassillis','leadville','merotherie','turill'],
                   'sirivans':['dunedoo','cassillis','uarbry'],
@@ -230,24 +234,29 @@ def map_add_locations_extent(extentname,
     text = [name.capitalize() for name in locs]
     if hide_text:
         text = ['']*len(locs)
+    if abbr:
+        text = [name[0].capitalize() for name in locs]
     
     if nice:
         latlons=[ _latlons_[loc] for loc in locs ]
         map_add_nice_text(plt.gca(),latlons=latlons,texts=text)
     else:
-        map_add_locations(locs, text=text, color=color, textcolor='k', dx=dx,dy=dy)
+        map_add_locations(locs, text=text, color=color, textcolor='k', dx=dx,dy=dy, fontsize=fontsize)
         # add fire ignition
         map_add_locations([firename], text=[['Ignition',''][hide_text]], 
-                          color='r', marker='*', dx=dxfire, dy=dyfire, textcolor='k')
+                          color='r', marker='*', dx=dxfire, dy=dyfire, textcolor='k',fontsize=fontsize)
         # add weather stations
         if 'waroona' in extentname:
             map_add_locations(['wagerup'],[['AWS',''][hide_text]],
-                              color='b', marker='*', dx=-.025,dy=.01)
+                              color='b', marker='*', dx=-.025,dy=.01,fontsize=fontsize)
 
 def map_add_locations(namelist, text=None, proj=None,
                       marker='o', color='grey', markersize=None, 
                       textcolor='k',
-                      dx=.025,dy=.015):
+                      dx=.025,
+                      dy=.015,
+                      fontsize=None,
+                      ):
     '''
     input is list of names to be added to a map using the lat lons in _latlons_
     '''
@@ -260,19 +269,28 @@ def map_add_locations(namelist, text=None, proj=None,
         dxi,dyi = dx,dy
         if isinstance(dx, (list,tuple,np.ndarray)):
             dxi,dyi = dx[i], dy[i]
+        textkwarg={}
+        plotkwarg={}
+        if fontsize is not None:
+            textkwarg['fontsize']=fontsize
+        if proj is not None:
+            textkwarg['proj']=proj
+            plotkwarg['transform']=proj
 
         # Add marker and text
-        if proj is None:
-            plt.plot(x,y,  color=color, linewidth=0, 
-                     marker=marker, markersize=None)
-            plt.text(x+dxi, y+dyi, name, color=textcolor,
-                     horizontalalignment='right')
-        else:
-            plt.plot(x,y,  color=color, linewidth=0, 
-                     marker=marker, markersize=None, transform=proj)
-            plt.text(x+dxi, y+dyi, name, color=textcolor,
-                     horizontalalignment='right',
-                     transform=proj)
+        plt.plot(x,y,  color=color, linewidth=0, 
+                 marker=marker, markersize=None,
+                 **plotkwarg)
+        plt.text(x+dxi, y+dyi, name, color=textcolor,
+                 horizontalalignment='right',
+                 **textkwarg)
+        #else:
+        #    plt.plot(x,y,  color=color, linewidth=0, 
+        #             marker=marker, markersize=None, transform=proj)
+        #    plt.text(x+dxi, y+dyi, name, color=textcolor,
+        #             horizontalalignment='right',
+        #             transform=proj.
+        #             **kwarg)
 
 def map_add_rectangle(LRBT, **rectargs):
     """

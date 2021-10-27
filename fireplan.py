@@ -264,7 +264,7 @@ def fireplan_comparison(model_runs=['waroona_old','waroona_run1','waroona_run2',
     # Make/Add legend
     ax.legend(legend, model_runs)
     plt.tight_layout()
-    fio.save_fig('project', _sn_, figname, plt)
+    fio.save_fig('comparison', _sn_, figname, plt)
 
 def fireplan_vs_isochrones():
     """
@@ -376,21 +376,16 @@ def show_fire_outlines(mr, extentname=None):
 
 if __name__=='__main__':
     
-    ## Check KI output
-    fig,ax = show_fire_outlines('KI_run0')
-    fio.save_fig_to_path('check.png',plt)
-    
-    
     ### Run the stuff
     
     ext_sirivan=constants.extents['sirivan']
     ##fireplan comparison
-    if False:
-        fireplan_comparison(model_runs=["sirivan_run5_hr","sirivan_run6_hr","sirivan_run7_hr"],
+    if True:
+        fireplan_comparison(model_runs=["sirivan_run4","sirivan_run5_hr","sirivan_run6_hr"],
                 colors=['k','orange','teal'],
                 extent=ext_sirivan,
                 mapname='sirivan.tiff',
-                figname='sirivan_fireplan_comparison',
+                figname='sirivan_4_56hr_fireplan',
                 #mapname='sirivan_linescan_osm.tiff',
                 #figname="sirivan_fireplan_comparison_osm",
                 )

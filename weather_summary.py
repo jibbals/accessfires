@@ -9,7 +9,7 @@ import matplotlib
 matplotlib.use("Agg")
 
 from matplotlib import colors, ticker, patches
-from matplotlib import patheffects, gridspec
+from matplotlib import patheffects
 import matplotlib.dates as mdates
 
 import numpy as np

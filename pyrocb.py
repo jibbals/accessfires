@@ -102,9 +102,9 @@ __PCB_occurrences__ = {
                   (-31.5, 149.95)],
         'time':[datetime(2017,2,12,2), datetime(2017,2,12,3), 
                 datetime(2017,2,12,4), datetime(2017,2,12,5),
-                datetime(2017,2,12,6),datetime(2017,2,12,7),
-                datetime(2017,2,12,8),datetime(2017,2,12,9),
-                datetime(2017,2,12,10),datetime(2017,2,12,11),
+                datetime(2017,2,12,6), datetime(2017,2,12,7),
+                datetime(2017,2,12,8), datetime(2017,2,12,9),
+                datetime(2017,2,12,10), datetime(2017,2,12,11),
                 datetime(2017,2,12,12),]
         },
     'sirivan_run2':{
@@ -165,9 +165,9 @@ def transect_plus_stream(w,u,qc,topog,zth,lat,lon,start,end,ztop,contours,
                                                  topog=topog, ztop=ztop,
                                                  contours=contours,
                                                  lines=None, colorbar=showcolorbar)
-    print("DEBUG: axes[::5] from vert motion transect (should be metres from bot left):")
-    print("     : slicex:",slicex[0],slicex[:,0])
-    print("     : slicez:",slicez[0],slicez[:,0])
+    #print("DEBUG: axes[::5] from vert motion transect (should be metres from bot left):")
+    #print("     : slicex:", slicex[0], slicex[:,0])
+    #print("     : slicez:", slicez[0], slicez[:,0])
     
     ## add cloud outlines
     ## Add contour where clouds occur
@@ -184,9 +184,9 @@ def transect_plus_stream(w,u,qc,topog,zth,lat,lon,start,end,ztop,contours,
     
     
     # Add streamplot - needs regularised grid
-    print("DEBUG: u, w before adding wind streams:")
-    print("     : sliceu:",sliceu[0], sliceu[:,0])
-    print("     : slicew:",slicew[0], slicew[:,0])
+    #print("DEBUG: u, w before adding wind streams:")
+    #print("     : sliceu:",sliceu[0], sliceu[:,0])
+    #print("     : slicew:",slicew[0], slicew[:,0])
     
     if show_windstream:
         plotting.streamplot_regridded(slicex, slicez, sliceu, slicew)
@@ -231,7 +231,7 @@ def map_with_transect(data,lat,lon, transect,
     if ff is not None:
         #print("DEBUG: mapfire:",ff.shape,lat.shape,lon.shape)
         #print("     : ",type(ff))
-        plotting.map_fire(ff,lat,lon)
+        plotting.map_fire(ff,lat,lon, colors=['orange'],linewidths=[3])
     
     return cs,cb
 
@@ -391,7 +391,7 @@ def plot_X_transect(w, u, qc, z, wmean, topog, lat, lon,
     '''
     ## Plotting setup
     # set font sizes etc
-    plotting.init_plots()
+    #plotting.init_plots()
     # get transects
     start,end = transect1
     startx1,endx1 = transect2
